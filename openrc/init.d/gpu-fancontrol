@@ -1,0 +1,61 @@
+#!/sbin/openrc-run
+# OpenRC init script for GPU fan control
+# BareCortex - Bare-metal AI compute OS
+#
+# NOTE: `nvidia-smi -f` (manual fan speed) is unsupported on most GeForce and
+# many Quadro cards — the driver ignores it and those GPUs stay on their own
+# thermal curve. Check with `nvidia-smi -i 0 -f 60` by hand before enabling
+# this service; on unsupported cards, drive the chassis fans with fancontrol
+# from lm-sensors instead.
+
+name="GPU Fan Control"
+description="Manages GPU fan speeds for optimal cooling under AI workloads"
+
+FAN_SPEED="${FAN_SPEED:-80}"
+CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
+LOG_FILE="${LOG_FILE:-/var/log/gpu-fancontrol.log}"
+
+pidfile="/run/gpu-fancontrol.pid"
+
+depend() {
+    need nvidia-persistenced
+}
+
+start_pre() {
+    # Verify NVIDIA GPUs are present
+    if ! command -v nvidia-smi > /dev/null 2>&1; then
+        eerror "nvidia-smi not found. Install NVIDIA drivers first."
+        return 1
+    fi
+}
+
+start() {
+    ebegin "Starting ${name} (target: ${FAN_SPEED}%)"
+
+    # Enable manual fan control
+    nvidia-smi -pm 1 > /dev/null 2>&1
+
+    # Set fan speed for all GPUs
+    GPU_COUNT=$(nvidia-smi -L | wc -l)
+    for i in $(seq 0 $((GPU_COUNT - 1))); do
+        nvidia-smi -i ${i} -f ${FAN_SPEED} 2>/dev/null || true
+    done
+
+    # Log initial state
+    echo "$(date): Fan control started. Target: ${FAN_SPEED}%, GPUs: ${GPU_COUNT}" >> ${LOG_FILE}
+
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping ${name} (resetting to auto)"
+
+    # Reset fan control to automatic
+    GPU_COUNT=$(nvidia-smi -L | wc -l)
+    for i in $(seq 0 $((GPU_COUNT - 1))); do
+        nvidia-smi -i ${i} -f 0 2>/dev/null || true
+    done
+
+    echo "$(date): Fan control stopped. Reset to auto." >> ${LOG_FILE}
+    eend $?
+}

@@ -1,0 +1,63 @@
+#!/sbin/openrc-run
+# OpenRC init script for AI training jobs
+# BareCortex - Bare-metal AI compute OS
+
+name="AI Training Service"
+description="Runs the neural network training script"
+
+# Configure these in /etc/conf.d/ai-training
+TRAINING_SCRIPT="${TRAINING_SCRIPT:-/opt/ai/train.py}"
+PYTHON_BIN="${PYTHON_BIN:-/opt/ai/venv/bin/python}"
+GPU_IDS="${GPU_IDS:-0,1}"
+LOG_DIR="${LOG_DIR:-/var/log/ai-training}"
+
+command="${PYTHON_BIN}"
+command_args="${TRAINING_SCRIPT}"
+command_background="yes"
+pidfile="/run/ai-training.pid"
+output_log="${LOG_DIR}/training.log"
+error_log="${LOG_DIR}/training-error.log"
+
+depend() {
+    need nvidia-persistenced
+    after net
+}
+
+start_pre() {
+    # Create log directory if it doesn't exist
+    mkdir -p "${LOG_DIR}"
+
+    # Verify training script exists
+    if [ ! -f "${TRAINING_SCRIPT}" ]; then
+        eerror "Training script not found: ${TRAINING_SCRIPT}"
+        return 1
+    fi
+
+    # Verify Python environment
+    if [ ! -x "${PYTHON_BIN}" ]; then
+        eerror "Python binary not found: ${PYTHON_BIN}"
+        return 1
+    fi
+
+    # Set GPU visibility
+    export CUDA_VISIBLE_DEVICES="${GPU_IDS}"
+    export NCCL_DEBUG=INFO
+
+    einfo "Starting training with GPUs: ${GPU_IDS}"
+    einfo "Script: ${TRAINING_SCRIPT}"
+}
+
+start() {
+    ebegin "Starting ${name}"
+    start-stop-daemon --start --background \
+        --make-pidfile --pidfile ${pidfile} \
+        --exec ${command} -- ${command_args} \
+        >> ${output_log} 2>> ${error_log}
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping ${name}"
+    start-stop-daemon --stop --pidfile ${pidfile}
+    eend $?
+}

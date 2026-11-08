@@ -1,0 +1,12 @@
+# Configuration for GPU Fan Control
+# BareCortex
+
+# Target fan speed percentage (0-100)
+# Recommended: 70-85 for sustained training loads
+FAN_SPEED="80"
+
+# Check interval in seconds (for future fan curve support)
+CHECK_INTERVAL="60"
+
+# Log file location
+LOG_FILE="/var/log/gpu-fancontrol.log"

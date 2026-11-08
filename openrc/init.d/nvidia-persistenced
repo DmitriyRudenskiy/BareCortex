@@ -1,0 +1,46 @@
+#!/sbin/openrc-run
+# OpenRC init script for NVIDIA Persistence Daemon
+# BareCortex - Bare-metal AI compute OS
+
+name="NVIDIA Persistence Daemon"
+description="Keeps NVIDIA GPU driver loaded to minimize initialization latency"
+
+command="/usr/bin/nvidia-persistenced"
+command_args="--user root --verbose"
+pidfile="/run/nvidia-persistenced.pid"
+
+depend() {
+    need localmount
+    after modules
+}
+
+start_pre() {
+    # Ensure NVIDIA kernel modules are loaded
+    if ! lsmod | grep -q "^nvidia "; then
+        modprobe nvidia
+        sleep 2
+    fi
+
+    # Verify GPU is accessible
+    if ! nvidia-smi -L > /dev/null 2>&1; then
+        eerror "No NVIDIA GPU detected. Check hardware and drivers."
+        return 1
+    fi
+
+    GPU_COUNT=$(nvidia-smi -L | wc -l)
+    einfo "Detected ${GPU_COUNT} NVIDIA GPU(s)"
+}
+
+start() {
+    ebegin "Starting ${name}"
+    start-stop-daemon --start --exec ${command} \
+        -- ${command_args} \
+        --pidfile ${pidfile}
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping ${name}"
+    start-stop-daemon --stop --pidfile ${pidfile}
+    eend $?
+}

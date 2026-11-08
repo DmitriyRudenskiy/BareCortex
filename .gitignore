@@ -1,0 +1,60 @@
+# BareCortex .gitignore
+
+# Build artifacts
+*.o
+*.ko
+*.mod
+*.mod.c
+*.order
+*.symvers
+.tmp_*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+
+# Logs
+*.log
+/var/log/
+
+# Kernel build
+/kernel/.config.old
+/kernel/Module.symvers
+/kernel/modules.order
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.pem
+*.key
+*.crt
+/etc/ssh/
+
+# Datasets (too large for git)
+*.csv
+*.json
+*.parquet
+*.tfrecord
+*.h5
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Checkpoints
+checkpoints/

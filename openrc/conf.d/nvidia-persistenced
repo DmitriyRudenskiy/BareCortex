@@ -1,0 +1,8 @@
+# Configuration for NVIDIA Persistence Daemon
+# BareCortex
+
+# User to run the daemon as (usually root)
+NVPD_USER="root"
+
+# Verbosity level
+NVPD_VERBOSE="--verbose"
