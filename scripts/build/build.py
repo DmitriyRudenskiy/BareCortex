@@ -225,14 +225,17 @@ def page_script(pg, title):
     take = o.get("only_blocks")
     skip = set(o.get("skip_blocks", []))
     why_skipped = safe(o.get("note", "overridden"))
-    n = 0
+    # The numbers of the blocks this script actually runs. A block the override
+    # skipped is not a block that failed to report, and a page that stops early is
+    # only detectable against the list of what was asked for.
+    emitted = []
     for i, (why, cmd) in enumerate(book.commands(pg), 1):
         if take is not None and i not in take:
             continue
         if i in skip:
             lines.append(f'echo "@@SKIP block {i}: {why_skipped}"')
             continue
-        n += 1
+        emitted.append(i)
         lines.append(f'echo "@@BLOCK {i} START: {safe(why)[:120]}"')
         lines.append(deviate(substitute(cmd, o), o.get("block_subst", {}).get(str(i), {}), pg, i))
         lines.append("rc=$?")
@@ -247,7 +250,7 @@ def page_script(pg, title):
     # list of things a hard stop can lose.
     lines.append("sync")
     lines.append('echo "@@DONE"')
-    return "\n".join(lines), n
+    return "\n".join(lines), emitted
 
 
 def archive_for(pg):
@@ -413,8 +416,8 @@ def guard_present(pages):
 
 
 def run_page(pg, title, context, logdir):
-    script, nblocks = page_script(pg, title)
-    print(f"  {pg} ({nblocks} blocks, {context})", flush=True)
+    script, emitted = page_script(pg, title)
+    print(f"  {pg} ({len(emitted)} blocks, {context})", flush=True)
     rc, out = guest_run(wrap(script, context))
     log = logdir / (pg.split("/")[1][:-5] + ".log")
     log.write_text(f"# {pg}\n# context: {context}\n# ssh exit: {rc}\n\n{out}")
@@ -422,10 +425,18 @@ def run_page(pg, title, context, logdir):
     blocks = [(i, why, codes.get(str(i))) for i, (why, _) in enumerate(book.commands(pg), 1)
               if str(i) in codes]
     expected = expected_failures(pg, out)
-    bad = [b for b in blocks if b[2] != "0" and b[0] not in expected]
+    bad = [f"block {b[0]} rc {b[2]}" for b in blocks if b[2] != "0" and b[0] not in expected]
+    # A block that never reported is a block that never ran. `exec` is the usual
+    # cause — chapter 7's createfiles page ends with `exec /usr/bin/bash --login`
+    # for the person at the keyboard, which replaced the shell and took the page's
+    # last block, the one creating /var/log/{btmp,lastlog,wtmp}, with it. The page
+    # reported 5 of 7 blocks and passed. Nothing downstream can tell, so this does.
+    ran = {b[0] for b in blocks}
+    bad += [f"block {i} never reported (the page stopped early)"
+            for i in emitted if i not in ran]
     return {"page": pg, "title": title, "exit": rc, "blocks": len(blocks),
-            "failed": [f"block {b[0]} rc {b[2]}" for b in bad],
-            "tolerated_blocks": sorted(expected), "log": str(log.relative_to(ROOT))}
+            "failed": bad, "tolerated_blocks": sorted(expected),
+            "log": str(log.relative_to(ROOT))}
 
 
 EXPECTED_FAILURE = re.compile(r"known to fail|safe to ignore|do not pass|are expected", re.I)

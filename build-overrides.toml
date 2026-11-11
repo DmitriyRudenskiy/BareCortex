@@ -29,6 +29,14 @@ archive = "gcc-15.2.0.tar.xz"
 archive = "Python-3.14.3.tar.xz"   # the -docs-html tarball is unpacked into the source tree
 [page."chapter08/Python.html"]
 archive = "Python-3.14.3.tar.xz"
+[page."chapter07/createfiles.html"]
+# Block 6 is `exec /usr/bin/bash --login` — the book telling the person at the
+# keyboard to get a prompt that says `I have no name!` no longer. Under the runner
+# it replaces the shell, ends the page, and takes block 7 (the /var/log files)
+# with it. Skipped; the blocks either side of it are the page.
+skip_blocks = [6]
+note = "the book's interactive `exec /usr/bin/bash --login`; nothing here is a keyboard"
+
 [page."chapter08/glibc.html"]
 archive = "glibc-2.43.tar.xz"   # tzdata is copied in for the timezone data
 # The zoneinfo block reads `ln -sfv /usr/share/zoneinfo/<xxx> /etc/localtime` and

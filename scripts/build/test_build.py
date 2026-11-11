@@ -197,6 +197,24 @@ def check_resume_starts_at_the_failed_phase():
     assert build.next_phase([], order) == "host-prep"
 
 
+def check_a_page_that_stops_early_does_not_pass():
+    """Every block of the page has to report, or the page did not happen.
+
+    Chapter 7's createfiles page ends with `exec /usr/bin/bash --login` for the
+    person at the keyboard. It replaced the shell, ended the page, and took the
+    page's last block — the one creating /var/log/{btmp,lastlog,wtmp} — with it.
+    The page reported 5 of 7 blocks and passed, and the record said so happily.
+    """
+    real = build.guest_run
+    build.guest_run = lambda *a, **k: (0, '@@RC 1 0\n@@RC 2 0\n@@DONE')
+    try:
+        r = build.run_page("chapter07/createfiles.html", "Creating", "chroot-root",
+                           pathlib.Path(tempfile.mkdtemp()))
+    finally:
+        build.guest_run = real
+    assert any("never reported" in f for f in r["failed"]), r["failed"]
+
+
 def check_a_placeholder_means_what_its_page_says():
     """The book's `<xxx>` is the LFS partition on the chapter 2 pages and a timezone on Glibc's.
 
