@@ -25,6 +25,7 @@
 #   ./vm-host.sh disk 60G    create the LFS disk (/dev/vdb in the guest)
 #   ./vm-host.sh snapshot t  freeze the LFS disk as checkpoint t, continue on a copy
 #   ./vm-host.sh rollback t  discard the current LFS disk, resume from checkpoint t
+#   ./vm-host.sh prune       delete checkpoints no image is built on (--do to actually do it)
 #   ./vm-host.sh boot-lfs    boot the LFS disk alone — the first-boot test
 #   ./vm-host.sh console     tail the boot console
 #
@@ -113,8 +114,40 @@ snapshot() {
   stop
   mv $VM/lfs.qcow2 $VM/sn/$tag-$n.qcow2
   $P/usr/bin/qemu-img create -f qcow2 -F qcow2 -b $VM/sn/$tag-$n.qcow2 $VM/lfs.qcow2 >/dev/null
+  prune --do
   echo "checkpointed LFS disk as $tag gen$n ($(du -h $VM/sn/$tag-$n.qcow2 | cut -f1)); building continues on a copy"
   start; wait_up 40
+}
+
+# Bounded retention. A checkpoint is a link in a qcow2 chain, and the working
+# image's chain is the only history that still means anything: every other file in
+# sn/ is a branch some rollback abandoned, worth nothing but disk. Deleting by age
+# or by generation count would cut a parent out from under its child, so the rule
+# is reachability, not count.
+chain_names() {
+  local img=${1:-$VM/lfs.qcow2}
+  $P/usr/bin/qemu-img info -U --backing-chain "$img" \
+    | sed -n "s,^backing file: \(.*\)$,\1,p; s,^image: \(.*\)$,\1,p" \
+    | xargs -r -n1 basename | sort -u
+}
+
+prune() {
+  local keep=$(chain_names) f n deleted=0
+  [ -n "$keep" ] || { echo "cannot read the disk chain; keeping every checkpoint"; return 1; }
+  for f in $VM/sn/*.qcow2; do
+    [ -e "$f" ] || continue
+    n=$(basename "$f")
+    printf "%s\n" "$keep" | grep -Fxq "$n" && continue
+    sz=$(du -h "$f" | cut -f1)
+    if [ "$1" = "--do" ]; then
+      rm -f "$f" && echo "deleted $n ($sz) - no image is built on it"
+      deleted=$((deleted+1))
+    else
+      echo "would delete $n ($(du -h "$f" | cut -f1)) - no image is built on it"
+    fi
+  done
+  [ "$1" = "--do" ] && echo "pruned $deleted checkpoint(s)"
+  return 0
 }
 
 # The newest generation of a tag is what `rollback` means by that tag.
@@ -220,6 +253,7 @@ case "${1:-}" in
   disk) shift; disk "$@" ;;
   snapshot) shift; snapshot "$@" ;;
   rollback) shift; rollback "$@" ;;
+  prune) shift; prune "$@" ;;
   boot-lfs) boot-lfs ;;
   console) tail -20 $VM/console.log ;;
   *) echo "usage: $0 {seed [pw]|start|stop|wait|sh <cmd>|grow <size>|disk <size>|snapshot <tag>|rollback <tag>|boot-lfs|console}"; exit 2 ;;
