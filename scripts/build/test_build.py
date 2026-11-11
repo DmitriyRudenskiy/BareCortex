@@ -197,6 +197,24 @@ def check_resume_starts_at_the_failed_phase():
     assert build.next_phase([], order) == "host-prep"
 
 
+def check_sources_needed_for_every_page():
+    """Every page of every phase can be asked what it needs, including pages that need nothing.
+
+    The guard that reads the answer used to raise TypeError on the first page with
+    no source archive — every page of chapter 7 — because set arithmetic was
+    written inline against a value that could be None. It is a phase-start path,
+    so nothing but a real page list reaches it.
+    """
+    assert build.sources_needed("chapter07/chroot.html") == set(), "a chroot page builds no package"
+    assert build.sources_needed("chapter05/gcc-pass1.html") == {
+        "gcc-15.2.0.tar.xz", "mpfr-4.2.2.tar.xz", "gmp-6.3.0.tar.xz", "mpc-1.3.1.tar.gz"}
+    assert build.sources_needed("chapter08/glibc.html") == {
+        "glibc-2.43.tar.xz", "glibc-fhs-1.patch", "tzdata2025c.tar.gz"}
+    for ph in build.phases().values():
+        for pg, _ in build.pages_for(ph):
+            assert isinstance(build.sources_needed(pg), set), pg
+
+
 def check_core_suite_cannot_be_skipped():
     """Skipping a core suite through an override is refused, not remembered."""
     pg = "chapter08/glibc.html"
@@ -227,6 +245,7 @@ if __name__ == "__main__":
                check_build_root_lock, check_test_expectations_are_current,
                check_core_suite_cannot_be_skipped,
                check_no_page_is_dropped_from_the_index,
+               check_sources_needed_for_every_page,
                check_resume_starts_at_the_failed_phase,
                check_guard_on_the_real_pages):
         print(f"{fn.__name__} ...", flush=True)

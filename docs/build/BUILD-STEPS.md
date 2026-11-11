@@ -54,6 +54,7 @@ edition's own contents page, so a page cannot be left out by editing a list here
 - [x] `check_core_suite_cannot_be_skipped` — an override cannot skip glibc's, GCC's or Binutils' suite
 - [x] `check_no_page_is_dropped_from_the_index` — every page the contents page lists is a page the build knows
 - [x] `check_resume_starts_at_the_failed_phase` — the phase that failed is the phase a resume runs
+- [x] `check_sources_needed_for_every_page` — any page can be asked what it needs, including the chapter 7 pages that need nothing
 - [x] `check_guard_on_the_real_pages` — an unsourced tarball, in a page or in an override, stops the phase
 
 ## What the build refuses to do

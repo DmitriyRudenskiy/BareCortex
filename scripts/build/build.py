@@ -30,6 +30,7 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 import tomllib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -104,6 +105,15 @@ def guest_run(script, timeout=10800):
     return p.returncode, p.stdout.decode("utf-8", "replace")
 
 
+# Chapter 7's four mounts, as the host sees them. Guarded by `findmnt` so the
+# context can be re-established after a restart without failing on what is
+# already there.
+CHROOT_MOUNTS = [("/dev", "mount --bind /dev {lfs}/dev"),
+                 ("/dev/pts", "mount --bind /dev/pts {lfs}/dev/pts"),
+                 ("/proc", "mount -t proc proc {lfs}/proc"),
+                 ("/sys", "mount -t sysfs sysfs {lfs}/sys")]
+
+
 def wrap(script, context, net=False):
     """The same command, in the environment the book types it in.
 
@@ -134,7 +144,14 @@ def wrap(script, context, net=False):
         cmd = (f"sudo {ns}sudo -u lfs -H bash -c "
                + shlex.quote(f"source $HOME/.bashrc; {prelude}{script}"))
     elif context == "chroot-root":
-        cmd = (f"sudo {ns}chroot $LFS {CHROOT_ENV.format(term='xterm')} "
+        # Re-applied on every call, because a mount table is runtime state: a
+        # checkpoint does not freeze it, so a VM that comes up for this phase has
+        # an empty $LFS/proc and every page inside dies on
+        # `comm: /dev/fd/63: No such file or directory`. These are chapter 7's own
+        # mount commands, guarded so re-running one is not an error.
+        cmd = "".join(f"findmnt {shlex.quote(LFS + where)} >/dev/null || "
+                      f"sudo {what.format(lfs=LFS)}; " for where, what in CHROOT_MOUNTS)
+        cmd += (f"sudo {ns}chroot $LFS {CHROOT_ENV.format(term='xterm')} "
                f"/bin/bash --login -c {shlex.quote(prelude + script)}")
         cmd = f"export LFS={shlex.quote(LFS)}; " + cmd
     else:
@@ -344,6 +361,26 @@ def guard_sources(pages):
     return missing
 
 
+def sources_needed(pg):
+    """Every file the page needs in `$LFS/sources`: its archive and its patches.
+
+    Separate from `guard_present` because it is the part with the edge cases — a
+    page with no archive at all (`chapter07/chroot.html`), a page whose archive
+    is only in an override, a page whose name is ambiguous — and the caller needs
+    a live guest. A `| ({archive_for(pg)} - {None})` written inline once raised
+    TypeError on the first page that had no archive, which is every page of
+    chapter 7; `check_sources_needed_for_every_page` is why it cannot happen again.
+    """
+    names = set(sources_named(pg))
+    try:
+        a = archive_for(pg)
+    except AmbiguousArchive:
+        a = None
+    if a:
+        names.add(a)
+    return names
+
+
 def guard_present(pages):
     """Every source the pages of this phase need is on the disk, not just in base.lock.
 
@@ -354,21 +391,12 @@ def guard_present(pages):
     as `tar: ncurses-6.6.tar.gz: Cannot open` two pages into chapter 6. The phase
     is blocked here instead, naming the file and the command that puts it back.
     """
-    want = set()
-    for pg in pages:
-        try:
-            a = archive_for(pg)
-        except AmbiguousArchive:
-            continue
-        if a:
-            want.add(a)
-        want |= sources_named(pg)
+    need = {pg: sources_needed(pg) for pg in pages}
     rc, out = guest_run(f"ls {LFS}/sources 2>/dev/null")
     have = set(out.split())
     return [f"{pg}: {a} is named by base.lock but is not in $LFS/sources — "
             f"run: build.py run sources"
-            for pg in pages for a in sorted(sources_named(pg) | ({archive_for(pg)} if archive_for(pg) else ()))
-            if a not in have]
+            for pg in pages for a in sorted(need[pg] - have)]
 
 
 def run_page(pg, title, context, logdir):
@@ -590,11 +618,18 @@ def ensure_mounted():
     machine coming back, and it is the phase's entry criterion, so it is done
     here and said out loud rather than assumed.
     """
-    rc, _ = guest_run(f"findmnt {shlex.quote(LFS)} >/dev/null || "
-                      f"(sudo mkdir -p {LFS} && sudo mount /dev/{DEV['LFS_PART']} {LFS})")
-    if rc:
-        print("  $LFS could not be mounted", flush=True)
-    return rc == 0
+    # Retried, because the usual reason this fails is that a rollback just
+    # restarted the guest: ssh answers in two seconds, `sudo` takes a few more,
+    # and a phase that gives up on the first try is a phase that needs a human to
+    # type the same command again.
+    for attempt in range(4):
+        rc, _ = guest_run(f"findmnt {shlex.quote(LFS)} >/dev/null || "
+                          f"(sudo mkdir -p {LFS} && sudo mount /dev/{DEV['LFS_PART']} {LFS})")
+        if rc == 0:
+            return True
+        time.sleep(5 * (attempt + 1))
+    print("  $LFS could not be mounted", flush=True)
+    return False
 
 
 def verify(ph, logdir):
@@ -658,12 +693,11 @@ def cmd_resume():
 
     The rollback is the part a person forgets: a failed phase leaves the disk
     half-built, and running the next phase on top of that builds chapter 7 on a
-    broken chapter 6. So resume asks the previous phase's record for its
-    checkpoint and, when the working image is not already sitting on that
-    checkpoint, rolls back to it first. It refuses to guess — if the image's
-    backing chain cannot be read, it says so and builds on what is there.
+    broken chapter 6. So resume rolls back to the checkpoint the phase before
+    this one recorded, unconditionally — a phase's writes are only worth keeping
+    once it has passed — and then runs the phase that has not.
     """
-    order = [p["name"] for p in phases()]
+    order = list(phases())
     recs = phase_records()
     nxt = next_phase(recs, order)
     if nxt is None:
@@ -672,20 +706,36 @@ def cmd_resume():
     i = order.index(nxt)
     if i:
         prev = next((r for r in recs if r["phase"] == order[i - 1]), None)
-        tag = (prev or {}).get("checkpoint", "none")
-        if tag != "none" and tag:
+        # The tag is the phase's name — `checkpoint(name)` in run_phase — while
+        # the record's `checkpoint` field is the *policy* from phases.toml
+        # ("after"), which is not a file on the substrate.
+        tag = order[i - 1] if (prev or {}).get("checkpoint", "none") != "none" else "none"
+        if tag != "none":
+            # Unconditionally, not "when the disk is not already that checkpoint":
+            # the working image is a child of the checkpoint even when it is a
+            # child covered in the failed phase's own writes, and a backing-chain
+            # check cannot tell those two apart. A phase's writes are only worth
+            # keeping once the phase has passed — the same rule that makes a
+            # chapter 6 page un-retryable in place (`ln -sv` meets the symlink its
+            # own previous attempt left behind).
             gen = host(f"ls -1 ~/barecortex-vm/sn/{tag}-*.qcow2 2>/dev/null | tail -1").stdout.strip()
-            img = host('export LD_LIBRARY_PATH=$HOME/.local/qemu/usr/lib/x86_64-linux-gnu; '
-                       '$HOME/.local/qemu/usr/bin/qemu-img info --output=json '
-                       '~/barecortex-vm/lfs.qcow2').stdout
-            if not gen or not img:
-                print(f"cannot see the {tag} checkpoint or the working image; "
-                      f"running {nxt} on the disk as it is", flush=True)
-            elif f"{tag}-" not in img:
+            if gen:
                 name = gen.rsplit("/", 1)[-1].removesuffix(".qcow2")
-                print(f"{nxt} follows {order[i-1]}, but the working disk is not the "
-                      f"{name} checkpoint — rolling back to it", flush=True)
+                print(f"{nxt} follows {order[i-1]}: rolling the disk back to {name} "
+                      f"so the phase starts where that one ended", flush=True)
                 subprocess.run(SUBSTRATE + [f"cd ~/barecortex-vm && ./vm.sh rollback {name}"])
+            else:
+                print(f"no {tag} checkpoint on the substrate; running {nxt} "
+                      f"on the disk as it is", flush=True)
+    # After the rollback, not before: the checkpoint froze the whole disk,
+    # `$LFS/sources` included, so it is the rollback that can take a tarball back
+    # while `sources` still records passed. `run` refuses to build on that;
+    # `resume` is the verb meant to get the build going again, and re-running
+    # `sources` is a verified fetch, not a guess.
+    if guard_present([pg for pg, _ in pages_for(phases()[nxt])]):
+        print(f"{nxt} needs sources the disk does not have — re-running sources first",
+              flush=True)
+        run_sources()
     return run_phase(nxt)
 
 

@@ -90,16 +90,20 @@ name = "temp-tools"
 chapter = "06"
 context = "host-lfs"
 entry = ["The cross-toolchain phase passed."]
-exit = ["The temporary utilities are installed under $LFS/tools.",
+exit = ["The temporary utilities are installed under $LFS/usr: chapter 6's pages configure --prefix=/usr and install with DESTDIR=$LFS, so not under $LFS/tools.",
          "Every command block of every page exited 0."]
-verify = ['/mnt/lfs/tools/bin/gcc --version > /dev/null',
-          '/mnt/lfs/tools/bin/ld --version > /dev/null',
-          'test -x /mnt/lfs/tools/bin/bash']
+verify = ['/mnt/lfs/usr/bin/gcc --version > /dev/null',
+          # `ld` links libbfd out of /usr/lib, which is only a default path once
+          # $LFS is /. Pointing LD_LIBRARY_PATH at it from the host segfaults — the
+          # binary has to be run through its own loader, which is also what prints
+          # the version this phase is supposed to have installed.
+          '/mnt/lfs/usr/lib/ld-linux-x86-64.so.2 --library-path /mnt/lfs/usr/lib /mnt/lfs/usr/bin/ld --version > /dev/null',
+          'test -x /mnt/lfs/usr/bin/bash']
 
 [[phase]]
 name = "enter-chroot"
 chapter = "07"
-only = ["changingowner", "kernfs", "chroot", "creatingdirs", "createfiles"]
+only = ["changingowner", "kernfs", "chroot"]
 context = "host-root"
 unpack = false
 entry = ["The temporary tools phase passed."]
@@ -114,10 +118,16 @@ verify = ['findmnt -t proc -o SOURCE /mnt/lfs/proc',
 [[phase]]
 name = "temp-system"
 chapter = "07"
-skip = ["changingowner", "kernfs", "chroot", "creatingdirs", "createfiles", "cleanup"]
+skip = ["changingowner", "kernfs", "chroot", "cleanup"]
 context = "chroot-root"
 entry = ["The chroot is entered and its virtual filesystems are mounted."]
-exit = ["Gettext, Bison, Perl, Python, Texinfo and Util-linux are installed in the temporary system.",
+# `creatingdirs` and `createfiles` are here, not with the other chapter 7
+# housekeeping, because their commands write to bare `/etc` and `/var` — they
+# have no `$LFS` prefix anywhere, which is the book telling you they run inside
+# the chroot. Run outside, `ln -sv /proc/self/mounts /etc/mtab` relinks the
+# *build host's* /etc/mtab, which is what this table used to do.
+exit = ["The chroot's own /etc exists: mtab, hosts, passwd, group, and the directory tree the pages create.",
+         "Gettext, Bison, Perl, Python, Texinfo and Util-linux are installed in the temporary system.",
          "Every command block of every page exited 0."]
 verify = ['sudo chroot /mnt/lfs /bin/bash -c "test -x /usr/bin/perl -a -x /usr/bin/make -a -x /usr/bin/python3"']
 
