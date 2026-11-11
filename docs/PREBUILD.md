@@ -193,7 +193,7 @@ Not passing, because they need a machine:
       driver 580.159.03, where it corrected two assumptions the code had made
 
 The machine for the first three now exists: `scripts/build/vm-host.sh` starts a
-disposable KVM guest — Debian 13.7, 8 vCPU, 59 G free, passwordless root, its
+disposable KVM guest — Debian 13.7, 8 vCPU, 89 G free, passwordless root, its
 whole disk a qcow2 file — which is what `build-orchestration 0.3` and design D10
 turned on. Those three lines are blocked on the phases being written, not on
 hardware. The guest has no GPU, so everything `(gpu)` stays on the substrate.

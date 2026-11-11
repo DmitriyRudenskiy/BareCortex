@@ -82,7 +82,10 @@ stop() {
   # the next command fail with `Failed to get "write" lock`, which is exactly
   # what `grow` would then trip over.
   for _ in $(seq 1 60); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
-  kill -9 "$pid" 2>/dev/null
+  # `|| true`: if QEMU already exited on its own, kill -9 finds no process,
+  # returns non-zero, and `set -e` silently aborts the caller — which is how
+  # `grow` came to stop the VM and then exit before resizing anything.
+  kill -9 "$pid" 2>/dev/null || true
   rm -f $VM/vm.pid; echo stopped
 }
 
@@ -95,6 +98,7 @@ grow() {
   local size=${1:?usage: grow 64G}
   stop
   $P/usr/bin/qemu-img resize $VM/work.qcow2 "$size"
+  $P/usr/bin/qemu-img info -U "$VM/work.qcow2" | grep 'virtual size'
   start
   wait_up 40
   rsh "command -v sgdisk >/dev/null || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq gdisk >/dev/null 2>&1
