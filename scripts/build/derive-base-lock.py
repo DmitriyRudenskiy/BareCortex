@@ -25,12 +25,22 @@ import sys
 import urllib.request
 
 PKG_RE = re.compile(r"^(?P<name>[A-Za-z][A-Za-z0-9.:+_-]*)[- ](?P<version>\d[\w.]*)")
-PAGE_RE = r'href="(chapter\d+/[A-Za-z0-9:._-]+\.html)"'
+# `+` in the class: `gcc-libstdc++.html` is a page of this edition, and a page
+# the derivation cannot see is a page it cannot account for.
+PAGE_RE = r'href="(chapter\d+/[A-Za-z0-9:._+-]+\.html)"'
+
+
+_PAGES = {}
 
 
 def get(url):
-    with urllib.request.urlopen(url, timeout=60) as r:
-        return r.read().decode("utf-8", "replace")
+    """A page of the pinned edition, once. The derivation looks at each page for
+    two things — what it downloads and what it patches — and refetching 160 pages
+    for the second look would double a two-minute command to four."""
+    if url not in _PAGES:
+        with urllib.request.urlopen(url, timeout=60) as r:
+            _PAGES[url] = r.read().decode("utf-8", "replace")
+    return _PAGES[url]
 
 
 def strip(s):
@@ -44,15 +54,19 @@ def toc_pages(index_html, base):
                                   index_html, re.S):
         title = " ".join(strip(title).split())
         all_pages.append(href)
-        m = PKG_RE.match(title)
-        if m:
-            pkgs.append((href.split("/")[0], href, m.group("name"), m.group("version")))
+        # `Udev from Systemd-259.1`, `Libstdc++ from GCC-15.2.0`: the book's own
+        # idiom for a page that builds another package's archive, and the only
+        # place that says so for libstdc++, whose page body says just `cd build`.
+        for candidate in (title, title.rsplit(" from ", 1)[-1]):
+            if (m := PKG_RE.match(candidate)):
+                pkgs.append((href.split("/")[0], href, m.group("name"), m.group("version")))
+                break
     return sorted(set(all_pages)), pkgs
 
 
 TARBALL_RE = re.compile(r"[A-Za-z0-9._:+-]+\.(?:tar\.(?:xz|gz|bz2|zst)|tar|tgz|zip)")
 H2_RE = re.compile(r"<h2[^>]*>(.*?)</h2>", re.S)
-CD_RE = re.compile(r"\bcd\s+([A-Za-z0-9._+-]+)")
+CD_RE = re.compile(r"\bcd\s+([A-Za-z0-9._+/-]+)")
 TAIL_PKG_RE = re.compile(r"([A-Za-z][A-Za-z0-9.:+_-]*)-(\d[\w.]*)")
 
 
@@ -81,7 +95,11 @@ def page_downloads(url):
             stems.add(f"{m.group(1)}-{m.group(2)}".lower())
     for name in TARBALL_RE.findall(page):
         stems.add(re.sub(r"\.(?:tar\.(?:xz|gz|bz2|zst)|tar|tgz|zip)$", "", name).lower())
-    stems.update(c.lower() for c in CD_RE.findall(page))
+    # A path, because chapter 5 builds libstdc++ by `cd ../gcc-15.2.0/build` —
+    # the directory the page moves into is the package it builds, whatever the
+    # path to it is. `.` and `..` are a page going back out again.
+    stems.update(c.lower().rsplit("/", 1)[-1] for c in CD_RE.findall(page)
+                 if c not in (".", ".."))
     return stems
 
 
@@ -125,6 +143,28 @@ def patch_table(page_html):
 def norm(s):
     """Package identity across the book's own spellings of it."""
     return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def remote_of(url):
+    """Where the archive comes from, as the URL the book publishes says."""
+    if "//" not in url:
+        return url
+    scheme, rest = url.split("//", 1)
+    return f"{scheme}//{rest.split('/')[0]}"
+
+
+def revision_of(url, version):
+    """The upstream release identifier the download URL itself carries.
+
+    The book publishes a URL, a version and an MD5 — no revision. Where the URL
+    is a release download or a source archive its path names the upstream tag
+    (`/releases/download/v2.3.2/`, `/archive/POSIX-2.08t.tar.bz2`), and that is
+    the revision; where it does not, the version is the whole of the identifier
+    the URL offers. Recorded as derived from the URL, never invented: a commit
+    hash nobody checked would be worse than no field at all.
+    """
+    m = re.search(r"/(?:releases/download|archive)/([^/]+?)(?:\.tar\.[a-z0-9]+|\.zip|/|$)", url)
+    return m.group(1) if m else version
 
 
 # Downloads this edition lists but builds nowhere, as far as its own pages go.
@@ -192,12 +232,28 @@ def main():
     packages = package_table(get(f"{base}/chapter03/packages.html"))
     patches = patch_table(get(f"{base}/chapter03/patches.html"))
 
+    # Which page applies which patch, read off the pages themselves: a patch is
+    # applied by `patch -Np1 -i ../<file>` inside the package's own page, so the
+    # patch series is not a guess from the patch's filename.
+    patch_pages = {}
+    for page in all_pages:
+        if page.startswith(("chapter01/", "chapter02/", "chapter03/")):
+            continue
+        html = get(f"{base}/{page}")
+        for p in patches:
+            if p["patch"] in html:
+                patch_pages.setdefault(p["patch"], set()).add(page)
+
     print(f'# base.lock — derived, do not edit by hand.')
     print(f'# Derived from: {edition}')
     print(f'# Source:       {base}/chapter03/packages.html')
     print(f'# Derivation:   scripts/build/derive-base-lock.py')
     print(f'# Checksums:    the MD5 column of that table — the book publishes MD5,')
     print(f'#               not SHA-256, so this file carries MD5 and says so.')
+    print(f'# Remote:       the origin of the URL the book publishes for the archive.')
+    print(f'# Revision:     the release tag that URL carries, or the version where it')
+    print(f'#               carries none. The book publishes no revision field; this')
+    print(f'#               is read off the URL, not looked up behind it.')
     print(f'# Format owner: base-system-and-init D3. Contents owner: build-orchestration 2.1.')
     print(f'#')
     print(f'# Provenance classes are rows of class-map.toml, not a sentence; every')
@@ -227,14 +283,36 @@ def main():
             missing.append(p["name"])
         entries.append((p, pages))
 
+    # A patch belongs to the package whose page applies it. Two patches of one
+    # edition can land on one page (Bzip2's two), which is why this is a list
+    # keyed by page and not a name match on the patch's own filename.
+    series = {}
+    for p in patches:
+        # The book names a patch `<package>-<version>-<what>.patch`, and that is
+        # the attribution: `glibc-fhs-1.patch` is applied from the glibc page,
+        # which also installs the time zone data, and page-sharing does not make
+        # it a patch of tzdata. Pages are the fallback for a patch named after
+        # nothing in the package list.
+        named = max((n for n, _ in ((e[0]["name"], 0) for e in entries)
+                     if p["patch"].startswith(norm(n))), key=len, default=None)
+        owners = [n for n, pages in entries if named is None and
+                  patch_pages.get(p["patch"], set()) & set(pages)]
+        for name in ([named] if named else owners[:1]):
+            series.setdefault(name, []).append(p["patch"])
+            p["package"] = name
+
     for p, pages in entries:
         print('[[package]]')
         print(f'name = {p["name"]!r}')
         print(f'version = {p["version"]!r}')
         print(f'url = {p["url"]!r}')
+        print(f'remote = {remote_of(p["url"])!r}')
+        print(f'revision = {revision_of(p["url"], p["version"])!r}')
         print(f'md5 = {p["md5"]!r}')
         print('class = "source-built"')
         print(f'pages = {pages!r}')
+        if p["name"] in series:
+            print(f'patches = {series[p["name"]]!r}')
         print()
 
     for p, reason in unattributed:
@@ -242,18 +320,23 @@ def main():
         print(f'name = {p["name"]!r}')
         print(f'version = {p["version"]!r}')
         print(f'url = {p["url"]!r}')
+        print(f'remote = {remote_of(p["url"])!r}')
+        print(f'revision = {revision_of(p["url"], p["version"])!r}')
         print(f'md5 = {p["md5"]!r}')
         print(f'reason = {reason!r}')
         print()
 
-    print('# --- patch series, chapter 3.3. Applied by the phase that builds the')
-    print('# --- package they name; the series is part of the version, per D3.')
+    print('# --- patch series, chapter 3.3. Applied by the package named, on the page')
+    print('# --- named; the series is part of that version, per D3.')
     for p in patches:
         print('[[patch]]')
         print(f'file = {p["patch"]!r}')
         print(f'url = {p["url"]!r}')
+        print(f'remote = {remote_of(p["url"])!r}')
         print(f'md5 = {p["md5"]!r}')
         print(f'description = {p["description"]!r}')
+        print(f'package = {p.get("package", "UNATTRIBUTED")!r}')
+        print(f'pages = {sorted(patch_pages.get(p["patch"], []))!r}')
         print()
 
     if missing:

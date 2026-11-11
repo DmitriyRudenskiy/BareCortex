@@ -25,7 +25,7 @@ name = "source-built"
 owner = "gpu-stack"
 # The book page is the evidence: it is what a reviewer opens to check that the
 # recipe was followed, and 2.5 rejects an entry that carries no page.
-requires = ["name", "version", "url", "md5", "pages"]
+requires = ["name", "version", "url", "remote", "revision", "md5", "pages"]
 
 [[class]]
 name = "binary-distribution"

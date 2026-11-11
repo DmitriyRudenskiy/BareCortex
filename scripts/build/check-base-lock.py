@@ -9,7 +9,9 @@ then checks `base.lock` against it. Fails naming the file and the entry.
 """
 
 import argparse
+import html
 import pathlib
+import re
 import sys
 import tomllib
 
@@ -60,10 +62,46 @@ def load_map(path, fails):
     return data
 
 
+def coverage(lock, lock_path, fails):
+    """Does base.lock cover the base set? Asked of the book, not of a list.
+
+    The base set is the edition's own table of contents: every page titled like
+    `Acl-2.3.2` is a package the book builds. Coverage is checked against that,
+    so this file never holds a second copy of the package list — which is the
+    defect base-system-and-init 3.2 exists to prevent.
+    """
+    import urllib.request
+    base = lock.get("edition", {}).get("url", "").rstrip("/")
+    if not base:
+        fail(f"{lock_path}: [edition] url absent, so coverage cannot be asked "
+             f"of the book it was derived from", fails)
+        return
+    index = urllib.request.urlopen(base + "/", timeout=60).read().decode("utf-8", "replace")
+    wanted = set()
+    for href, title in re.findall(r'href="(chapter\d+/[\w:.+-]+\.html)"[^>]*>(.*?)</a>',
+                                  index, re.S):
+        t = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", title)).split())
+        if re.match(r"[A-Za-z][\w :+.-]*-\d", t):   # the book's `Name-Version` pages
+            wanted.add(href)
+    cited = {p for e in lock.get("package", []) for p in e.get("pages", [])}
+    cited |= {p for u in lock.get("unattributed-download", []) for p in u.get("pages", [])}
+    if stale := sorted(cited - wanted):
+        fail(f"{lock_path}: {len(stale)} cited page(s) of this edition build no "
+             f"package: {', '.join(stale[:6])} — a citation to a page that does "
+             f"not build anything cites nothing", fails)
+    if uncovered := sorted(wanted - cited):
+        fail(f"{lock_path}: {len(uncovered)} package page(s) of {base} are built by "
+             f"the book and named by no entry: {', '.join(uncovered[:8])}", fails)
+    print(f"coverage: pages={len(wanted)} cited={len(wanted & cited)} "
+          f"uncovered={len(uncovered)}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--lock", default="base.lock")
     ap.add_argument("--map", dest="map", default="class-map.toml")
+    ap.add_argument("--coverage", action="store_true",
+                    help="ask the edition's index whether base.lock covers it")
     ap.add_argument("--explain", action="store_true", help="print the rules and exit")
     a = ap.parse_args()
 
@@ -126,6 +164,9 @@ def main():
 
     for u in lock.get("unattributed-download", []):
         print(f"unattributed: {u['name']} {u['version']} — {u['reason']}")
+
+    if a.coverage:
+        coverage(lock, lock_path, fails)
 
     print(f"base-lock: {'FAIL ' + str(len(fails)) if fails else 'ok'} "
           f"packages={len(lock.get('package', []))} edition={edition}")
