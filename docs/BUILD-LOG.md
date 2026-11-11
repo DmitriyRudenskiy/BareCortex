@@ -331,3 +331,83 @@ The phase's exit criteria, evaluated after the pages ran:
 - `ok` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-ld`
 
 Checkpoint: `after`
+
+## temp-tools — FAILED
+
+2026-11-11T18:51:29 → 2026-11-11T18:51:55, context `host-lfs`, 2 page(s) of chapter 06.
+
+Book pages: `chapter06/m4.html`, `chapter06/ncurses.html`
+
+Exit criteria this phase claims to meet:
+
+- The temporary utilities are installed under $LFS/tools.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 127` `/mnt/lfs/tools/bin/gcc --version > /dev/null`
+- `FAILED 127` `/mnt/lfs/tools/bin/ld --version > /dev/null`
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/bash`
+
+Checkpoint: `after`
+
+## sources — FAILED
+
+2026-11-11T18:54:23 → 2026-11-11T18:54:59, context `host-root`, 1 page(s) of chapter 03.
+
+Book pages: `chapter03/packages.html`
+
+Exit criteria this phase claims to meet:
+
+- Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.
+- Nothing was fetched that base.lock does not name.
+
+Failures: `checksum mismatch ncurses-6.6.tar.gz`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `93 files, MD5 as published by the book`
+
+Checkpoint: `none`
+
+## sources — passed
+
+2026-11-11T18:57:17 → 2026-11-11T18:59:15, context `host-root`, 1 page(s) of chapter 03.
+
+Book pages: `chapter03/packages.html`
+
+Exit criteria this phase claims to meet:
+
+- Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.
+- Nothing was fetched that base.lock does not name.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `93 files, MD5 as published by the book`
+
+Checkpoint: `none`
+
+## temp-tools — FAILED
+
+2026-11-11T18:59:26 → 2026-11-11T19:00:30, context `host-lfs`, 2 page(s) of chapter 06.
+
+Book pages: `chapter06/m4.html`, `chapter06/ncurses.html`
+
+Exit criteria this phase claims to meet:
+
+- The temporary utilities are installed under $LFS/tools.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 127` `/mnt/lfs/tools/bin/gcc --version > /dev/null`
+- `FAILED 127` `/mnt/lfs/tools/bin/ld --version > /dev/null`
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/bash`
+
+Checkpoint: `after`

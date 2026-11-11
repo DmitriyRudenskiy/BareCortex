@@ -147,6 +147,25 @@ def substitute(cmd):
     return cmd
 
 
+def deviate(cmd, subs, pg, i):
+    """A word of a page's command replaced, and the replacement left in the log.
+
+    `build-overrides.toml` may say that one flag of one block of one page is not
+    what this build runs. Saying it in the file is not enough: the log of the run
+    has to show the command that actually ran, or the record describes a build
+    nobody performed.
+    """
+    for old, new in subs.items():
+        if old not in cmd:
+            raise SystemExit(f"{pg} block {i}: build-overrides.toml substitutes {old!r}, "
+                             "which the page's command does not contain — the pinned "
+                             "edition changed and this deviation is now a guess")
+        cmd = cmd.replace(old, new)
+        lines = f'echo "@@SUBSTITUTED in block {i}: {safe(old)} -> {safe(new)}"'
+        cmd = lines + "\n" + cmd
+    return cmd
+
+
 def safe(s):
     """Prose going into a shell echo: no quoting, no expansion, one line."""
     return re.sub(r"[\"'`$\\&;|<>(){}\n\r]", " ", s).strip()
@@ -179,7 +198,7 @@ def page_script(pg, title):
             continue
         n += 1
         lines.append(f'echo "@@BLOCK {i} START: {safe(why)[:120]}"')
-        lines.append(substitute(cmd))
+        lines.append(deviate(substitute(cmd), o.get("block_subst", {}).get(str(i), {}), pg, i))
         lines.append("rc=$?")
         lines.append(f'echo "@@RC {i} $rc"')
         lines.append(f'[ "$rc" -eq 0 ] || {{ echo "@@ABORT block {i}"; exit 1; }}')
@@ -478,13 +497,23 @@ def run_phase(name):
         if r["exit"] != 0 or r["failed"]:
             break
     checks = verify(ph, logdir)
+    if name == "sources":
+        # This phase's exit criteria are about files in $LFS/sources, and the only
+        # thing that knows them is the fetch. `verify = []` used to mean "checked
+        # elsewhere", which let the phase record passed with nothing evaluated —
+        # and it had: two of the 93 sources were never downloaded, and the phase
+        # that exists to notice that said passed.
+        bad, n = fetch()
+        checks.append({"name": "every file base.lock names is present with the published md5",
+                       "cmd": "fetch: wget what is absent, md5sum everything",
+                       "rc": 1 if bad else 0,
+                       "out": f"{n} files named by base.lock; mismatches and absences: "
+                              f"{bad or 'none'}"})
     evidence = results and all(pathlib.Path(ROOT / r["log"]).is_file() for r in results)
     pages_ok = bool(results) and all(r["exit"] == 0 and not r["failed"] for r in results)
-    # `verify = []` says the criteria are evaluated by the phase's own
-    # implementation (the sources phase checks every MD5 as it fetches), not that
-    # there are none. A phase with no `verify` key at all has neither, and fails.
-    criteria_ok = bool(ph.get("verify")) and all(c["rc"] == 0 for c in checks) \
-        if ph.get("verify") else ph.get("verify") == []
+    # A phase passes on criteria that were evaluated. Not having any is not a pass:
+    # the same fail-closed rule the base.lock check applies to an empty class map.
+    criteria_ok = bool(checks) and all(c["rc"] == 0 for c in checks)
     rec = {"phase": name, "started": started,
            "finished": datetime.datetime.now().isoformat(timespec="seconds"),
            "context": ph["context"], "pages": len(results),
@@ -620,11 +649,20 @@ def fetch():
               # an interrupted fetch leaves .part files behind; they are never renamed
               # and never verified, so they are cleared before anything is resumed
               "rm -f *.part"]
+    mirrors = OVR.get("mirror", {})
     for url, md5, name in items:
+        # The book's URL is tried first and alone if the book is reachable. When it
+        # is not, a mirror listed in build-overrides.toml may stand in, and the
+        # authority stays the book's own MD5 — that is what a checksum is for.
+        urls = [url] + list(mirrors.get(name, []))
+        quote = " ".join(shlex.quote(u) for u in urls)
         script.append(f'if [ ! -f {shlex.quote(name)} ]; then '
-                      f'wget -q --tries=3 -O {shlex.quote(name)}.part {shlex.quote(url)} '
-                      f'&& mv {shlex.quote(name)}.part {shlex.quote(name)} '
-                      f'|| {{ rm -f {shlex.quote(name)}.part; echo "@@FETCH-FAIL {name}"; }}; fi')
+                      f'for u in {quote}; do '
+                      f'wget -q --tries=3 -O {shlex.quote(name)}.part "$u" '
+                      f'&& {{ mv {shlex.quote(name)}.part {shlex.quote(name)}; '
+                      f'echo "@@FROM {name} $u"; break; }}; '
+                      f'rm -f {shlex.quote(name)}.part; done; '
+                      f'test -f {shlex.quote(name)} || echo "@@FETCH-FAIL {name}"; fi')
         script.append(f'echo "@@MD5 {name} $(md5sum {shlex.quote(name)} 2>/dev/null '
                       f'| cut -d" " -f1) {md5}"')
     rc, out = guest_run(wrap("\n".join(script), "host-root", net=True), timeout=7200)

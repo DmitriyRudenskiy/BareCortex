@@ -78,14 +78,16 @@ note = "Block 2 is the separate /home layout; this build does not use one."
 
 [page."chapter04/addinguser.html"]
 skip_blocks = [2]
-block_subst = { "1" = { "1000" = "1001" } }
 post = """echo 'lfs:BareCortexBuild' | sudo chpasswd lfs"""
 note = """Block 2 is `passwd lfs`, an interactive prompt; the password is set with
-chpasswd instead. It exists so `su - lfs` works from a script. The page creates
-the user with uid and gid 1000; on this host 1000 belongs to the image's own
-login user, so `groupadd -g 1000` answers "GID not unique" and the page cannot
-run as written — the build user takes the next id, nothing in the book keys off
-the number itself."""
+chpasswd instead. It exists so `su - lfs` works from a script. The page asks for
+no uid and no gid — `groupadd lfs` and `useradd -s /bin/bash -g lfs -m -k
+/dev/null lfs` — so the id is whatever the host hands out, and on this guest the
+image's own login user holds 1000, so `id lfs` answers 1001. Nothing in the book
+keys off the number. (An earlier note here claimed the page asked for 1000 and
+that this build rewrote it to 1001. That described an older edition, no command
+was ever rewritten, and the entry was deleted rather than fixed because the
+edition this build pins has never needed it.)"""
 
 [page."chapter04/settingenvironment.html"]
 context = "host-lfs"
@@ -112,3 +114,30 @@ run as lfs and the sources are fetched as root: the sticky bit is what upstream'
 [page."chapter02/hostreqs.html"]
 post = """bash version-check.sh > /tmp/bc-hostreqs.txt 2>&1; cat /tmp/bc-hostreqs.txt"""
 note = "The page writes the script; running it is the point of writing it."
+
+# --- when the book's own URL does not answer --------------------------------
+# One source in the pinned edition cannot be downloaded from this network. The
+# mirror is not a second opinion about what the file should be: the book's MD5
+# still decides, and `fetch` prints `@@FROM <file> <url>` so the record says
+# which host the bytes came from. The book's URL stays first in base.lock.
+[mirror]
+# `invisible-mirror.net` does not resolve here ("Name or service not known"),
+# and chapter 3 prints no other URL for Ncurses. GNU hosts the same release, and
+# its bytes answer to the book's dd45bf6854430af403452a7a6a40652c.
+"ncurses-6.6.tar.gz" = ["https://ftp.gnu.org/gnu/ncurses/ncurses-6.6.tar.gz"]
+
+[page."chapter06/ncurses.html"]
+block_subst = { "2" = { "--with-cxx-shared" = "--disable-cxx" } }
+note = """The page asks for C++ bindings and the toolchain this book just built
+cannot make them. Chapter 5's GCC pass 1 is configured `--without-headers
+--disable-libstdcxx` (its own printed command), and chapter 6's GCC pass 2 says
+in its own text that target libraries cannot be built in that pass either, so at
+this point in the book there is no C++ standard library anywhere: `ls
+$LFS/tools/*/include/c++` answers `No such file or directory`, and
+`x86_64-lfs-linux-gnu-g++ -E -x c++ /dev/null -v` searches three directories,
+none of them a C++ include directory. Ncurses 6.6's c++/etip.h line 105 is an
+unguarded `#include <exception>`, so `make` dies with `fatal error: exception:
+No such file or directory` after configure correctly printed `checking for
+exception... no`. Nothing is lost: chapter 8 builds Ncurses again, with the
+compiler that has libstdc++, and that is the copy whose C++ bindings end up in
+the installed system."""
