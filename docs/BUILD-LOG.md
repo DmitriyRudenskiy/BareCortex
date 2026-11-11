@@ -411,3 +411,121 @@ The phase's exit criteria, evaluated after the pages ran:
 - `FAILED 1` `test -x /mnt/lfs/tools/bin/bash`
 
 Checkpoint: `after`
+
+## temp-tools — FAILED
+
+2026-11-11T19:10:22 → 2026-11-11T19:11:27, context `host-lfs`, 2 page(s) of chapter 06.
+
+Book pages: `chapter06/m4.html`, `chapter06/ncurses.html`
+
+Exit criteria this phase claims to meet:
+
+- The temporary utilities are installed under $LFS/tools.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 127` `/mnt/lfs/tools/bin/gcc --version > /dev/null`
+- `FAILED 127` `/mnt/lfs/tools/bin/ld --version > /dev/null`
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/bash`
+
+Checkpoint: `after`
+
+## temp-tools — FAILED
+
+2026-11-11T19:14:16 → 2026-11-11T19:15:10, context `host-lfs`, 1 page(s) of chapter 06.
+
+Book pages: `chapter06/ncurses.html`
+
+Exit criteria this phase claims to meet:
+
+- The temporary utilities are installed under $LFS/tools.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 127` `/mnt/lfs/tools/bin/gcc --version > /dev/null`
+- `FAILED 127` `/mnt/lfs/tools/bin/ld --version > /dev/null`
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/bash`
+
+Checkpoint: `after`
+
+## temp-tools — FAILED
+
+2026-11-11T19:15:19 → 2026-11-11T19:16:34, context `host-lfs`, 2 page(s) of chapter 06.
+
+Book pages: `chapter06/m4.html`, `chapter06/ncurses.html`
+
+Exit criteria this phase claims to meet:
+
+- The temporary utilities are installed under $LFS/tools.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 127` `/mnt/lfs/tools/bin/gcc --version > /dev/null`
+- `FAILED 127` `/mnt/lfs/tools/bin/ld --version > /dev/null`
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/bash`
+
+Checkpoint: `after`
+
+## temp-tools — FAILED
+
+2026-11-11T19:19:49 → 2026-11-11T19:19:50, context `host-lfs`, 0 page(s) of chapter 06.
+
+Book pages: 
+
+Exit criteria this phase claims to meet:
+
+- The temporary utilities are installed under $LFS/tools.
+- Every command block of every page exited 0.
+
+Failures: none
+
+Checkpoint: `none`
+
+## sources — passed
+
+2026-11-11T19:19:55 → 2026-11-11T19:21:14, context `host-root`, 1 page(s) of chapter 03.
+
+Book pages: `chapter03/packages.html`
+
+Exit criteria this phase claims to meet:
+
+- Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.
+- Nothing was fetched that base.lock does not name.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `93 files, MD5 as published by the book`
+
+Checkpoint: `none`
+
+## temp-tools — FAILED
+
+2026-11-11T19:21:14 → 2026-11-11T19:30:05, context `host-lfs`, 17 page(s) of chapter 06.
+
+Book pages: `chapter06/m4.html`, `chapter06/ncurses.html`, `chapter06/bash.html`, `chapter06/coreutils.html`, `chapter06/diffutils.html`, `chapter06/file.html`, `chapter06/findutils.html`, `chapter06/gawk.html`, `chapter06/grep.html`, `chapter06/gzip.html`, `chapter06/make.html`, `chapter06/patch.html`, `chapter06/sed.html`, `chapter06/tar.html`, `chapter06/xz.html`, `chapter06/binutils-pass2.html`, `chapter06/gcc-pass2.html`
+
+Exit criteria this phase claims to meet:
+
+- The temporary utilities are installed under $LFS/tools.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 127` `/mnt/lfs/tools/bin/gcc --version > /dev/null`
+- `FAILED 127` `/mnt/lfs/tools/bin/ld --version > /dev/null`
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/bash`
+
+Checkpoint: `after`

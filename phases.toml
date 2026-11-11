@@ -75,10 +75,15 @@ context = "host-lfs"
 entry = ["lfs can write $LFS/tools and read $LFS/sources.",
          "The chapter 4 environment is set in lfs's login shell."]
 exit = ["$LFS/tools holds the cross compiler, assembler and linker, and the target's `as --version` answers.",
+         "The cross C++ compiler links a program — chapter 6's GCC pass 2 needs it to build libcody.",
          "Every command block of every page exited 0."]
 verify = ['test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-gcc',
           '/mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-as --version > /dev/null',
-          'test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-ld']
+          'test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-ld',
+          # The criterion the dropped Libstdc++ page would have failed: a cross
+          # g++ that exists but cannot link anything let this phase pass while
+          # chapter 6's `configure-libcody` was already doomed.
+          "printf 'int main(){}' > /tmp/cxx.cpp && /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-g++ -o /tmp/cxx /tmp/cxx.cpp"]
 
 [[phase]]
 name = "temp-tools"

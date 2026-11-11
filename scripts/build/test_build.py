@@ -142,6 +142,75 @@ def check_build_root_lock():
         build.LOCK = real
 
 
+def check_test_expectations_are_current():
+    """`test-expectations.toml` says what the pinned pages say today.
+
+    The file quotes the book's own sentences about failing tests. Quoted prose
+    rots silently when a version is bumped, so the derivation is re-run here and
+    compared, and a difference is an error naming the command that fixes it.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "derive_expectations", str(build.ROOT / "scripts/build/derive-test-expectations.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    out = pathlib.Path(tempfile.mkdtemp()) / "test-expectations.toml"
+    mod.OUT = out
+    import io
+    import contextlib
+    with contextlib.redirect_stdout(io.StringIO()):
+        mod.main()
+    have = (build.ROOT / "test-expectations.toml").read_text()
+    want = out.read_text()
+    assert have == want, ("test-expectations.toml does not match the pinned pages; "
+                          "run scripts/build/derive-test-expectations.py")
+
+
+def check_no_page_is_dropped_from_the_index():
+    """Every page the edition's own contents lists is a page the build knows about.
+
+    The contents page is the authority on what the book asks for, so it is scraped
+    twice: once with a permissive href pattern, once through `index_pages`. The
+    pattern used to be a character class that forgot `+`, which dropped
+    `chapter05/gcc-libstdc++.html` — "Libstdc++ from GCC-15.2.0" — out of every
+    phase, and the build only noticed two chapters later, when GCC pass 2's
+    `configure-libcody` failed with `cannot find -lstdc++` because the cross
+    compiler had never been handed a C++ library to link with.
+    """
+    import re
+    import book
+    listed = set(re.findall(r'href="(chapter\d+/[^"]+\.html)"', book.page("index.html")))
+    assert listed, "the contents page parsed as zero pages"
+    dropped = listed - {h for h, _ in build.index_pages()}
+    assert not dropped, f"the book lists pages the build will never run: {sorted(dropped)}"
+
+
+def check_resume_starts_at_the_failed_phase():
+    """A resume runs the phase that failed, not the one after it (task 4.3)."""
+    order = ["host-prep", "sources", "chroot-layout", "cross-toolchain", "temp-tools"]
+    passed = [{"phase": p, "passed": True} for p in order[:3]]
+    assert build.next_phase(passed + [{"phase": "cross-toolchain", "passed": False}], order) == "cross-toolchain"
+    # A later phase passing does not make the failed one disappear.
+    assert build.next_phase(passed + [{"phase": "temp-tools", "passed": True},
+                                      {"phase": "cross-toolchain", "passed": False}], order) == "cross-toolchain"
+    assert build.next_phase([{"phase": p, "passed": True} for p in order], order) is None
+    assert build.next_phase([], order) == "host-prep"
+
+
+def check_core_suite_cannot_be_skipped():
+    """Skipping a core suite through an override is refused, not remembered."""
+    pg = "chapter08/glibc.html"
+    block = build.EXPECTATIONS[pg]["suite"][0]["block"]
+    pages = build.OVR.setdefault("page", {})
+    saved = pages.get(pg, {})
+    pages[pg] = {"skip_blocks": [block]}
+    try:
+        bad = build.guard_test_policy([pg])
+    finally:
+        pages[pg] = saved
+    assert bad and "glibc" in bad[0] and str(block) in bad[0], bad
+
+
 def _alive(pid):
     try:
         os.kill(pid, 0)
@@ -155,7 +224,10 @@ def _alive(pid):
 if __name__ == "__main__":
     for fn in (check_mismatches, check_lock_files, check_sources_named,
                check_record_identity_and_atomicity, check_chroot_environment_is_the_books,
-               check_build_root_lock,
+               check_build_root_lock, check_test_expectations_are_current,
+               check_core_suite_cannot_be_skipped,
+               check_no_page_is_dropped_from_the_index,
+               check_resume_starts_at_the_failed_phase,
                check_guard_on_the_real_pages):
         print(f"{fn.__name__} ...", flush=True)
         fn()

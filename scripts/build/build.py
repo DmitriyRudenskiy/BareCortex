@@ -67,7 +67,13 @@ def index_pages():
     import re as RE
     idx = book.page("index.html")
     out = []
-    for href, title in RE.findall(r'href="(chapter\d+/[A-Za-z0-9:._-]+\.html)"[^>]*>(.*?)</a>',
+    # `[^"]+` and not a character class: the edition has a page named
+    # `gcc-libstdc++.html`, and a class that forgot `+` dropped "Libstdc++ from
+    # GCC" from every phase, which surfaced two chapters later as GCC pass 2's
+    # `configure-libcody` failing with `cannot find -lstdc++` — the cross
+    # compiler had never been given a C++ library to link with.
+    # `check_no_page_is_dropped_from_the_index` keeps that from happening again.
+    for href, title in RE.findall(r'href="(chapter\d+/[^"]+\.html)"[^>]*>(.*?)</a>',
                                   idx, re.S):
         out.append((href, " ".join(H.unescape(re.sub(r"<[^>]*>", " ", title)).split())))
     return out
@@ -278,6 +284,20 @@ CORE_SUITES = {"chapter08/binutils.html": "binutils", "chapter08/gcc.html": "GCC
                "chapter08/glibc.html": "glibc"}
 
 
+def test_expectations():
+    """The derived record of what the book predicts about its own test suites."""
+    path = ROOT / "test-expectations.toml"
+    if not path.is_file():
+        raise SystemExit("test-expectations.toml is missing; run "
+                         "scripts/build/derive-test-expectations.py")
+    return {r["id"]: r for r in load_toml(path).get("page", [])}
+
+# Which blocks of a page run its suite is the book's fact, not this file's: it
+# comes from the derivation, so a version bump that moves `make check` to another
+# block moves the guard with it. Loaded once; a phase cannot run without it.
+EXPECTATIONS = test_expectations()
+
+
 def guard_test_policy(pages):
     """The three suites the book names as utmost importance are never skipped.
 
@@ -292,9 +312,8 @@ def guard_test_policy(pages):
             continue
         o = OVR.get("page", {}).get(pg, {})
         skip, take = set(o.get("skip_blocks", [])), o.get("only_blocks")
-        for i, (_, cmd) in enumerate(book.commands(pg), 1):
-            if "check" not in cmd:
-                continue
+        for block in EXPECTATIONS[pg]["suite"]:
+            i = block["block"]
             if i in skip:
                 bad.append(f"{pg}: {CORE_SUITES[pg]} test suite skipped (block {i})")
             elif take is not None and i not in take:
@@ -323,6 +342,33 @@ def guard_sources(pages):
         if archive and archive not in have:
             missing.append(f"build-overrides.toml page {pg}: {archive}")
     return missing
+
+
+def guard_present(pages):
+    """Every source the pages of this phase need is on the disk, not just in base.lock.
+
+    A checkpoint freezes the whole LFS disk, sources included, so rolling back to
+    one rolls the tarballs back too. `sources` records passed and takes no
+    checkpoint of its own, which means a rollback to a later phase can leave the
+    tree missing a file a passed phase vouched for — this build hit it twice, once
+    as `tar: ncurses-6.6.tar.gz: Cannot open` two pages into chapter 6. The phase
+    is blocked here instead, naming the file and the command that puts it back.
+    """
+    want = set()
+    for pg in pages:
+        try:
+            a = archive_for(pg)
+        except AmbiguousArchive:
+            continue
+        if a:
+            want.add(a)
+        want |= sources_named(pg)
+    rc, out = guest_run(f"ls {LFS}/sources 2>/dev/null")
+    have = set(out.split())
+    return [f"{pg}: {a} is named by base.lock but is not in $LFS/sources — "
+            f"run: build.py run sources"
+            for pg in pages for a in sorted(sources_named(pg) | ({archive_for(pg)} if archive_for(pg) else ()))
+            if a not in have]
 
 
 def run_page(pg, title, context, logdir):
@@ -474,7 +520,9 @@ def run_phase(name):
         # which reads like the build broke rather than like the name did.
         raise SystemExit(f"--page {only_page!r} matches no page of phase {name!r}; "
                          f"run: build.py pages {name}")
-    missing = guard_sources([pg for pg, _ in todo]) + guard_test_policy([pg for pg, _ in todo])
+    missing = (guard_sources([pg for pg, _ in todo])
+               + guard_test_policy([pg for pg, _ in todo])
+               + guard_present([pg for pg, _ in todo]))
     if missing:
         # Nothing was downloaded, unpacked or run: the phase is over before it
         # started, and the record says which page asked for what.
@@ -571,10 +619,74 @@ def verify(ph, logdir):
     return checks
 
 
+SUBSTRATE = ["ssh", "-o", "BatchMode=yes", "user@192.168.0.86"]
+
+
+def host(script):
+    """Run a shell command on the substrate, where qemu and the disk images are."""
+    return subprocess.run(SUBSTRATE + [script], capture_output=True, text=True)
+
+
 def checkpoint(tag):
     print(f"checkpointing the LFS disk as {tag}", flush=True)
-    subprocess.run(["ssh", "-o", "BatchMode=yes", "user@192.168.0.86",
-                    f"cd ~/barecortex-vm && ./vm.sh snapshot {tag}"])
+    subprocess.run(SUBSTRATE + [f"cd ~/barecortex-vm && ./vm.sh snapshot {tag}"])
+
+
+def phase_records():
+    out = []
+    if EVIDENCE.is_dir():
+        for d in sorted(EVIDENCE.iterdir()):
+            if (d / "record.json").is_file():
+                out.append(json.loads((d / "record.json").read_text()))
+    return out
+
+
+def next_phase(records, order):
+    """The first phase with no passed record. That is where a resume starts.
+
+    Pure, because the interesting part of resuming is deciding where: a phase
+    that failed keeps its name (its pages have to run again), a phase that passed
+    is skipped even if it is the one that just failed its criteria and was
+    re-run. `order` comes from phases.toml, so the sequence is still the book's.
+    """
+    done = {r["phase"] for r in records if r["passed"]}
+    return next((p for p in order if p not in done), None)
+
+
+def cmd_resume():
+    """Run the next phase, on the disk the phase before it checkpointed.
+
+    The rollback is the part a person forgets: a failed phase leaves the disk
+    half-built, and running the next phase on top of that builds chapter 7 on a
+    broken chapter 6. So resume asks the previous phase's record for its
+    checkpoint and, when the working image is not already sitting on that
+    checkpoint, rolls back to it first. It refuses to guess — if the image's
+    backing chain cannot be read, it says so and builds on what is there.
+    """
+    order = [p["name"] for p in phases()]
+    recs = phase_records()
+    nxt = next_phase(recs, order)
+    if nxt is None:
+        print("every phase in phases.toml has passed")
+        return 0
+    i = order.index(nxt)
+    if i:
+        prev = next((r for r in recs if r["phase"] == order[i - 1]), None)
+        tag = (prev or {}).get("checkpoint", "none")
+        if tag != "none" and tag:
+            gen = host(f"ls -1 ~/barecortex-vm/sn/{tag}-*.qcow2 2>/dev/null | tail -1").stdout.strip()
+            img = host('export LD_LIBRARY_PATH=$HOME/.local/qemu/usr/lib/x86_64-linux-gnu; '
+                       '$HOME/.local/qemu/usr/bin/qemu-img info --output=json '
+                       '~/barecortex-vm/lfs.qcow2').stdout
+            if not gen or not img:
+                print(f"cannot see the {tag} checkpoint or the working image; "
+                      f"running {nxt} on the disk as it is", flush=True)
+            elif f"{tag}-" not in img:
+                name = gen.rsplit("/", 1)[-1].removesuffix(".qcow2")
+                print(f"{nxt} follows {order[i-1]}, but the working disk is not the "
+                      f"{name} checkpoint — rolling back to it", flush=True)
+                subprocess.run(SUBSTRATE + [f"cd ~/barecortex-vm && ./vm.sh rollback {name}"])
+    return run_phase(nxt)
 
 
 def write_log(rec, ph):
@@ -704,12 +816,12 @@ def status():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["pages", "run", "fetch", "status", "guest"])
+    ap.add_argument("cmd", choices=["pages", "run", "fetch", "resume", "status", "guest"])
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--page")
     a = ap.parse_args()
     run_phase.only_page = a.page
-    if a.cmd in ("run", "fetch"):
+    if a.cmd in ("run", "fetch", "resume"):
         acquire_lock(f"{a.cmd} {a.arg}")
         try:
             return _dispatch(a)
@@ -725,6 +837,8 @@ def _dispatch(a):
     elif a.cmd == "run":
         rec = run_sources() if a.arg == "sources" else run_phase(a.arg)
         return 0 if rec["passed"] else 1
+    elif a.cmd == "resume":
+        return cmd_resume()
     elif a.cmd == "fetch":
         bad, _ = fetch()
         return 1 if bad else 0

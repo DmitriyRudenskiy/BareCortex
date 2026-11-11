@@ -127,7 +127,7 @@ note = "The page writes the script; running it is the point of writing it."
 "ncurses-6.6.tar.gz" = ["https://ftp.gnu.org/gnu/ncurses/ncurses-6.6.tar.gz"]
 
 [page."chapter06/ncurses.html"]
-block_subst = { "2" = { "--with-cxx-shared" = "--disable-cxx" } }
+block_subst = { "2" = { "--with-cxx-shared" = "--without-cxx-binding" } }
 note = """The page asks for C++ bindings and the toolchain this book just built
 cannot make them. Chapter 5's GCC pass 1 is configured `--without-headers
 --disable-libstdcxx` (its own printed command), and chapter 6's GCC pass 2 says
