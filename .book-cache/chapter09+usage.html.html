@@ -1,0 +1,376 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+    <title>
+      9.5.&nbsp;OpenRC Usage and Configuration
+    </title>
+    <link rel="stylesheet" type="text/css" href="../stylesheets/lfs.css" />
+    <meta name="generator" content="DocBook XSL-NS Stylesheets Vsnapshot" />
+    <link rel="stylesheet" href="../stylesheets/lfs-print.css" type=
+    "text/css" media="print" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body class="lfs" id="lfs-13.0-openrc">
+    <div class="navheader">
+      <h4>
+        Linux From Scratch - Version 13.0-openrc
+      </h4>
+      <h3>
+        Chapter&nbsp;9.&nbsp;System Configuration
+      </h3>
+      <ul>
+        <li class="prev">
+          <a accesskey="p" href="network.html" title=
+          "General Network Configuration">Prev</a>
+          <p>
+            General Network Configuration
+          </p>
+        </li>
+        <li class="next">
+          <a accesskey="n" href="locale.html" title=
+          "Configuring the System Locale">Next</a>
+          <p>
+            Configuring the System Locale
+          </p>
+        </li>
+        <li class="up">
+          <a accesskey="u" href="chapter09.html" title=
+          "Chapter&nbsp;9.&nbsp;System Configuration">Up</a>
+        </li>
+        <li class="home">
+          <a accesskey="h" href="../index.html" title=
+          "Linux From Scratch - Version 13.0-openrc">Home</a>
+        </li>
+      </ul>
+    </div>
+    <h1 class="sect1">
+      <a id="ch-config-usage" name="ch-config-usage"></a>9.5. OpenRC Usage
+      and Configuration
+    </h1>
+    <div class="sect1" lang="en" xml:lang="en">
+      <div class="sect2" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          9.5.1. How Does OpenRC Work?
+        </h2>
+        <p>
+          This version of LFS uses a special booting facility named OpenRC,
+          which starts services according to a series of <span class=
+          "emphasis"><em>run levels</em></span>. These runlevels are slightly
+          different from init systems like SysVinit. While these runlevels
+          exist, there is much less complexity involved with OpenRC services.
+          The process doesn't require bootscripts.
+        </p>
+        <p>
+          There is an alternative boot procedure called <span class=
+          "command"><strong>systemd</strong></span>. We will not discuss that
+          boot process any further here. For a detailed description visit
+          <a class="ulink" href=
+          "https://www.linux.com/training-tutorials/understanding-and-using-systemd/">
+          https://www.linux.com/training-tutorials/understanding-and-using-systemd/</a>.
+        </p>
+        <p>
+          OpenRC's run level scheme has five run levels that are the most
+          important, with the ability to add more. Each one of the five
+          corresponds to certain modes the computer is in, like if it's
+          booting, shutting down, or has no networking. Here are the
+          descriptions of the different run levels as they are implemented in
+          LFS:
+        </p>
+        <div class="itemizedlist">
+          <ul>
+            <li class="listitem">
+              <p>
+                sysinit: brings up and mounts kernel virtual filesystems
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                boot: starts up important services like setting the time and
+                checks the filesystem
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                nonetwork: default without networking
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                default: where most services should be, like setting up audio
+                services
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                shutdown: kills all processes and remounts <code class=
+                "filename">/</code> in read-only mode
+              </p>
+            </li>
+          </ul>
+        </div>
+        <p>
+          Each service has dependency information, so a service on a given
+          run level will be started at the correct time if it has correct
+          dependency information.
+        </p>
+      </div>
+      <div class="configuration" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="conf-openrc" name="conf-openrc"></a>9.5.2. Configuring
+          OpenRC
+        </h2>
+        <p>
+          Whenever a system is started, <span class=
+          "command"><strong>agetty</strong></span> is ran for a number of
+          <code class="literal">tty</code> devices. OpenRC provides an
+          <span class="command"><strong>agetty</strong></span> service but
+          doesn't start it for each <code class="literal">tty</code> that's
+          needed. Create and enable those services:
+        </p>
+        <pre class="userinput"><kbd class=
+        "command">rm -vf /etc/runlevels/default/agetty*
+for i in $(seq 1 6); do
+  ln -sfv agetty /etc/init.d/agetty.tty$i
+  rc-update add agetty.tty$i default
+done</kbd></pre>
+        <p>
+          These <code class="literal">tty</code> services are started on the
+          <code class="literal">default</code> run level.
+        </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="ch-config-udevd" name="ch-config-udevd"></a>9.5.3. Creating
+          the Udevd Service
+        </h2>
+        <p>
+          OpenRC doesn't ship services for <span class=
+          "command"><strong>udevd</strong></span>, leading to kernel modules
+          not being loaded. Create and enable them now:
+        </p>
+        <pre class="userinput"><kbd class=
+        "command">cat &gt; /etc/init.d/udevd &lt;&lt; "EOF"
+<code class="literal">#!/sbin/openrc-run
+# Starts the udevd daemon.
+# Authors: Zeckma - zeckma.tech@gmail.com
+# Version: LFS 12.5
+
+description="starts the udevd daemon"
+
+command=/sbin/udevd
+command_background=yes
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+  after localnet
+  after modules
+}
+
+stop() {
+  ebegin "Stopping ${RC_SVCNAME}"
+  /bin/udevadm control --exit
+  eend $?
+}</code>
+EOF
+
+cat &gt; /etc/init.d/udev-trigger &lt;&lt; "EOF"
+<code class="literal">#!/sbin/openrc-run
+# Coldplugs devices and settles the udevd daemon.
+# Authors: Zeckma - zeckma.tech@gmail.com
+# Version: LFS 12.5
+
+description="coldplugs devices"
+
+depend() {
+  after udevd
+  provides dev
+  keyword -shutdown
+}
+
+start() {
+  ebegin "Coldplugging devices"
+
+  /bin/udevadm trigger --action=add    --type=subsystems
+  /bin/udevadm trigger --action=add    --type=devices
+  /bin/udevadm trigger --action=change --type=devices
+
+# Wait for udevd to process the uevents we triggered
+  /bin/udevadm settle --timeout=5
+
+# If any LVM based partitions are on the system, ensure they
+# are activated so they can be used.
+  if [ -x /sbin/vgchange ]; then /sbin/vgchange -a y &gt;/dev/null; fi
+}</code>
+EOF
+
+for i in udev{d,-trigger}; do
+  chmod 755 /etc/init.d/$i
+  rc-update add $i sysinit
+done</kbd></pre>
+        <p>
+          These services should load most if not all modules automatically.
+          If you need to load a given module but it isn't being loaded, pass
+          the module name to the <code class=
+          "filename">/etc/conf.d/modules</code> configuration file.
+        </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="ch-config-clock" name="ch-config-clock"></a>9.5.4.
+          Configuring the System Clock
+        </h2>
+        <p>
+          OpenRC provides a <span class=
+          "command"><strong>hwclock</strong></span> service which reads from
+          the hardware clock. It then sets the time. This time is obtained
+          from either applying timezone data from <code class=
+          "filename">/etc/localtime</code>, or it simply doesn't do anything
+          and displays the time as-is. In order to know what to do with the
+          hardware time, it needs to decide whether the time is UTC or local.
+          It has no way to do this on its own, so a configuration file is
+          needed. OpenRC provides one already, and should be edited.
+        </p>
+        <p>
+          If you cannot remember whether or not the hardware clock is set to
+          UTC, find out by running the <strong class=
+          "userinput"><code>hwclock --localtime --show</code></strong>
+          command. This will display what the current time is according to
+          the hardware clock. If this time matches whatever your watch says,
+          then the hardware clock is set to local time. If the output from
+          <span class="command"><strong>hwclock</strong></span> is not local
+          time, chances are it is set to UTC time. Verify this by adding or
+          subtracting the proper amount of hours for the timezone to the time
+          shown by <span class="command"><strong>hwclock</strong></span>. For
+          example, if you are currently in the MST timezone, which is also
+          known as GMT -0700, add seven hours to the local time.
+        </p>
+        <p>
+          Once you know the hardware time uses, edit <code class=
+          "filename">/etc/conf.d/hwclock</code> as necessary. There are
+          plenty of comments explaining what to edit.
+        </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="ch-config-console" name="ch-config-console"></a>9.5.5.
+          Configuring the Linux Console
+        </h2>
+        <p>
+          This section discusses how to configure the <span class=
+          "command"><strong>consolefont</strong></span> and <span class=
+          "command"><strong>keymap</strong></span> services that set up the
+          console font and keyboard map. If non-ASCII characters (e.g., the
+          copyright sign, the British pound sign, and the Euro symbol) will
+          not be used and the keyboard is a U.S. one, much of this section
+          can be skipped. Without the configuration files, the <span class=
+          "command"><strong>consolefont</strong></span> and <span class=
+          "command"><strong>keymap</strong></span> services will use the
+          defaults.
+        </p>
+        <p>
+          The <span class="command"><strong>consolefont</strong></span>
+          service reads the <code class=
+          "filename">/etc/conf.d/consolefont</code> file for configuration
+          information. Decide which screen font will be used. Search
+          <code class="filename">/usr/share/consolefonts</code> for valid
+          fonts.
+        </p>
+        <p>
+          The <span class="command"><strong>keymaps</strong></span> service
+          reads the <code class="filename">/etc/conf.d/keymaps</code> file
+          for configuration information. Decide which keymap will be used.
+          Various language-specific HOWTOs can also help with this; see
+          <a class="ulink" href=
+          "https://tldp.org/HOWTO/HOWTO-INDEX/other-lang.html">https://tldp.org/HOWTO/HOWTO-INDEX/other-lang.html</a>.
+          If still in doubt, look in the <code class=
+          "filename">/usr/share/keymaps</code> directory for valid keymaps.
+        </p>
+        <p>
+          For both <span class="command"><strong>consolefont</strong></span>
+          and <span class="command"><strong>keymaps</strong></span>,
+          configuration files exist for both and have comments that give good
+          information about what to provide to each parameter.
+        </p>
+        <div class="admon note">
+          <img alt="[Note]" src="../images/note.png" />
+          <h3>
+            Note
+          </h3>
+          <p>
+            The configuration files for the console only control the Linux
+            text console localization. It has nothing to do with setting the
+            proper keyboard layout and terminal fonts in the X Window System,
+            with ssh sessions, or with a serial console.
+          </p>
+        </div>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="ch-config-agetty" name="ch-config-agetty"></a>9.5.6.
+          Configuring Agetty
+        </h2>
+        <p>
+          If you don't want the boot logs to be cleared on the first TTY,
+          which Agetty will clear them by default, add <code class=
+          "option">--noclear</code> to <code class=
+          "literal">agetty_options</code> in the <code class=
+          "filename">/etc/conf.d/agetty</code> file.
+        </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="ch-config-rc" name="ch-config-rc"></a>9.5.7. The rc.conf
+          File
+        </h2>
+        <p>
+          The <code class="filename">/etc/rc.conf</code> file contains
+          settings that control how OpenRC starts and operates. For example,
+          you can tell OpenRC to start services in parallel, or you can
+          specify what run level you want the system to run at. In most
+          cases, you won't need to edit this file.
+        </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="ch-config-other-rc" name="ch-config-other-rc"></a>9.5.8.
+          Other OpenRC Configuration Files
+        </h2>
+        <p>
+          Many other services have configuration files in <code class=
+          "filename">/etc/conf.d</code> and should match the service name
+          found in <code class="filename">/etc/init.d</code>. If a service
+          gives you any trouble, there may be a configuration file for it
+          already, and should have comments provided.
+        </p>
+      </div>
+    </div>
+    <div class="navfooter">
+      <ul>
+        <li class="prev">
+          <a accesskey="p" href="network.html" title=
+          "General Network Configuration">Prev</a>
+          <p>
+            General Network Configuration
+          </p>
+        </li>
+        <li class="next">
+          <a accesskey="n" href="locale.html" title=
+          "Configuring the System Locale">Next</a>
+          <p>
+            Configuring the System Locale
+          </p>
+        </li>
+        <li class="up">
+          <a accesskey="u" href="chapter09.html" title=
+          "Chapter&nbsp;9.&nbsp;System Configuration">Up</a>
+        </li>
+        <li class="home">
+          <a accesskey="h" href="../index.html" title=
+          "Linux From Scratch - Version 13.0-openrc">Home</a>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>

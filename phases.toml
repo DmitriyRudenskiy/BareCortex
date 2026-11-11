@@ -1,0 +1,159 @@
+# phases.toml — the phase table.
+#
+# One row per phase of the system build: the book pages it runs, the environment
+# those pages are typed in, what has to hold before it starts, what is evaluated
+# before it may be called passed, and when the disk is frozen.
+#
+# The pages are named by chapter, not retyped: `scripts/build/build.py` takes
+# them from the pinned edition's own index, in its order, so this file cannot
+# drift from the book's table of contents. Where a phase is part of a chapter,
+# `only`/`skip` say which.
+#
+# Contexts are the three the book distinguishes, and they are the whole content
+# of the chroot boundary:
+#   host-root   the disposable host, as root (sudo)
+#   host-lfs    the disposable host, as user lfs with the chapter 4 environment
+#   chroot-root inside $LFS, via the chapter 7 invocation with its exact `env -i`
+#
+# Checkpoints are external qcow2 snapshots of the LFS disk (`vm-host.sh snapshot
+# <phase>`): the phase's files are frozen in the parent and the build continues
+# on a copy, so a later phase that ruins the system costs a rollback and not a
+# rebuild. `none` marks a phase whose failure cannot damage what came before.
+
+defaults = { checkpoint = "after", unpack = true }
+
+[[phase]]
+name = "host-prep"
+chapter = "02"
+# This is the phase that makes the filesystem, so it cannot start by mounting it.
+needs_mount = false
+only = ["hostreqs", "creatingpartition", "creatingfilesystem", "aboutlfs", "mounting"]
+context = "host-root"
+unpack = false
+entry = ["The host passes chapter 2's own requirement script.",
+         "A disk exists to be the LFS system, and it is not the host's disk."]
+exit = ["The LFS partition is formatted ext4 and mounted at /mnt/lfs.",
+         "Swap is on, and $LFS resolves to the mount point in every later context."]
+verify = ["findmnt -no FSTYPE /mnt/lfs | grep -qx ext4",
+          "findmnt -no SOURCE /mnt/lfs | grep -qx /dev/vdc1",
+          "sudo swapon --show=NAME --noheadings | grep -qx /dev/vdc2"]
+checkpoint = "none"
+
+[[phase]]
+name = "sources"
+chapter = "03"
+only = ["packages", "patches"]
+context = "host-root"
+unpack = false
+entry = ["base.lock is current for the pinned edition and check-base-lock.py passes."]
+exit = ["Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.",
+         "Nothing was fetched that base.lock does not name."]
+# `run sources` is `build.py fetch`, which checks every file's MD5 against the
+# book's own table; that check is this phase's exit criterion, so it is evaluated
+# there and recorded here rather than restated as a shell test.
+verify = []
+checkpoint = "none"
+
+[[phase]]
+name = "chroot-layout"
+chapter = "04"
+only = ["creatingminlayout", "addinguser", "settingenvironment"]
+context = "host-root"
+unpack = false
+entry = ["/mnt/lfs is mounted."]
+exit = ["The directory layout exists with $LFS/sources writable by lfs and $LFS/tools owned by lfs.",
+         "User lfs exists and its environment sets LFS, LFS_TGT and MAKEFLAGS as the book's page writes them."]
+verify = ['test "$(stat -c %U /mnt/lfs/tools)" = lfs',
+          'sudo test -w /mnt/lfs/sources && sudo -u lfs test -w /mnt/lfs/sources',
+          'id lfs',
+          "sudo -u lfs -H bash -c 'source $HOME/.bashrc; test \"$LFS\" = /mnt/lfs -a -n \"$LFS_TGT\" -a -n \"$MAKEFLAGS\"'"]
+
+[[phase]]
+name = "cross-toolchain"
+chapter = "05"
+context = "host-lfs"
+entry = ["lfs can write $LFS/tools and read $LFS/sources.",
+         "The chapter 4 environment is set in lfs's login shell."]
+exit = ["$LFS/tools holds the cross compiler, assembler and linker, and the target's `as --version` answers.",
+         "Every command block of every page exited 0."]
+verify = ['test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-gcc',
+          '/mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-as --version > /dev/null',
+          'test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-ld']
+
+[[phase]]
+name = "temp-tools"
+chapter = "06"
+context = "host-lfs"
+entry = ["The cross-toolchain phase passed."]
+exit = ["The temporary utilities are installed under $LFS/tools.",
+         "Every command block of every page exited 0."]
+verify = ['/mnt/lfs/tools/bin/gcc --version > /dev/null',
+          '/mnt/lfs/tools/bin/ld --version > /dev/null',
+          'test -x /mnt/lfs/tools/bin/bash']
+
+[[phase]]
+name = "enter-chroot"
+chapter = "07"
+only = ["changingowner", "kernfs", "chroot", "creatingdirs", "createfiles"]
+context = "host-root"
+unpack = false
+entry = ["The temporary tools phase passed."]
+exit = ["Ownership of the $LFS directories is root:root, not lfs.",
+         "proc, sysfs and devpts are mounted inside $LFS and /dev is bind-mounted.",
+         "The chapter 7 `env -i` invocation runs a command inside $LFS seeing only HOME, TERM, PS1, PATH, MAKEFLAGS, TESTSUITEFLAGS."]
+verify = ['findmnt -t proc -o SOURCE /mnt/lfs/proc',
+          'findmnt -t sysfs -o SOURCE /mnt/lfs/sys',
+          'findmnt -t devpts -o SOURCE /mnt/lfs/dev/pts',
+          'test "$(stat -c %U /mnt/lfs/usr)" = root']
+
+[[phase]]
+name = "temp-system"
+chapter = "07"
+skip = ["changingowner", "kernfs", "chroot", "creatingdirs", "createfiles", "cleanup"]
+context = "chroot-root"
+entry = ["The chroot is entered and its virtual filesystems are mounted."]
+exit = ["Gettext, Bison, Perl, Python, Texinfo and Util-linux are installed in the temporary system.",
+         "Every command block of every page exited 0."]
+verify = ['sudo chroot /mnt/lfs /bin/bash -c "test -x /usr/bin/perl -a -x /usr/bin/make -a -x /usr/bin/python3"']
+
+[[phase]]
+name = "final-system"
+chapter = "08"
+context = "chroot-root"
+entry = ["The temporary system phase passed and the sources are unpackable inside the chroot."]
+exit = ["Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.",
+         "The debugging-symbols, stripping and cleanup pages ran."]
+verify = ['sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"']
+
+[[phase]]
+name = "configuration"
+chapter = "09"
+context = "chroot-root"
+unpack = false
+entry = ["The final system phase passed."]
+exit = ["The device symlinks, network configuration, locale, inputrc and shells files exist with the contents the pages give them.",
+         "OpenRC's default runlevel is set."]
+verify = ['sudo test -s /mnt/lfs/etc/hostname -a -s /mnt/lfs/etc/hosts -a -s /mnt/lfs/etc/resolv.conf']
+
+[[phase]]
+name = "bootable"
+chapter = "10"
+context = "chroot-root"
+entry = ["The configuration phase passed."]
+exit = ["fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.",
+         "The kernel on the disk is the version base.lock names."]
+verify = ['sudo grep -q UUID /mnt/lfs/etc/fstab',
+          'ls /mnt/lfs/boot/vmlinuz-* > /dev/null',
+          'sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub']
+
+[[phase]]
+name = "first-boot"
+chapter = "11"
+only = ["theend", "reboot"]
+context = "lfs-boot"
+unpack = false
+entry = ["The bootable phase passed and a checkpoint exists to roll back to."]
+exit = ["The LFS disk boots to a login prompt with the host's disk detached.",
+         "Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it."]
+verify = []
+checkpoint = "none"

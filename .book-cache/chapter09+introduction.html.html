@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+    <title>
+      9.1.&nbsp;Introduction
+    </title>
+    <link rel="stylesheet" type="text/css" href="../stylesheets/lfs.css" />
+    <meta name="generator" content="DocBook XSL-NS Stylesheets Vsnapshot" />
+    <link rel="stylesheet" href="../stylesheets/lfs-print.css" type=
+    "text/css" media="print" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body class="lfs" id="lfs-13.0-openrc">
+    <div class="navheader">
+      <h4>
+        Linux From Scratch - Version 13.0-openrc
+      </h4>
+      <h3>
+        Chapter&nbsp;9.&nbsp;System Configuration
+      </h3>
+      <ul>
+        <li class="prev">
+          <a accesskey="p" href="chapter09.html" title=
+          "System Configuration">Prev</a>
+          <p>
+            System Configuration
+          </p>
+        </li>
+        <li class="next">
+          <a accesskey="n" href="udev.html" title=
+          "Overview of Device and Module Handling">Next</a>
+          <p>
+            Overview of Device and Module Handling
+          </p>
+        </li>
+        <li class="up">
+          <a accesskey="u" href="chapter09.html" title=
+          "Chapter&nbsp;9.&nbsp;System Configuration">Up</a>
+        </li>
+        <li class="home">
+          <a accesskey="h" href="../index.html" title=
+          "Linux From Scratch - Version 13.0-openrc">Home</a>
+        </li>
+      </ul>
+    </div>
+    <h1 class="sect1">
+      <a id="ch-config-introduction" name="ch-config-introduction"></a>9.1.
+      Introduction
+    </h1>
+    <div class="sect1" lang="en" xml:lang="en">
+      <p>
+        Booting a Linux system involves several tasks. The process must mount
+        both virtual and real file systems, initialize devices, check file
+        systems for integrity, mount and activate any swap partitions or
+        files, set the system clock, bring up networking, start any daemons
+        required by the system, and accomplish any other custom tasks
+        specified by the user. This process must be organized to ensure the
+        tasks are performed in the correct order and executed as quickly as
+        possible.
+      </p>
+      <div class="sect2" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="openrc-desc" name="openrc-desc"></a>9.1.1. OpenRC
+        </h2>
+        <p>
+          OpenRC combines the methodology of both SysVinit and Systemd.
+          OpenRC has the concept of services with dependency information, yet
+          it uses a run level scheme which is similar to SysVinit. OpenRC,
+          like SysVinit and Systemd, uses <span class=
+          "command"><strong>init</strong></span> and starts up every process
+          and daemon as required. While you can choose which run level you
+          want to be on, <code class="literal">default</code> has the most
+          services and is the default. For information on run levels, see
+          <a class="xref" href="usage.html" title=
+          "9.5.&nbsp;OpenRC Usage and Configuration">Section&nbsp;9.5,
+          “OpenRC Usage and Configuration”</a>.
+        </p>
+        <h3>
+          Advantages
+        </h3>
+        <div class="itemizedlist">
+          <ul>
+            <li class="listitem">
+              <p>
+                Established, well understood system.
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                Easy to customize.
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                Well supported and backed by major Linux distributions.
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                Parallelized.
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                Cgroups support.
+              </p>
+            </li>
+          </ul>
+        </div>
+        <h3>
+          Disadvantages
+        </h3>
+        <div class="itemizedlist">
+          <ul>
+            <li class="listitem">
+              <p>
+                It is not as convenient as Systemd.
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                It does not provide the amount of tooling Systemd does.
+              </p>
+            </li>
+            <li class="listitem">
+              <p>
+                Certain features that projects depend on that only exist in
+                Systemd may take a while before seeing parity in OpenRC.
+              </p>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="navfooter">
+      <ul>
+        <li class="prev">
+          <a accesskey="p" href="chapter09.html" title=
+          "System Configuration">Prev</a>
+          <p>
+            System Configuration
+          </p>
+        </li>
+        <li class="next">
+          <a accesskey="n" href="udev.html" title=
+          "Overview of Device and Module Handling">Next</a>
+          <p>
+            Overview of Device and Module Handling
+          </p>
+        </li>
+        <li class="up">
+          <a accesskey="u" href="chapter09.html" title=
+          "Chapter&nbsp;9.&nbsp;System Configuration">Up</a>
+        </li>
+        <li class="home">
+          <a accesskey="h" href="../index.html" title=
+          "Linux From Scratch - Version 13.0-openrc">Home</a>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>

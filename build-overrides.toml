@@ -1,0 +1,88 @@
+# build-overrides.toml — where this build deviates from the book's text, and why.
+#
+# `scripts/build/build.py` runs the commands on the pinned edition's pages. This
+# file is the only place a deviation is allowed, and it is read into the log: a
+# page that was not run verbatim says so, with the reason, in the same record as
+# the pages that were.
+#
+# Two kinds of deviation exist and both are mechanical, not editorial:
+#   the page is interactive (`fdisk`, `passwd`) — a machine cannot answer it, so
+#     the equivalent non-interactive command runs and the page says it was replaced;
+#   the page offers alternatives (`mount` with or without a separate /home, a
+#     `-j32` example that is not an instruction) — the block numbers actually run
+#     are recorded rather than left to whoever reads the log.
+
+[devices]
+# The book writes `/dev/<xxx>` and says "replace with the name of the LFS
+# partition". Here it is replaced from one place: the build guest's second
+# virtio disk, created by `vm-host.sh disk 60G`. At the first boot test the disk
+# is the only disk attached and becomes /dev/vda, which is why the fstab this
+# build writes addresses the root filesystem by UUID and not by a name that
+# belongs to whichever disk happens to be first.
+LFS = "/mnt/lfs"
+LFS_DISK = "/dev/vdc"
+LFS_PART = "vdc1"
+SWAP_DEV = "vdc2"
+
+[page."chapter02/creatingpartition.html"]
+note = """The page is `fdisk /dev/<xxx>` — an interactive editor. The partition
+table is written with sfdisk instead: one 4 G partition for swap and one
+spanning the rest for the LFS filesystem, MBR so SeaBIOS can boot it, the
+filesystem partition marked bootable. Same result, no keystrokes."""
+pre = """sfdisk -o Device,Size,Boot /dev/vdc <<'EOF'
+label: mbr
+units: sectors
+
+/dev/vdc1 : start=2048, size=104857600, type=83, bootable
+/dev/vdc2 : start=104860160, type=82
+EOF
+partprobe /dev/vdc 2>/dev/null || true
+fdisk -l /dev/vdc | head -12"""
+
+[page."chapter02/creatingfilesystem.html"]
+note = """Both blocks run: `mkfs -v -t ext4 /dev/<xxx>` on the filesystem partition and
+`mkswap /dev/<yyy>` on the swap partition, the book's two placeholders filled
+from [devices]."""
+
+[page."chapter02/mounting.html"]
+# Block 1 mounts the single-partition layout, block 2 the separate-/home layout,
+# block 3 fixes ownership of the mount point, block 4 enables swap.
+only_blocks = [1, 3, 4]
+note = "Block 2 is the separate /home layout; this build does not use one."
+
+[page."chapter04/addinguser.html"]
+skip_blocks = [2]
+block_subst = { "1" = { "1000" = "1001" } }
+post = """echo 'lfs:BareCortexBuild' | sudo chpasswd lfs"""
+note = """Block 2 is `passwd lfs`, an interactive prompt; the password is set with
+chpasswd instead. It exists so `su - lfs` works from a script. The page creates
+the user with uid and gid 1000; on this host 1000 belongs to the image's own
+login user, so `groupadd -g 1000` answers "GID not unique" and the page cannot
+run as written — the build user takes the next id, nothing in the book keys off
+the number itself."""
+
+[page."chapter04/settingenvironment.html"]
+context = "host-lfs"
+only_blocks = [1, 2, 6]
+note = """The page writes ~lfs/.bash_profile and ~lfs/.bashrc, so it runs as lfs.
+Block 3 moves the HOST's /etc/bash.bashrc aside; on Debian that file is the
+system-wide prompt and aliases and sets nothing the LFS environment cares about,
+so moving it would damage the build host to solve a problem it does not have.
+Blocks 4 and 5 are the page showing what not to type (a fixed -j). Block 7 is
+`source ~/.bash_profile`, which execs an interactive shell — a machine cannot sit
+in one, and the runner sources .bashrc for every lfs command instead, which is
+the same environment the page is trying to establish."""
+
+[page."chapter04/creatingminlayout.html"]
+post = """mkdir -pv $LFS/sources && chmod 1777 $LFS/sources
+ls -ld $LFS/sources"""
+note = """This edition never creates $LFS/sources. Chapter 5 says "extract the tarball
+from the sources directory" and chapter 3 is the list of things that live there,
+but no page of the edition makes the directory — `grep sources` across the whole
+book hits only the index. It is created here, mode 1777, because chapter 5 builds
+run as lfs and the sources are fetched as root: the sticky bit is what upstream's
+`chmod a+wt $LFS/sources` line does, which this edition dropped."""
+
+[page."chapter02/hostreqs.html"]
+post = """bash version-check.sh > /tmp/bc-hostreqs.txt 2>&1; cat /tmp/bc-hostreqs.txt"""
+note = "The page writes the script; running it is the point of writing it."

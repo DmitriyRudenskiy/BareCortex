@@ -123,6 +123,32 @@ status and the script cannot tell that the thing it launched is not doing its
 job. That is why each of the three names its requirements, its runlevel, and its
 failure mode, and why `gpu-fancontrol` delegates the one write that can lie.
 
+## Boot order
+
+| Service | Runlevel, and who enables it | `depend()` | If the thing it wraps is not installed |
+|---|---|---|---|
+| `nvidia-persistenced` | `default` — `rc-update add` in the install guide's Phase 4 | `need localmount`, `after modules` | `/usr/bin/nvidia-persistenced` comes from the NVIDIA driver installer, which no book page installs. The command is absent, the start fails, and both services below fail with it |
+| `gpu-fancontrol` | `default` — same | `need nvidia-persistenced` | `bmc-fan` is built by `utils/Cargo.toml` and installed by nothing in this tree; the shell cannot find it, `eend` receives a non-zero status, and the service is reported failed rather than started |
+| `ai-training` | **nothing enables it** — no document in this repository runs `rc-update` for it | `need nvidia-persistenced`, `after net` | it stays disabled, which is correct for a service that runs training jobs. Enabling it is an operator decision, and `conf.d/ai-training` is where the paths and the GPU list get corrected first |
+
+No file lists this as a sequence. OpenRC builds the order from the `depend()`
+blocks, and these three produce one chain: `localmount` → `modules` →
+`nvidia-persistenced` → `gpu-fancontrol` and `ai-training`. `need` is what makes
+"not installed" loud rather than cosmetic — a service whose `need` did not start
+does not start (`openrc-run(8)`), so the fan service cannot come up beside a
+missing persistence daemon and report a healthy boot.
+
+The same inventory as data, with each row's failure text and owner, is
+`openrc/services.toml`, which `scripts/build/check-services.py` enforces; this
+section is the ordering and the consequence, which a check cannot read.
+
+One dependency reaches into the open question at the end of this file:
+`nvidia-persistenced` declares `need localmount`, and nothing in the pinned
+edition enables `localmount`. If the answer turns out to be "the administrator
+enables it", then a first boot with the driver installed fails the GPU services
+for a reason that has nothing to do with NVIDIA, and the fix is the same
+`rc-update add localmount sysinit` the base system needs for `/proc` to exist.
+
 ## Open question the build will hit at chapter 9
 
 The edition's own `rc-update` commands enable exactly three things:

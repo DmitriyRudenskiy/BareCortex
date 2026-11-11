@@ -8,10 +8,14 @@ After installing NVIDIA drivers, verify all GPUs are detected:
 # List all NVIDIA GPUs
 nvidia-smi -L
 
-# Expected output:
-# GPU 0: NVIDIA A100-SXM4-80GB (UUID: GPU-xxxx)
-# GPU 1: NVIDIA A100-SXM4-80GB (UUID: GPU-xxxx)
+# Expected output — five cards, the one model the pinned table names:
+# GPU 0: NVIDIA GeForce RTX 4060 Ti (UUID: GPU-...)
+# GPU 1: NVIDIA GeForce RTX 4060 Ti (UUID: GPU-...)
+# ... through GPU 4
 ```
+
+A count short of five is the failure this check exists for, and `bmc-run --check`
+reports it as `INDETERMINATE` rather than starting on the survivors.
 
 ## GPU Topology
 
@@ -21,12 +25,18 @@ Check how your GPUs are connected:
 nvidia-smi topo -m
 ```
 
-Example output:
+Example output from an NVLink machine — **not this one**, and the difference is
+the point of running the command:
+
 ```
         GPU0  GPU1  NIC0  CPU Affinity
 GPU0     X    NV18  SYS   0-31
 GPU1    NV18   X    SYS   32-63
 ```
+
+The pinned cards are PCIe GeForce, so expect `PIX`/`PXB`/`PHB`/`SYS` and no `NV#`
+row. Whether peer-to-peer engages at all on GeForce is a driver property to
+observe in this output, not to assume from a variable set in a config file.
 
 | Symbol | Meaning |
 |---|---|
@@ -46,7 +56,7 @@ For optimal multi-GPU communication, set these environment variables:
 export NCCL_DEBUG=INFO
 export NCCL_SOCKET_IFNAME=eth0          # Your network interface
 export NCCL_IB_DISABLE=1                # Disable InfiniBand if not available
-export NCCL_P2P_LEVEL=NVL               # Use NVLink for P2P
+export NCCL_P2P_LEVEL=NVL               # NVLink only — a no-op on this PCIe box
 export NCCL_ALGO=Ring                   # Ring algorithm (or Tree)
 export NCCL_PROTO=Simple                # Protocol
 ```

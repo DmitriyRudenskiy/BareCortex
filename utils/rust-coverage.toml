@@ -90,8 +90,8 @@ rollback = "Not executed; incumbent kept."
 binary = "bmc-fan"
 incumbent = "openrc/init.d/gpu-fancontrol (the nvidia-smi -f writes only)"
 status = "candidate"
-usage_evidence = "The service is enabled by docs/INSTALL_GUIDE.md:87 (rc-update add gpu-fancontrol default), so it executes on every host built from these instructions — the one incumbent here with a written usage claim."
-parity_evidence = "utils/tests/parity.sh: accepted write exits 0, rejected write exits 1 and quotes the driver, --check writes nothing. Whether the driver accepts manual fan control at all is card-dependent and unverified — gpu-stack 7.4."
+usage_evidence = "The service is enabled by docs/INSTALL_GUIDE.md (Phase 4's `rc-update add gpu-fancontrol default`), so it executes on every host built from these instructions — the one incumbent here with a written usage claim."
+parity_evidence = "utils/tests/parity.sh: accepted write exits 0, rejected write exits 1 and quotes the driver, --check writes nothing. Whether the driver accepts manual fan control at all is card-dependent and unverified — gpu-stack 7.2."
 rollback = "Not executed. The init script is a wrapper now, so rollback is one file: restore the previous gpu-fancontrol and the shell writes return."
 scope_note = "Mechanism only. Thresholds, interval and the safe state on a failed read are gpu-stack 7.1-7.3 and are deliberately not implemented."
 
@@ -106,7 +106,7 @@ owner = "build-orchestration group 0"
 [[input-gap]]
 blocks = ["bmc-health", "bmc-fan", "bmc-vram"]
 missing = "An NVIDIA host that is not the target, to confirm every nvidia-smi query field these binaries use exists on the installed driver branch, and that a rejected fan write is reported rather than ignored."
-owner = "maintenance-and-updates 6.3, 7.6; gpu-stack 7.4"
+owner = "maintenance-and-updates 6.3, 7.6; gpu-stack 7.2"
 
 [[input-gap]]
 blocks = ["bmc-run"]

@@ -1,0 +1,446 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+    <title>
+      8.84.&nbsp;OpenRC-0.63
+    </title>
+    <link rel="stylesheet" type="text/css" href="../stylesheets/lfs.css" />
+    <meta name="generator" content="DocBook XSL-NS Stylesheets Vsnapshot" />
+    <link rel="stylesheet" href="../stylesheets/lfs-print.css" type=
+    "text/css" media="print" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body class="lfs" id="lfs-13.0-openrc">
+    <div class="navheader">
+      <h4>
+        Linux From Scratch - Version 13.0-openrc
+      </h4>
+      <h3>
+        Chapter&nbsp;8.&nbsp;Installing Basic System Software
+      </h3>
+      <ul>
+        <li class="prev">
+          <a accesskey="p" href="sysklogd.html" title=
+          "Sysklogd-2.7.2">Prev</a>
+          <p>
+            Sysklogd-2.7.2
+          </p>
+        </li>
+        <li class="next">
+          <a accesskey="n" href="aboutdebug.html" title=
+          "About Debugging Symbols">Next</a>
+          <p>
+            About Debugging Symbols
+          </p>
+        </li>
+        <li class="up">
+          <a accesskey="u" href="chapter08.html" title=
+          "Chapter&nbsp;8.&nbsp;Installing Basic System Software">Up</a>
+        </li>
+        <li class="home">
+          <a accesskey="h" href="../index.html" title=
+          "Linux From Scratch - Version 13.0-openrc">Home</a>
+        </li>
+      </ul>
+    </div>
+    <h1 class="sect1">
+      <a id="ch-system-openrc" name="ch-system-openrc"></a>8.84. OpenRC-0.63
+    </h1>
+    <div class="wrap" lang="en" xml:lang="en">
+      <div class="package" lang="en" xml:lang="en">
+        <p>
+          The OpenRC package contains programs for controlling the startup,
+          running, and shutdown of the system.
+        </p>
+        <div class="segmentedlist">
+          <div class="seglistitem">
+            <div class="seg">
+              <strong class="segtitle">Approximate build time:</strong>
+              <span class="segbody">0.1 SBU</span>
+            </div>
+            <div class="seg">
+              <strong class="segtitle">Required disk space:</strong>
+              <span class="segbody">13 MB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="installation" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          8.84.1. Installation of OpenRC
+        </h2>
+        <p>
+          Fix a script to allow a normal installation:
+        </p>
+        <pre class="userinput"><kbd class=
+        "command">sed -i '/set -u/d' tools/meson_final.sh</kbd></pre>
+        <p>
+          Prepare OpenRC for compilation:
+        </p>
+        <pre class="userinput"><kbd class="command">mkdir build
+cd    build
+
+meson setup --prefix=/usr       \
+            --buildtype=release \
+            -D pam=false ..</kbd></pre>
+        <div class="variablelist">
+          <p class="title">
+            <strong>The meaning of the configure options:</strong>
+          </p>
+          <dl class="variablelist">
+            <dt>
+              <span class="term"><em class="parameter"><code>-D
+              pam=false</code></em></span>
+            </dt>
+            <dd>
+              <p>
+                This disables needing Linux-PAM for the build, since it is
+                not installed yet.
+              </p>
+            </dd>
+          </dl>
+        </div>
+        <p>
+          Compile the package:
+        </p>
+        <pre class="userinput"><kbd class="command">ninja</kbd></pre>
+        <p>
+          To run the tests, issue:
+        </p>
+        <pre class="userinput"><kbd class="command">ninja test</kbd></pre>
+        <p>
+          Install the package:
+        </p>
+        <pre class="userinput"><kbd class="command">ninja install</kbd></pre>
+        <p>
+          OpenRC provides <span class="application">init</span> and other
+          programs of its own. However, the shorthands for them aren't
+          created. Create the symlinks:
+        </p>
+        <pre class="userinput"><kbd class=
+        "command">for i in {init,shutdown}; do
+  ln -sv openrc-$i /sbin/$i
+done
+
+cat &gt; /sbin/poweroff &lt;&lt; "EOF"
+<code class="literal">#!/bin/sh
+/sbin/shutdown --poweroff now</code>
+EOF
+
+cat &gt; /sbin/reboot &lt;&lt; "EOF"
+<code class="literal">#!/bin/sh
+/sbin/shutdown --reboot now</code>
+EOF
+
+chmod 755 /sbin/poweroff /sbin/reboot</kbd></pre>
+      </div>
+      <div class="content" lang="en" xml:lang="en">
+        <h2 class="sect2">
+          <a id="contents-openrc" name="contents-openrc"></a>8.84.2. Contents
+          of OpenRC
+        </h2>
+        <div class="segmentedlist">
+          <div class="seglistitem">
+            <div class="seg">
+              <strong class="segtitle">Installed programs:</strong>
+              <span class="segbody">rc-status, init (link to openrc-init),
+              openrc, openrc-init, openrc-run, openrc-shutdown, poweroff,
+              rc-service, rc-sstat, rc-update, reboot, shutdown (link to
+              openrc-shutdown), start-stop-daemon, and
+              supervise-daemon</span>
+            </div>
+            <div class="seg">
+              <strong class="segtitle">Installed libraries:</strong>
+              <span class="segbody">libeinfo.so and librc.so</span>
+            </div>
+            <div class="seg">
+              <strong class="segtitle">Installed directories:</strong>
+              <span class="segbody">/etc/conf.d, /etc/init.d, /etc/local.d,
+              /etc/runlevels, /etc/sysctl.d, /usr/libexec/rc, and
+              /usr/share/openrc</span>
+            </div>
+          </div>
+        </div>
+        <div class="variablelist">
+          <h3>
+            Short Descriptions
+          </h3>
+          <table border="0" class="variablelist">
+            <colgroup>
+              <col align="left" valign="top" />
+              <col />
+            </colgroup>
+            <tbody>
+              <tr>
+                <td>
+                  <p>
+                    <a id="rc-status" name="rc-status"></a><span class=
+                    "term"><span class=
+                    "command"><strong>rc-status</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Gives the status of a service
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="init" name="init"></a><span class=
+                    "term"><span class=
+                    "command"><strong>init</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Is the first process to be started when the kernel has
+                    initialized the hardware; it takes over the boot process
+                    and starts all the services; symlink to <span class=
+                    "command"><strong>openrc-init</strong></span>
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="openrc" name="openrc"></a><span class=
+                    "term"><span class=
+                    "command"><strong>openrc</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    starts and stops services on a given runlevel
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="openrc-init" name="openrc-init"></a><span class=
+                    "term"><span class=
+                    "command"><strong>openrc-init</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Gets called from <span class=
+                    "command"><strong>init</strong></span> and starts every
+                    service as needed
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="openrc-run" name="openrc-run"></a><span class=
+                    "term"><span class=
+                    "command"><strong>openrc-run</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Allows using shell commands in a service file
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="openrc-shutdown" name=
+                    "openrc-shutdown"></a><span class="term"><span class=
+                    "command"><strong>openrc-shutdown</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Brings the system down in a secure way, signaling all
+                    processes and notifying all logged-in users
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="poweroff" name="poweroff"></a><span class=
+                    "term"><span class=
+                    "command"><strong>poweroff</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Calls <span class=
+                    "command"><strong>openrc-shutdown</strong></span> with
+                    <em class="parameter"><code>--poweroff</code></em>,
+                    stopping all services and processes before shutting down
+                    the system
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="rc-service" name="rc-service"></a><span class=
+                    "term"><span class=
+                    "command"><strong>rc-service</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Runs a given service after locating it
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="rc-sstat" name="rc-sstat"></a><span class=
+                    "term"><span class=
+                    "command"><strong>rc-sstat</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Gives the status of the most crucial services, followed
+                    by normal services
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="rc-update" name="rc-update"></a><span class=
+                    "term"><span class=
+                    "command"><strong>rc-update</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Adds and removes services on a runlevel
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="reboot" name="reboot"></a><span class=
+                    "term"><span class=
+                    "command"><strong>reboot</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Calls <span class=
+                    "command"><strong>openrc-shutdown</strong></span> with
+                    <em class="parameter"><code>--reboot</code></em>,
+                    stopping all services and processes before telling the
+                    system to reboot
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="shutdown" name="shutdown"></a><span class=
+                    "term"><span class=
+                    "command"><strong>shutdown</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Is a symlink to <span class=
+                    "command"><strong>openrc-shutdown</strong></span>
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="start-stop-daemon" name=
+                    "start-stop-daemon"></a><span class="term"><span class=
+                    "command"><strong>start-stop-daemon</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Starts or stops a daemon in a service file
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="supervise-daemon" name=
+                    "supervise-daemon"></a><span class="term"><span class=
+                    "command"><strong>supervise-daemon</strong></span></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Supervises a daemon in a service file
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="libeinfo" name="libeinfo"></a><span class=
+                    "term"><code class="filename">libeinfo</code></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Contains functions for outputting colored messages
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p>
+                    <a id="librc" name="librc"></a><span class=
+                    "term"><code class="filename">librc</code></span>
+                  </p>
+                </td>
+                <td>
+                  <p>
+                    Provides the core OpenRC functions
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="navfooter">
+      <ul>
+        <li class="prev">
+          <a accesskey="p" href="sysklogd.html" title=
+          "Sysklogd-2.7.2">Prev</a>
+          <p>
+            Sysklogd-2.7.2
+          </p>
+        </li>
+        <li class="next">
+          <a accesskey="n" href="aboutdebug.html" title=
+          "About Debugging Symbols">Next</a>
+          <p>
+            About Debugging Symbols
+          </p>
+        </li>
+        <li class="up">
+          <a accesskey="u" href="chapter08.html" title=
+          "Chapter&nbsp;8.&nbsp;Installing Basic System Software">Up</a>
+        </li>
+        <li class="home">
+          <a accesskey="h" href="../index.html" title=
+          "Linux From Scratch - Version 13.0-openrc">Home</a>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>
