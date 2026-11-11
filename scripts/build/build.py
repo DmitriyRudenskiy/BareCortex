@@ -230,7 +230,7 @@ def safe(s):
     return re.sub(r"[\"'`$\\&;|<>(){}\n\r]", " ", s).strip()
 
 
-def page_script(pg, title):
+def page_script(pg, title, tolerates=()):
     """One page's recipe: the book's unpack synopsis, its blocks, its cleanup."""
     o = OVR.get("page", {}).get(pg, {})
     archive = o.get("archive") or archive_for(pg)
@@ -266,7 +266,13 @@ def page_script(pg, title):
         lines.append(deviate(substitute(cmd, o), o.get("block_subst", {}).get(str(i), {}), pg, i))
         lines.append("rc=$?")
         lines.append(f'echo "@@RC {i} $rc" >&3')
-        lines.append(f'[ "$rc" -eq 0 ] || {{ echo "@@ABORT block {i}" >&3; exit 1; }}')
+        if i in tolerates:
+            # The page predicts this one failing, so the page keeps going: stopping
+            # here would abandon `make install` over a test the book calls safe to
+            # ignore, and the phase would report a package that was never installed.
+            lines.append(f'[ "$rc" -eq 0 ] || echo "@@TOLERATED block {i} rc $rc" >&3')
+        else:
+            lines.append(f'[ "$rc" -eq 0 ] || {{ echo "@@ABORT block {i}" >&3; exit 1; }}')
     if archive and not o.get("no_unpack"):
         lines.append(book.wrapper_post())
     if o.get("post"):
@@ -442,7 +448,12 @@ def guard_present(pages):
 
 
 def run_page(pg, title, context, logdir):
-    script, emitted = page_script(pg, title)
+    # What the page predicts about its own test suite, asked of the book before
+    # the run: a page that stops at a predicted failure never reaches the install
+    # that follows it, which is the difference between a tolerated test and a
+    # package that was never built.
+    predicts = expected_failures(pg, PAGE_DONE)
+    script, emitted = page_script(pg, title, predicts)
     print(f"  {pg} ({len(emitted)} blocks, {context})", flush=True)
     rc, out = guest_run(wrap(script, context))
     # A second, short connection, which is the point: the page's own channel is
