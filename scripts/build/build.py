@@ -479,6 +479,7 @@ def expected_failures(pg, out):
 
 
 WRAP_PRELUDE = "export LFS={lfs} SRCDIR={srcdir}; "
+NET_DENIED = "denied (unshare -n: no routes, no interfaces; verified against the same probe outside)"
 
 # --- one build at a time ---------------------------------------------------------
 
@@ -649,6 +650,11 @@ def run_phase(name):
     rec = {"phase": name, "started": started,
            "finished": datetime.datetime.now().isoformat(timespec="seconds"),
            "context": ph["context"], "pages": len(results),
+           # In the record, because "the build cannot reach the network" is a claim
+           # about the run and the run is what the record is. Measured 2026-11-11:
+           # a TCP connect to the guest's own gateway answers outside the
+           # namespace and finds no route inside one.
+           "net": NET_DENIED,
            "pages_passed": pages_ok,
            "evidence_complete": bool(evidence),
            "criteria": checks,
