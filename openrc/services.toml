@@ -1,0 +1,79 @@
+# openrc/services.toml — the inventory of shipped OpenRC services, as data.
+#
+# Why a file and not a table in a document: `init-system` requires the inventory
+# to be "enforced by a command that fails when a service file has no entry", and
+# a command cannot read a paragraph. `scripts/build/check-services.py` reads this.
+#
+# Why the runlevel lives here at all: an init script does not contain the
+# runlevel it runs at. `rc-update add <name> <runlevel>` is a separate act —
+# chapter09/usage.html of the pinned edition does exactly that for the agetty
+# tty services it creates — and in this repository that act is written in
+# docs/INSTALL_GUIDE.md. So the runlevel below is not a guess from the file: the
+# check compares it against the guide's own `rc-update` line and fails a
+# disagreement.
+#
+# `establishes` is the field that makes the "success requires having done the
+# work" rule reviewable: what the start path proves before it reports success.
+# Where that proof is weak, the entry says so instead of the service pretending.
+
+[inventory]
+directory = "openrc/init.d"
+enabled_by = "docs/INSTALL_GUIDE.md"
+
+[[service]]
+name = "nvidia-persistenced"
+runlevel = "default"
+requires = ["localmount", "modules"]
+establishes = """
+`nvidia-smi -L` answering, in start_pre, before the daemon is launched; then
+start-stop-daemon's exit status for /usr/bin/nvidia-persistenced itself.
+"""
+failure = """
+start_pre returns 1 with "No NVIDIA GPU detected. Check hardware and drivers."
+when `nvidia-smi -L` fails. A failed `modprobe nvidia` is not reported on its
+own — the nvidia-smi check immediately after it is what catches that.
+"""
+owner = "gpu-stack"
+
+[[service]]
+name = "gpu-fancontrol"
+runlevel = "default"
+requires = ["nvidia-persistenced"]
+establishes = """
+`bmc-fan`'s exit status, which is 0 only when every device accepted the write,
+and the driver's own reason on stderr when one did not.
+"""
+failure = """
+eend of bmc-fan's exit code (0 accepted · 1 refused · 2 unreadable · 3 driver
+absent), with a timestamped line naming the exit code in /var/log/gpu-fancontrol.log.
+"""
+owner = "gpu-stack — groups 7.1-7.3 own the cooling policy (input, interval, parked state); this wrapper only performs the write"
+
+[[service]]
+name = "ai-training"
+runlevel = "default"
+requires = ["nvidia-persistenced", "net"]
+enabled = false
+enabled_reason = """
+Nothing enables it: docs/INSTALL_GUIDE.md has no `rc-update add ai-training`
+line, so the file is installed and never runs. Starting a training job during
+boot is a decision owned by userspace-and-ml-stack group 6, not by this
+inventory, so the inventory records the state instead of changing it.
+"""
+establishes = """
+That start-stop-daemon launched the interpreter. It does not establish that
+training is running: a job that exits on import still reports a successful
+start. Recorded as a defect, not as satisfied.
+"""
+failure = """
+start_pre returns 1 when the training script or the python binary is absent,
+naming which. Otherwise start() reports start-stop-daemon's status, which is 0
+for a process that dies just after exec.
+"""
+defect = """
+Reports a successful start for a run that never started. The platform feature
+for this is `supervise-daemon`, which the pinned edition installs with OpenRC
+(chapter08/openrc.html, Contents of OpenRC), plus a readiness check on the pid.
+Owned by userspace-and-ml-stack group 6; found by base-system-and-init 4.4.
+"""
+owner = "userspace-and-ml-stack — group 6 owns the training service's behaviour"
