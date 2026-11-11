@@ -19,7 +19,8 @@ Scope note: nothing here runs on the **target**. Markers mean the classes in `ta
 ## 2. Component inventory and `base.lock` entries
 
 - [ ] 2.1 Write the component table: kernel module, userspace driver, CUDA Toolkit, cuDNN, NCCL, `nvidia-persistenced` — source URL, licence, provenance class, install document
-- [ ] 2.2 Add the provenance classes to the class map in the `base.lock` format owned by `base-system-and-init 3.1`, and to whatever reads it. This change owns the vocabulary, so a class is added here as a row; the count is never written down, because the completeness check reads the class list from the map
+- [x] 2.2 Added to `class-map.toml`: `source-built` requires `name`, `version`, `url`, `md5`, `pages`; `binary-distribution` requires those plus `licence`, `doc`, `installed_files` — the file set a vendor installer writes outside the build's view, without which an image build cannot tell installed files from unaccounted ones; `binary-authenticated-fetch` requires `name`, `version`, `md5`, `licence`, `doc`, `supplied_dir`, `supplied_name`, the last two being what an operator is told to place and name. Each row names `gpu-stack` as its owner. `scripts/build/check-base-lock.py` is the "whatever reads it": it reads the rows and their `requires` from the map, so the count is nowhere written down, and it prints `class: binary-distribution owner=gpu-stack entries=0` — the class exists, its fields are known, and nothing satisfies it yet, which is the red state and is visible in the line
+
 - [ ] 2.3 Add `base.lock` entries for each binary component, with artifact name and checksum
 - [ ] 2.4 Record the installer's installed-file set as the `base.lock` file set for the driver (from 1.2)
 - [ ] 2.5 **(build)** Demonstrate the failure: an image containing an unaccounted GPU binary fails the build. The rule itself belongs to `base-system-and-init`'s unaccounted-package requirement — reference it, do not restate it, and add only the GPU-binary case **(build)**
@@ -27,7 +28,8 @@ Scope note: nothing here runs on the **target**. Markers mean the classes in `ta
 - [ ] 2.7 Add the `nvidia.kmod = open|proprietary` `base.lock` flag, selected from the GPU architecture rather than assumed, with the GSP firmware load check as its gate and the fallback documented
 - [ ] 2.8 Choose the mechanism that captures an installer's written file set (an `install -D` wrapper recording each path is the candidate) and record it as the answer to OQ3
 - [ ] 2.9 Write the required fields of the `binary-distribution` row: source URL, artifact name, checksum, licence, installation document. Until this lands the completeness check is **red naming this change**, and that red is the expected state of the map, not a regression — the row is unwritten because no session that does not own the class wrote it
-- [ ] 2.10 Record `first-party` in the class map as the fourth class — a package whose bytes are vouched for by a commit in this repository rather than by a book page and a checksum. Its row is owned by `userspace-and-ml-stack`; it is added through this change because this change owns the vocabulary
+- [x] 2.10 Recorded as the fourth row of `class-map.toml`, owned here and required to carry `name`, `version`, `scope`, `licence` — `scope` being the build scope ADR 0004 makes its version (the crate for a compiled binary, the file for a copied one), which is why the class cannot be folded into `source-built`: that would weaken "a book page" to "a page or a path" for all 88 source-built packages. The row exists before any entry does, so `class: first-party owner=userspace-and-ml-stack entries=0` is the honest current state — the off-book phase that populates it is `build-orchestration` group 3
+
 - [ ] 2.11 Record which change owns each class row, so that a failing completeness check names an owner and not a file
 
 ## 3. Replace the GLFS citation

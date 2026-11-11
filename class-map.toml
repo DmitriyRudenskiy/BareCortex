@@ -1,0 +1,54 @@
+# class-map.toml — the provenance classes, as data.
+#
+# Path and record format: `base-system-and-init` D3. The rows for
+# `source-built`, `binary-distribution`, and `binary-authenticated-fetch`:
+# `gpu-stack`. The `first-party` row: `userspace-and-ml-stack`, which owns the
+# vocabulary (ADR 0002 is why the class exists, not who maintains the row).
+#
+# Hand-authored on purpose. `base.lock` is derived and gets overwritten by
+# `scripts/build/derive-base-lock.py`; a hand-written section inside it would be
+# that script's collateral damage, which is why the classes live here.
+#
+# A check reads this file and fails naming this path when it is absent,
+# unparseable, or holds no class row — passing by iterating zero rows is the
+# failure mode this file exists to prevent.
+
+[schema]
+# The base.lock field whose values must be rows below. Declaring it here is what
+# makes it a set-list a check may read; a sentence naming the field is not a
+# declaration, and prose that needs the list points at this file instead.
+path = "base.lock"
+enumerates = "class"
+
+[[class]]
+name = "source-built"
+owner = "gpu-stack"
+# The book page is the evidence: it is what a reviewer opens to check that the
+# recipe was followed, and 2.5 rejects an entry that carries no page.
+requires = ["name", "version", "url", "md5", "pages"]
+
+[[class]]
+name = "binary-distribution"
+owner = "gpu-stack"
+# A published binary: the artifact, its checksum, its licence, the document the
+# installation follows, and the file set a vendor installer wrote outside the
+# build's view — without that last field an image build cannot tell installed
+# files from unaccounted ones.
+requires = ["name", "version", "url", "md5", "licence", "doc", "installed_files"]
+
+[[class]]
+name = "binary-authenticated-fetch"
+owner = "gpu-stack"
+# Fetching needs a human account, so the build takes a locally supplied artifact
+# and verifies it. `supplied_dir` and `supplied_name` are what the operator is
+# told; a missing artifact stops the build rather than skipping the component.
+requires = ["name", "version", "md5", "licence", "doc", "supplied_dir", "supplied_name"]
+
+[[class]]
+name = "first-party"
+owner = "userspace-and-ml-stack"
+# Code from this repository (ADR 0002). Its version is its build scope, not a
+# file path (ADR 0004): the crate for a compiled binary, the file for a copied
+# one. Folding this into `source-built` would weaken the book page to "page or
+# path" for every package, which is why it is a fourth class and not a field.
+requires = ["name", "version", "scope", "licence"]

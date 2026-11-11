@@ -1,0 +1,761 @@
+# base.lock — derived, do not edit by hand.
+# Derived from: LFS 13.0-openrc
+# Source:       https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0/chapter03/packages.html
+# Derivation:   scripts/build/derive-base-lock.py
+# Checksums:    the MD5 column of that table — the book publishes MD5,
+#               not SHA-256, so this file carries MD5 and says so.
+# Format owner: base-system-and-init D3. Contents owner: build-orchestration 2.1.
+#
+# Provenance classes are rows of class-map.toml, not a sentence; every
+# entry names its class and the book pages that build it, because 2.5
+# rejects a line that carries no book revision and page.
+
+[edition]
+name = 'LFS 13.0-openrc'
+url = 'https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0/'
+package_pages = 160
+unattributed_downloads = 1
+
+[[package]]
+name = 'Acl'
+version = '2.3.2'
+url = 'https://download.savannah.gnu.org/releases/acl/acl-2.3.2.tar.xz'
+md5 = '590765dee95907dbc3c856f7255bd669'
+class = "source-built"
+pages = ['chapter08/acl.html']
+
+[[package]]
+name = 'Attr'
+version = '2.5.2'
+url = 'https://download.savannah.gnu.org/releases/attr/attr-2.5.2.tar.gz'
+md5 = '227043ec2f6ca03c0948df5517f9c927'
+class = "source-built"
+pages = ['chapter08/attr.html']
+
+[[package]]
+name = 'Autoconf'
+version = '2.72'
+url = 'https://ftpmirror.gnu.org/autoconf/autoconf-2.72.tar.xz'
+md5 = '1be79f7106ab6767f18391c5e22be701'
+class = "source-built"
+pages = ['chapter08/autoconf.html']
+
+[[package]]
+name = 'Automake'
+version = '1.18.1'
+url = 'https://ftpmirror.gnu.org/automake/automake-1.18.1.tar.xz'
+md5 = 'cea31dbf1120f890cbf2a3032cfb9a68'
+class = "source-built"
+pages = ['chapter08/automake.html']
+
+[[package]]
+name = 'Bash'
+version = '5.3'
+url = 'https://ftpmirror.gnu.org/bash/bash-5.3.tar.gz'
+md5 = '977c8c0c5ae6309191e7768e28ebc951'
+class = "source-built"
+pages = ['chapter06/bash.html', 'chapter08/bash.html']
+
+[[package]]
+name = 'Bc'
+version = '7.0.3'
+url = 'https://github.com/gavinhoward/bc/releases/download/7.0.3/bc-7.0.3.tar.xz'
+md5 = 'ad4db5a0eb4fdbb3f6813be4b6b3da74'
+class = "source-built"
+pages = ['chapter08/bc.html']
+
+[[package]]
+name = 'Binutils'
+version = '2.46.0'
+url = 'https://sourceware.org/pub/binutils/releases/binutils-2.46.0.tar.xz'
+md5 = '81bb6810bcd1119819dc0804956e1c92'
+class = "source-built"
+pages = ['chapter05/binutils-pass1.html', 'chapter06/binutils-pass2.html', 'chapter08/binutils.html']
+
+[[package]]
+name = 'Bison'
+version = '3.8.2'
+url = 'https://ftpmirror.gnu.org/bison/bison-3.8.2.tar.xz'
+md5 = 'c28f119f405a2304ff0a7ccdcc629713'
+class = "source-built"
+pages = ['chapter07/bison.html', 'chapter08/bison.html']
+
+[[package]]
+name = 'Bzip2'
+version = '1.0.8'
+url = 'https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz'
+md5 = '67e051268d0c475ea773822f7500d0e5'
+class = "source-built"
+pages = ['chapter08/bzip2.html']
+
+[[package]]
+name = 'Coreutils'
+version = '9.10'
+url = 'https://ftpmirror.gnu.org/coreutils/coreutils-9.10.tar.xz'
+md5 = 'b0482ebec42fd48e95cb9187d566b9e4'
+class = "source-built"
+pages = ['chapter06/coreutils.html', 'chapter08/coreutils.html']
+
+[[package]]
+name = 'DejaGNU'
+version = '1.6.3'
+url = 'https://ftpmirror.gnu.org/dejagnu/dejagnu-1.6.3.tar.gz'
+md5 = '68c5208c58236eba447d7d6d1326b821'
+class = "source-built"
+pages = ['chapter08/dejagnu.html']
+
+[[package]]
+name = 'Diffutils'
+version = '3.12'
+url = 'https://ftpmirror.gnu.org/diffutils/diffutils-3.12.tar.xz'
+md5 = 'd1b18b20868fb561f77861cd90b05de4'
+class = "source-built"
+pages = ['chapter06/diffutils.html', 'chapter08/diffutils.html']
+
+[[package]]
+name = 'E2fsprogs'
+version = '1.47.3'
+url = 'https://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.47.3/e2fsprogs-1.47.3.tar.gz'
+md5 = '113d7a7ee0710d2a670a44692a35fd2e'
+class = "source-built"
+pages = ['chapter08/e2fsprogs.html']
+
+[[package]]
+name = 'Elfutils'
+version = '0.194'
+url = 'https://sourceware.org/ftp/elfutils/0.194/elfutils-0.194.tar.bz2'
+md5 = '1137792ea10e9194637d7344439a5955'
+class = "source-built"
+pages = ['chapter08/libelf.html']
+
+[[package]]
+name = 'Expat'
+version = '2.7.4'
+url = 'https://github.com/libexpat/libexpat/releases/download/R_2_7_4/expat-2.7.4.tar.xz'
+md5 = '5d3d1e1c829f8fb6f42b8e3e2371afa3'
+class = "source-built"
+pages = ['chapter08/expat.html']
+
+[[package]]
+name = 'Expect'
+version = '5.45.4'
+url = 'https://prdownloads.sourceforge.net/expect/expect5.45.4.tar.gz'
+md5 = '00fce8de158422f5ccd2666512329bd2'
+class = "source-built"
+pages = ['chapter08/expect.html']
+
+[[package]]
+name = 'File'
+version = '5.46'
+url = 'https://astron.com/pub/file/file-5.46.tar.gz'
+md5 = '459da2d4b534801e2e2861611d823864'
+class = "source-built"
+pages = ['chapter06/file.html', 'chapter08/file.html']
+
+[[package]]
+name = 'Findutils'
+version = '4.10.0'
+url = 'https://ftpmirror.gnu.org/findutils/findutils-4.10.0.tar.xz'
+md5 = '870cfd71c07d37ebe56f9f4aaf4ad872'
+class = "source-built"
+pages = ['chapter06/findutils.html', 'chapter08/findutils.html']
+
+[[package]]
+name = 'Flex'
+version = '2.6.4'
+url = 'https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz'
+md5 = '2882e3179748cc9f9c23ec593d6adc8d'
+class = "source-built"
+pages = ['chapter08/flex.html']
+
+[[package]]
+name = 'Flit-core'
+version = '3.12.0'
+url = 'https://pypi.org/packages/source/f/flit-core/flit_core-3.12.0.tar.gz'
+md5 = 'c538415c1f27bd69cbbbf3cdd5135d39'
+class = "source-built"
+pages = ['chapter08/flit-core.html']
+
+[[package]]
+name = 'Gawk'
+version = '5.3.2'
+url = 'https://ftpmirror.gnu.org/gawk/gawk-5.3.2.tar.xz'
+md5 = 'b7014650c5f45e5d4837c31209dc0037'
+class = "source-built"
+pages = ['chapter06/gawk.html', 'chapter08/gawk.html']
+
+[[package]]
+name = 'GCC'
+version = '15.2.0'
+url = 'https://ftpmirror.gnu.org/gcc/gcc-15.2.0/gcc-15.2.0.tar.xz'
+md5 = 'b861b092bf1af683c46a8aa2e689a6fd'
+class = "source-built"
+pages = ['chapter05/gcc-pass1.html', 'chapter06/gcc-pass2.html', 'chapter08/gcc.html']
+
+[[package]]
+name = 'GDBM'
+version = '1.26'
+url = 'https://ftpmirror.gnu.org/gdbm/gdbm-1.26.tar.gz'
+md5 = 'aaa600665bc89e2febb3c7bd90679115'
+class = "source-built"
+pages = ['chapter08/gdbm.html']
+
+[[package]]
+name = 'Gettext'
+version = '1.0'
+url = 'https://ftpmirror.gnu.org/gettext/gettext-1.0.tar.xz'
+md5 = 'dc8b2911535929cec1e263706b0a13a1'
+class = "source-built"
+pages = ['chapter07/gettext.html', 'chapter08/gettext.html']
+
+[[package]]
+name = 'Glibc'
+version = '2.43'
+url = 'https://ftpmirror.gnu.org/glibc/glibc-2.43.tar.xz'
+md5 = '7ec2588300b299215a65aec7e6afa04f'
+class = "source-built"
+pages = ['chapter05/glibc.html', 'chapter08/glibc.html']
+
+[[package]]
+name = 'GMP'
+version = '6.3.0'
+url = 'https://ftpmirror.gnu.org/gmp/gmp-6.3.0.tar.xz'
+md5 = '956dc04e864001a9c22429f761f2c283'
+class = "source-built"
+pages = ['chapter05/gcc-pass1.html', 'chapter06/gcc-pass2.html', 'chapter08/gmp.html']
+
+[[package]]
+name = 'Gperf'
+version = '3.3'
+url = 'https://ftpmirror.gnu.org/gperf/gperf-3.3.tar.gz'
+md5 = '31753b021ea78a21f154bf9eecb8b079'
+class = "source-built"
+pages = ['chapter08/gperf.html']
+
+[[package]]
+name = 'Grep'
+version = '3.12'
+url = 'https://ftpmirror.gnu.org/grep/grep-3.12.tar.xz'
+md5 = '5d9301ed9d209c4a88c8d3a6fd08b9ac'
+class = "source-built"
+pages = ['chapter06/grep.html', 'chapter08/grep.html']
+
+[[package]]
+name = 'Groff'
+version = '1.23.0'
+url = 'https://ftpmirror.gnu.org/groff/groff-1.23.0.tar.gz'
+md5 = '5e4f40315a22bb8a158748e7d5094c7d'
+class = "source-built"
+pages = ['chapter08/groff.html']
+
+[[package]]
+name = 'GRUB'
+version = '2.14'
+url = 'https://ftpmirror.gnu.org/grub/grub-2.14.tar.xz'
+md5 = '383f9effad01c235d2535357ff717543'
+class = "source-built"
+pages = ['chapter08/grub.html']
+
+[[package]]
+name = 'Gzip'
+version = '1.14'
+url = 'https://ftpmirror.gnu.org/gzip/gzip-1.14.tar.xz'
+md5 = '4bf5a10f287501ee8e8ebe00ef62b2c2'
+class = "source-built"
+pages = ['chapter06/gzip.html', 'chapter08/gzip.html']
+
+[[package]]
+name = 'Iana-Etc'
+version = '20260202'
+url = 'https://github.com/Mic92/iana-etc/releases/download/20260202/iana-etc-20260202.tar.gz'
+md5 = 'fe91258a0760912f61f1d6b200a1d885'
+class = "source-built"
+pages = ['chapter08/iana-etc.html']
+
+[[package]]
+name = 'Inetutils'
+version = '2.7'
+url = 'https://ftpmirror.gnu.org/inetutils/inetutils-2.7.tar.gz'
+md5 = 'eed294e7b170cbbb0ff86493ef4c1273'
+class = "source-built"
+pages = ['chapter08/inetutils.html']
+
+[[package]]
+name = 'Intltool'
+version = '0.51.0'
+url = 'https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz'
+md5 = '12e517cac2b57a0121cda351570f1e63'
+class = "source-built"
+pages = ['chapter08/intltool.html']
+
+[[package]]
+name = 'IPRoute2'
+version = '6.18.0'
+url = 'https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-6.18.0.tar.xz'
+md5 = '9e3f70620db43fe0ecab29b36a47914d'
+class = "source-built"
+pages = ['chapter08/iproute2.html']
+
+[[package]]
+name = 'Jinja2'
+version = '3.1.6'
+url = 'https://pypi.org/packages/source/J/Jinja2/jinja2-3.1.6.tar.gz'
+md5 = '66d4c25ff43d1deaf9637ccda523dec8'
+class = "source-built"
+pages = ['chapter08/jinja2.html']
+
+[[package]]
+name = 'Kbd'
+version = '2.9.0'
+url = 'https://www.kernel.org/pub/linux/utils/kbd/kbd-2.9.0.tar.xz'
+md5 = '7be7c6f658f5fb9512e2c490349a8eeb'
+class = "source-built"
+pages = ['chapter08/kbd.html']
+
+[[package]]
+name = 'Kmod'
+version = '34.2'
+url = 'https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-34.2.tar.xz'
+md5 = '36f2cc483745e81ede3406fa55e1065a'
+class = "source-built"
+pages = ['chapter08/kmod.html']
+
+[[package]]
+name = 'Less'
+version = '692'
+url = 'https://www.greenwoodsoftware.com/less/less-692.tar.gz'
+md5 = '4efd31e34ecf7682a6c62a3c53007600'
+class = "source-built"
+pages = ['chapter08/less.html']
+
+[[package]]
+name = 'Libcap'
+version = '2.77'
+url = 'https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.77.tar.xz'
+md5 = '58048c92f90ef8513c17fb9c24c2c1bd'
+class = "source-built"
+pages = ['chapter08/libcap.html']
+
+[[package]]
+name = 'Libffi'
+version = '3.5.2'
+url = 'https://github.com/libffi/libffi/releases/download/v3.5.2/libffi-3.5.2.tar.gz'
+md5 = '92af9efad4ba398995abf44835c5d9e9'
+class = "source-built"
+pages = ['chapter08/libffi.html']
+
+[[package]]
+name = 'Libtool'
+version = '2.5.4'
+url = 'https://ftpmirror.gnu.org/libtool/libtool-2.5.4.tar.xz'
+md5 = '22e0a29df8af5fdde276ea3a7d351d30'
+class = "source-built"
+pages = ['chapter08/libtool.html']
+
+[[package]]
+name = 'Libxcrypt'
+version = '4.5.2'
+url = 'https://github.com/besser82/libxcrypt/releases/download/v4.5.2/libxcrypt-4.5.2.tar.xz'
+md5 = '25e888919ddcd153a07daa95224fa436'
+class = "source-built"
+pages = ['chapter08/libxcrypt.html']
+
+[[package]]
+name = 'Linux'
+version = '6.18.10'
+url = 'https://www.kernel.org/pub/linux/kernel/v6.x/linux-6.18.10.tar.xz'
+md5 = '660e706a43f634b1fcd911f8839d2f61'
+class = "source-built"
+pages = ['chapter05/linux-headers.html', 'chapter10/kernel.html']
+
+[[package]]
+name = 'Lz4'
+version = '1.10.0'
+url = 'https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz'
+md5 = 'dead9f5f1966d9ae56e1e32761e4e675'
+class = "source-built"
+pages = ['chapter08/lz4.html']
+
+[[package]]
+name = 'M4'
+version = '1.4.21'
+url = 'https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.xz'
+md5 = '8051eef7239b2f187791f2ab0034d6b7'
+class = "source-built"
+pages = ['chapter06/m4.html', 'chapter08/m4.html']
+
+[[package]]
+name = 'Make'
+version = '4.4.1'
+url = 'https://ftpmirror.gnu.org/make/make-4.4.1.tar.gz'
+md5 = 'c8469a3713cbbe04d955d4ae4be23eeb'
+class = "source-built"
+pages = ['chapter06/make.html', 'chapter08/make.html']
+
+[[package]]
+name = 'Man-DB'
+version = '2.13.1'
+url = 'https://download.savannah.gnu.org/releases/man-db/man-db-2.13.1.tar.xz'
+md5 = 'b6335533cbeac3b24cd7be31fdee8c83'
+class = "source-built"
+pages = ['chapter08/man-db.html']
+
+[[package]]
+name = 'Man-pages'
+version = '6.17'
+url = 'https://www.kernel.org/pub/linux/docs/man-pages/man-pages-6.17.tar.xz'
+md5 = '4327b009d63a6e0fc27df3e4c9e7369b'
+class = "source-built"
+pages = ['chapter08/man-pages.html']
+
+[[package]]
+name = 'MarkupSafe'
+version = '3.0.3'
+url = 'https://pypi.org/packages/source/M/MarkupSafe/markupsafe-3.0.3.tar.gz'
+md5 = '13a73126d25afa72a1ff0daed072f5fe'
+class = "source-built"
+pages = ['chapter08/markupsafe.html']
+
+[[package]]
+name = 'Meson'
+version = '1.10.1'
+url = 'https://github.com/mesonbuild/meson/releases/download/1.10.1/meson-1.10.1.tar.gz'
+md5 = 'e1c12d275f8aae9fae71dff3d6891746'
+class = "source-built"
+pages = ['chapter08/meson.html']
+
+[[package]]
+name = 'MPC'
+version = '1.3.1'
+url = 'https://ftpmirror.gnu.org/mpc/mpc-1.3.1.tar.gz'
+md5 = '5c9bc658c9fd0f940e8e3e0f09530c62'
+class = "source-built"
+pages = ['chapter05/gcc-pass1.html', 'chapter06/gcc-pass2.html', 'chapter08/mpc.html']
+
+[[package]]
+name = 'MPFR'
+version = '4.2.2'
+url = 'https://ftpmirror.gnu.org/mpfr/mpfr-4.2.2.tar.xz'
+md5 = '7c32c39b8b6e3ae85f25156228156061'
+class = "source-built"
+pages = ['chapter05/gcc-pass1.html', 'chapter06/gcc-pass2.html', 'chapter08/mpfr.html']
+
+[[package]]
+name = 'Ncurses'
+version = '6.6'
+url = 'https://invisible-mirror.net/archives/ncurses/ncurses-6.6.tar.gz'
+md5 = 'dd45bf6854430af403452a7a6a40652c'
+class = "source-built"
+pages = ['chapter06/ncurses.html', 'chapter08/ncurses.html']
+
+[[package]]
+name = 'Ninja'
+version = '1.13.2'
+url = 'https://github.com/ninja-build/ninja/archive/v1.13.2/ninja-1.13.2.tar.gz'
+md5 = '76c00637fde44909cd7d56f8d73f2042'
+class = "source-built"
+pages = ['chapter08/ninja.html']
+
+[[package]]
+name = 'OpenRC'
+version = '0.63'
+url = 'https://github.com/OpenRC/openrc/archive/0.63/openrc-0.63.tar.gz'
+md5 = 'f73566fc120e19e5a96fb0134cbb5ac8'
+class = "source-built"
+pages = ['chapter08/openrc.html']
+
+[[package]]
+name = 'OpenSSL'
+version = '3.6.1'
+url = 'https://github.com/openssl/openssl/releases/download/openssl-3.6.1/openssl-3.6.1.tar.gz'
+md5 = '589777dc85ebbfeca70161c0c384d572'
+class = "source-built"
+pages = ['chapter08/openssl.html']
+
+[[package]]
+name = 'Packaging'
+version = '26.0'
+url = 'https://files.pythonhosted.org/packages/source/p/packaging/packaging-26.0.tar.gz'
+md5 = '2cbdbb5754f038736c3c361826c6872a'
+class = "source-built"
+pages = ['chapter08/packaging.html']
+
+[[package]]
+name = 'Patch'
+version = '2.8'
+url = 'https://ftpmirror.gnu.org/patch/patch-2.8.tar.xz'
+md5 = '149327a021d41c8f88d034eab41c039f'
+class = "source-built"
+pages = ['chapter06/patch.html', 'chapter08/patch.html']
+
+[[package]]
+name = 'Pcre2'
+version = '10.47'
+url = 'https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2'
+md5 = 'aded5840ab5a7d772dd4e16fc294b665'
+class = "source-built"
+pages = ['chapter08/pcre2.html']
+
+[[package]]
+name = 'Perl'
+version = '5.42.0'
+url = 'https://www.cpan.org/src/5.0/perl-5.42.0.tar.xz'
+md5 = '7a6950a9f12d01eb96a9d2ed2f4e0072'
+class = "source-built"
+pages = ['chapter07/perl.html', 'chapter08/perl.html']
+
+[[package]]
+name = 'Pkgconf'
+version = '2.5.1'
+url = 'https://distfiles.ariadne.space/pkgconf/pkgconf-2.5.1.tar.xz'
+md5 = '3291128c917fdb8fccd8c9e7784b643b'
+class = "source-built"
+pages = ['chapter08/pkgconf.html']
+
+[[package]]
+name = 'Procps'
+version = '4.0.6'
+url = 'https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.6.tar.xz'
+md5 = '20c23dc3dd1569a2bb1d1fa93de213ed'
+class = "source-built"
+pages = ['chapter08/procps-ng.html']
+
+[[package]]
+name = 'Psmisc'
+version = '23.7'
+url = 'https://sourceforge.net/projects/psmisc/files/psmisc/psmisc-23.7.tar.xz'
+md5 = '53eae841735189a896d614cba440eb10'
+class = "source-built"
+pages = ['chapter08/psmisc.html']
+
+[[package]]
+name = 'Python'
+version = '3.14.3'
+url = 'https://www.python.org/ftp/python/3.14.3/Python-3.14.3.tar.xz'
+md5 = 'ef513dcb836d219ae0e2b16ac9c87d0f'
+class = "source-built"
+pages = ['chapter07/Python.html', 'chapter08/Python.html']
+
+[[package]]
+name = 'Python Documentation'
+version = '3.14.3'
+url = 'https://www.python.org/ftp/python/doc/3.14.3/python-3.14.3-docs-html.tar.bz2'
+md5 = '005159be74cf46222d6399fbc0fb0ada'
+class = "source-built"
+pages = ['chapter07/Python.html', 'chapter08/Python.html']
+
+[[package]]
+name = 'Readline'
+version = '8.3'
+url = 'https://ftpmirror.gnu.org/readline/readline-8.3.tar.gz'
+md5 = '25a73bfb2a3ad7146c5e9d4408d9f6cd'
+class = "source-built"
+pages = ['chapter08/readline.html']
+
+[[package]]
+name = 'Sed'
+version = '4.9'
+url = 'https://ftpmirror.gnu.org/sed/sed-4.9.tar.xz'
+md5 = '6aac9b2dbafcd5b7a67a8a9bcb8036c3'
+class = "source-built"
+pages = ['chapter06/sed.html', 'chapter08/sed.html']
+
+[[package]]
+name = 'Setuptools'
+version = '82.0.0'
+url = 'https://pypi.org/packages/source/s/setuptools/setuptools-82.0.0.tar.gz'
+md5 = '6e65b88d2466b35e86e5187b99502b1c'
+class = "source-built"
+pages = ['chapter08/setuptools.html']
+
+[[package]]
+name = 'Shadow'
+version = '4.19.3'
+url = 'https://github.com/shadow-maint/shadow/releases/download/4.19.3/shadow-4.19.3.tar.xz'
+md5 = 'c56d98c09e5dbae816250ba5c2285a37'
+class = "source-built"
+pages = ['chapter08/shadow.html']
+
+[[package]]
+name = 'Sqlite'
+version = '3510200'
+url = 'https://sqlite.org/2026/sqlite-autoconf-3510200.tar.gz'
+md5 = '49600a5739d382c648b1a317e4b57446'
+class = "source-built"
+pages = ['chapter08/sqlite.html']
+
+[[package]]
+name = 'Sqlite Documentation'
+version = '3510200'
+url = 'https://anduin.linuxfromscratch.org/LFS/sqlite-doc-3510200.tar.xz'
+md5 = '6f798c5dcd409ee563684c70be7e16fe'
+class = "source-built"
+pages = ['chapter08/sqlite.html']
+
+[[package]]
+name = 'Sysklogd'
+version = '2.7.2'
+url = 'https://github.com/troglobit/sysklogd/releases/download/v2.7.2/sysklogd-2.7.2.tar.gz'
+md5 = 'af60786956a2dc84054fbf46652e515e'
+class = "source-built"
+pages = ['chapter08/sysklogd.html']
+
+[[package]]
+name = 'Systemd'
+version = '259.1'
+url = 'https://github.com/systemd/systemd/archive/v259.1/systemd-259.1.tar.gz'
+md5 = '623f73826e7702ac08c57febb9d20431'
+class = "source-built"
+pages = ['chapter08/udev.html']
+
+[[package]]
+name = 'Systemd Man Pages'
+version = '259.1'
+url = 'https://anduin.linuxfromscratch.org/LFS/systemd-man-pages-259.1.tar.xz'
+md5 = 'de40a27b137ef707777811818995363c'
+class = "source-built"
+pages = ['chapter08/udev.html']
+
+[[package]]
+name = 'Tar'
+version = '1.35'
+url = 'https://ftpmirror.gnu.org/tar/tar-1.35.tar.xz'
+md5 = 'a2d8042658cfd8ea939e6d911eaf4152'
+class = "source-built"
+pages = ['chapter06/tar.html', 'chapter08/tar.html']
+
+[[package]]
+name = 'Tcl'
+version = '8.6.17'
+url = 'https://downloads.sourceforge.net/tcl/tcl8.6.17-src.tar.gz'
+md5 = '1ec3444533f54d0f86cd120058e15e48'
+class = "source-built"
+pages = ['chapter08/tcl.html']
+
+[[package]]
+name = 'Tcl Documentation'
+version = '8.6.17'
+url = 'https://downloads.sourceforge.net/tcl/tcl8.6.17-html.tar.gz'
+md5 = '60c71044e723b0db5f21be82929f3534'
+class = "source-built"
+pages = ['chapter08/tcl.html']
+
+[[package]]
+name = 'Texinfo'
+version = '7.2'
+url = 'https://ftpmirror.gnu.org/texinfo/texinfo-7.2.tar.xz'
+md5 = '11939a7624572814912a18e76c8d8972'
+class = "source-built"
+pages = ['chapter07/texinfo.html', 'chapter08/texinfo.html']
+
+[[package]]
+name = 'Time Zone Data'
+version = '2025c'
+url = 'https://www.iana.org/time-zones/repository/releases/tzdata2025c.tar.gz'
+md5 = '7250c862872c33104b73e7d0bd3cb25f'
+class = "source-built"
+pages = ['chapter08/glibc.html']
+
+[[package]]
+name = 'Udev-lfs Tarball'
+version = 'udev-lfs-20251217'
+url = 'https://www.linuxfromscratch.org/~zeckma/udev-lfs-20251217.tar.xz'
+md5 = '0f800adc86b5c96897575d7ce440dab6'
+class = "source-built"
+pages = ['chapter08/udev.html']
+
+[[package]]
+name = 'Util-linux'
+version = '2.41.3'
+url = 'https://www.kernel.org/pub/linux/utils/util-linux/v2.41/util-linux-2.41.3.tar.xz'
+md5 = 'd2faa85303dea29e7f6ee40a9465e528'
+class = "source-built"
+pages = ['chapter07/util-linux.html', 'chapter08/util-linux.html']
+
+[[package]]
+name = 'Vim'
+version = '9.2.0078'
+url = 'https://github.com/vim/vim/archive/v9.2.0078/vim-9.2.0078.tar.gz'
+md5 = '592819d17a5f76d39ddba5651912afe0'
+class = "source-built"
+pages = ['chapter08/vim.html']
+
+[[package]]
+name = 'Wheel'
+version = '0.46.3'
+url = 'https://pypi.org/packages/source/w/wheel/wheel-0.46.3.tar.gz'
+md5 = '61fb0c9633fe7492933a8f338db23508'
+class = "source-built"
+pages = ['chapter08/wheel.html']
+
+[[package]]
+name = 'XML::Parser'
+version = '2.47'
+url = 'https://cpan.metacpan.org/authors/id/T/TO/TODDR/XML-Parser-2.47.tar.gz'
+md5 = '89a8e82cfd2ad948b349c0a69c494463'
+class = "source-built"
+pages = ['chapter08/xml-parser.html']
+
+[[package]]
+name = 'Xz Utils'
+version = '5.8.2'
+url = 'https://github.com//tukaani-project/xz/releases/download/v5.8.2/xz-5.8.2.tar.xz'
+md5 = '87c8bb8addf7189d3a51f6a5f03163fc'
+class = "source-built"
+pages = ['chapter06/xz.html', 'chapter08/xz.html']
+
+[[package]]
+name = 'Zlib'
+version = '1.3.2'
+url = 'https://zlib.net/fossils/zlib-1.3.2.tar.gz'
+md5 = 'a1e6c958597af3c67d162995a342138a'
+class = "source-built"
+pages = ['chapter08/zlib.html']
+
+[[package]]
+name = 'Zstd'
+version = '1.5.7'
+url = 'https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz'
+md5 = '780fc1896922b1bc52a4e90980cdda48'
+class = "source-built"
+pages = ['chapter08/zstd.html']
+
+[[unattributed-download]]
+name = 'Libpipeline'
+version = '1.5.8'
+url = 'https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.8.tar.gz'
+md5 = '17ac6969b2015386bcb5d278a08a40b5'
+reason = 'listed by chapter03/packages.html; no page of this edition names it'
+
+# --- patch series, chapter 3.3. Applied by the phase that builds the
+# --- package they name; the series is part of the version, per D3.
+[[patch]]
+file = 'bzip2-1.0.8-install_docs-1.patch'
+url = 'https://www.linuxfromscratch.org/patches/lfs/13.0/bzip2-1.0.8-install_docs-1.patch'
+md5 = '6a5ac7e89b791aae556de0f745916f7f'
+description = 'Bzip2 Documentation Patch'
+
+[[patch]]
+file = 'coreutils-9.10-i18n-1.patch'
+url = 'https://www.linuxfromscratch.org/patches/lfs/13.0/coreutils-9.10-i18n-1.patch'
+md5 = '6e9aea31b1662176101e6438a39fdad4'
+description = 'Coreutils Internationalization Fixes Patch'
+
+[[patch]]
+file = 'expect-5.45.4-gcc15-1.patch'
+url = 'https://www.linuxfromscratch.org/patches/lfs/13.0/expect-5.45.4-gcc15-1.patch'
+md5 = '0ca4d6bb8d572fbcdb13cb36cd34833e'
+description = 'Expect GCC15 Patch'
+
+[[patch]]
+file = 'glibc-fhs-1.patch'
+url = 'https://www.linuxfromscratch.org/patches/lfs/13.0/glibc-fhs-1.patch'
+md5 = '9a5997c3452909b1769918c759eff8a2'
+description = 'Glibc FHS Patch'
+
+[[patch]]
+file = 'kbd-2.9.0-backspace-1.patch'
+url = 'https://www.linuxfromscratch.org/patches/lfs/13.0/kbd-2.9.0-backspace-1.patch'
+md5 = 'f75cca16a38da6caa7d52151f7136895'
+description = 'Kbd Backspace/Delete Fix Patch'
+
