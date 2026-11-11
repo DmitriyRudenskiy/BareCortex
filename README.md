@@ -74,7 +74,7 @@ Xorg (optional/headless)      → Display server
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/BareCortex.git
+git clone https://github.com/DmitriyRudenskiy/BareCortex.git
 cd BareCortex
 
 # Review the build preparation script

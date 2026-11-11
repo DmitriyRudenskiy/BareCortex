@@ -22,8 +22,10 @@ Build the core system using the **LFS OpenRC Edition** book.
 export LFS=/mnt/barecortex
 mkdir -p $LFS
 
-# Follow the LFS book (OpenRC Edition)
-# https://www.linuxfromscratch.org/lfs/view/stable-openrc/
+# Follow the LFS book, OpenRC Edition — the edition this project pins. The
+# rendering lives under the maintainer's home directory, not under lfs/view/,
+# and base.lock's [edition] row is the authoritative pin.
+# https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0/
 ```
 
 **Key decisions during build:**
@@ -36,8 +38,11 @@ mkdir -p $LFS
 Install essential server packages from **BLFS OpenRC Edition**.
 
 ```bash
-# Follow BLFS book (OpenRC Edition)
-# https://www.linuxfromscratch.org/blfs/view/stable-openrc/
+# Follow the BLFS book, OpenRC Edition. It publishes no versioned release path
+# — only an SVN rendering, observed as BLFS-BOOK r13.0-194 (2026-03-23), which
+# targets the LFS *development* book rather than the 13.0 the base is built
+# from. Citing it by revision is base-system-and-init 1.3/1.5.
+# https://www.linuxfromscratch.org/~zeckma/openrc/blfs/svn/
 ```
 
 **Required packages:**
@@ -69,7 +74,7 @@ Install GPU stack from **GLFS OpenRC Edition**.
 
 ```bash
 # Clone this repository on your new system
-git clone https://github.com/YOUR_USERNAME/BareCortex.git /opt/barecortex
+git clone https://github.com/DmitriyRudenskiy/BareCortex.git /opt/barecortex
 cd /opt/barecortex
 
 # Install kernel config
