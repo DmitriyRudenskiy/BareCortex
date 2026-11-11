@@ -945,3 +945,22 @@ The phase's exit criteria, evaluated after the pages ran:
 - `ok` `93 files, MD5 as published by the book`
 
 Checkpoint: `none`
+
+## sources — passed
+
+2026-11-12T00:50:46 → 2026-11-12T00:50:49, context `host-root`, 1 page(s) of chapter 03.
+
+Book pages: `chapter03/packages.html`
+
+Exit criteria this phase claims to meet:
+
+- Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.
+- Nothing was fetched that base.lock does not name.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `93 files, MD5 as published by the book`
+
+Checkpoint: `none`
