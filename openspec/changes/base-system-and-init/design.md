@@ -49,6 +49,23 @@ What is owned is not the init layer but the **pinning of it**. The edition lives
 
 The documentation says this in those words. An operator following the main view index will not find the OpenRC book at all, and the honest text is "the OpenRC edition is published here, at this revision, and here is what to do when it lags the book" — not a link to `/lfs/view/stable-openrc/`, and not a claim that no upstream exists.
 
+**The pin, as published by the two editions themselves** (read off their own pages, not off a memory of them):
+
+| | path | version | revision / date | what it patches |
+|---|---|---|---|---|
+| LFS | `~zeckma/openrc/lfs/13.0/` | `13.0-openrc` | published **March 5th, 2026** — no SVN revision is published for it | LFS 13.0, whose changelog entry `[bdubbs] - LFS-13.0 released` carries the same date |
+| BLFS | `~zeckma/openrc/blfs/svn/` | `r13.0-194` | dated **March 23rd, 2026** | nothing versioned — it is the **svn branch**, and its own version page says it is "currently targeting the LFS development book" |
+
+Three things follow and are recorded here rather than in a change that cannot see them.
+
+The LFS edition's directory also offers `stable/` and `development/`. Neither is cited anywhere in this repository: an alias is a path that moves under a pin, which is the failure mode the pin exists to prevent.
+
+BLFS has **no released OpenRC edition at all** — `~zeckma/openrc/blfs/` contains one entry, `svn/`. So the BLFS instructions this project reads assume a base *newer* than the 13.0-openrc pinned above, and every BLFS-derived `base.lock` entry is checked against the pinned base before it is installed. That is not a hypothetical: `userspace-and-ml-stack` 3.1, 3.3 and 3.4 already record Ninja, pkgconf, ccache, chrony and tmux as having **no page in the pinned BLFS rendering** — the gap is the mismatch showing up, in advance.
+
+The SysVinit alternative was checked rather than assumed: `lfs/view/13.0/` and `lfs/view/13.1/` return 404 while `lfs/view/12.4/` returns 200. LFS 13.x publishes no SysVinit edition, so choosing the OpenRC edition is a **version** decision and not only an init decision — the alternative to 13.0-openrc is 12.4-sysvinit, four minor versions and a year of package updates behind, or 13.1 with systemd built into the base.
+
+**When the two books disagree about a base package version, the base book wins**, because `base.lock` is derived from the base book's package page and the build installs what `base.lock` names; a BLFS page describing a different version is not a competing instruction, it is evidence that the BLFS instruction was written against a newer base. The re-verification is owned by the change that derives the BLFS-side entries — `userspace-and-ml-stack` group 3, whose 0.7 route already exists for packages the rendering does not cover — and it is triggered by the only event that can move the pin: a re-run of `derive-base-lock.py` against a different edition directory. What is *not* in place is a check that notices the drift automatically; the trigger is procedural, and saying so is cheaper than a check that cannot be written before a build exists.
+
 ### D2 — "No systemd" is a link scan with a named exception, not a badge
 
 The failure mode is silent and common: build systems probe, find `libsystemd`, and enable integration — meson options default to `auto`, autotools grow `--with-systemd`. The result is an OpenRC host whose binaries link `libsystemd.so.1`, with a README badge that remains technically true.
@@ -92,6 +109,12 @@ The gate is also what rejects things. A daemon written to replace syslogd, cron,
 
 The datacenter driver installation guide, the CUDA Installation Guide for Linux, and the CUDA Compatibility guide all resolve and are the actual sources. GLFS is a gaming book.
 
+### D6 — The kernel version is the base book's; the config audit names what it was done against
+
+Three kernel numbers are in circulation and the build uses exactly one of them. `base.lock` pins **Linux 6.18.10** (`chapter05/linux-headers.html`, `chapter10/kernel.html`), derived from the pinned edition, and that is what the build compiles. `honest-scope-and-config-generation` audited every symbol in `kernel/.config` against **`torvalds/linux` tag `v6.12`**, on 2026-11-09 — a version nobody builds here. Mainline is ahead of both.
+
+The audit is a record of what was checked, not a version the project uses, and the difference is not cosmetic: a symbol that exists in 6.12 can be renamed, moved under a new parent, or select another symbol by 6.18, and `merge_config.sh` exits 0 whether or not the requested symbol survived — the string match that change added *is* the enforcement. So the honest state, written down where the next reader will find it rather than where it flatters: **as of today `kernel/.config` has no symbol verified against 6.18.10**, and the first build that compiles the kernel is the first time the two meet. When the pin moves, the audit is redone against the tag the pin names, and the audit document says which tag it used in its first line, the way `honest-scope-and-config-generation` already does.
+
 ## Risks / Trade-offs
 
 - **The OpenRC layer has no upstream and one maintainer.** Mitigation is the inventory requirement: every service names its runlevel, requirements, and failure mode, so the cost of not maintaining it is visible before it is paid at 3am.
@@ -101,6 +124,13 @@ The datacenter driver installation guide, the CUDA Installation Guide for Linux,
 ## Open Questions
 
 - **OQ1 — CLOSED, and closed wrongly the first time (2026-11-08).** This question was previously recorded as "PID 1 is sysvinit's `init`, OpenRC is called per runlevel". That was an inference from how other OpenRC systems are packaged, and the pinned edition contradicts it: `chapter08/openrc.html` installs OpenRC, states that "OpenRC provides init and other programs of its own", and creates the shorthands itself — `for i in {init,shutdown}; do ln -sv openrc-$i /sbin/$i; done`, followed by a hand-written `/sbin/poweroff`. **PID 1 is `openrc-init`.** There is no sysvinit package in the edition's 85-package list, and no `/etc/inittab` to keep. Everything this design or a spec said about sysvinit is superseded. The consequence for the runlevel map, `sulogin`/`utmp` handling and shutdown path is the edition's business, cited by revision, not ours.
-- **OQ2 — What does OpenRC itself need to build?** Its optional integrations (PAM, SELinux, cracklib, ncurses) each decide whether a base package must exist first. The pinned edition lists the package set; OpenRC's own build definition is the tiebreaker. Read from those, do not guess.
+- **OQ2 — What does OpenRC itself need to build? ANSWERED 2026-11-11, from `openrc/openrc` tag `0.63` — the version the pinned edition builds — `meson.build` and `meson_options.txt`.** Every external dependency OpenRC 0.63 declares lives in the root `meson.build`; the 54 subdirectory files only `declare_dependency` over its own sources.
+  - **Required, on Linux: `libcap >= 2.33`** (`dependency('libcap', version: '>=2.33')`, unconditional inside `if os == 'linux'`). Satisfied by the base's own order: `base.lock` pins Libcap 2.77, and the edition builds it at §8.27 while OpenRC is §8.84.
+  - **Optional with `type: 'feature', value: 'auto'`: `audit` and `libselinux`.** `auto` means meson probes pkg-config and enables silently when present. Neither exists in the pinned base — `base.lock` has no audit or SELinux entry — so both are off, which is why the edition passes no flag for them. The consequence is the interesting part: install audit or SELinux before §8.84 and OpenRC starts linking them with nobody deciding, and the only thing that would notice is the group 5 link scan.
+  - **`pam` is a boolean with no default (false), and the edition passes `-D pam=false` anyway** — "disables needing Linux-PAM for the build, since it is not installed yet". With it false, `pam_misc` and `libcrypt` are never looked up, which is the mechanism behind 2.7: there is no PAM anywhere in this system to write a `pam.d` file for.
+  - **`dl` and `util` are `find_library(..., required: false)`** — glibc, present. `kvm` is BSD-only.
+  - **Correction to the question as asked:** cracklib and ncurses are not dependencies of OpenRC 0.63 and appear nowhere in its build definition, and neither is popt, which older OpenRC needed and which a dependency list copied from a distro spec would still name. The question's own list was the thing that needed checking.
 - **OQ3 — Is BLFS used at all, or only a named subset?** "Follow BLFS" is the same class of instruction as "follow the LFS OpenRC edition": a book is not a build. The image should list packages, and BLFS should be cited per package. Compounded by BLFS having no released OpenRC edition — only an SVN snapshot (see the correction above for its pin and its coverage gaps). **Answered 2026-11-08:** a named subset only, derived into `base.lock` by `userspace-and-ml-stack` group 3, one citation per entry, with the uncovered packages listed there rather than assumed available.
-- **OQ4 — How many packages link systemd today?** Unanswerable without a built system; the scan's first run is the answer, and the answer is expected to be nonzero.
+
+**Recorded 2026-11-11, with one exception still standing:** the list exists — `base.lock`, 88 package entries, each naming the book pages that build it — and it is derived by `scripts/build/derive-base-lock.py` from the pinned edition's package page, so nothing hand-maintained sits beside it. What is *not* yet true is "no second list is kept": `docs/INSTALL_GUIDE.md` Phase 2 still carries a hand-written "Required packages" block (Python, OpenSSH, Git, GCC, CMake, Make, Ninja, curl, wget) that no check reads and no build consumes. Task 2.2 is what removes it; until then the second list exists and this line is the record that it is a defect, not a design.
+- **OQ4 — How many packages link systemd today?** Unanswerable without a built system; the answer is the first run of the scan in **group 5**, and it is expected to be nonzero. The count is unknown by construction, not by omission, and no document here states a number.
