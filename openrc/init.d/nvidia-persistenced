@@ -3,7 +3,7 @@
 # BareCortex - Bare-metal AI compute OS
 
 name="NVIDIA Persistence Daemon"
-description="Keeps NVIDIA GPU driver loaded to minimize initialization latency"
+description="Maintains persistent software state in the NVIDIA driver while no client holds a device"
 
 command="/usr/bin/nvidia-persistenced"
 command_args="--user root --verbose"

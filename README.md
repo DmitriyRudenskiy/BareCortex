@@ -9,7 +9,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/OS-Linux_LFS-orange" alt="OS">
   <img src="https://img.shields.io/badge/init-OpenRC-blue" alt="Init">
-  <img src="https://img.shields.io/badge/display-Xorg-green" alt="Display">
+  <img src="https://img.shields.io/badge/display-Headless-green" alt="Display: no X server by default; Xorg headless/dummy is the option">
   <img src="https://img.shields.io/badge/containers-None-red" alt="Containers">
   <img src="https://img.shields.io/badge/license-MIT-yellow" alt="License">
 </p>

@@ -75,10 +75,36 @@ This eliminates:
 A training server doesn't need a desktop environment. BareCortex boots into
 a multi-user text console with:
 
-- `nvidia-persistenced` keeping GPUs initialized
+- `nvidia-persistenced` holding the driver's device state while no client is using the GPU
 - SSH access for remote management
 - tmux for persistent training sessions
 - Optional X11 forwarding for GUI tools (Nsight, TensorBoard)
+
+### Decisions, so they stop arriving with the next consultation
+
+Three things get re-proposed by every piece of outside advice about this project.
+They are decided here, and the reason is the kind that can be checked.
+
+**IOMMU and VFIO do not come back "in case a VM is needed".** They come back on
+a stated VM requirement — a named guest, on a named device, doing a named job.
+`CONFIG_VFIO` and `CONFIG_VFIO_PCI` are out of the fragment for having no such
+requirement behind them, and the `=y` IOMMU pins are redundant in a different
+way: `=y` builds a driver, while activation is `CONFIG_INTEL_IOMMU_DEFAULT_ON`,
+which the base leaves unset, so the base already follows the BIOS.
+
+**Out-of-memory during training is handled by `vm.overcommit_memory` and a cgroup
+v2 memory limit — not by `ulimit`.** `ulimit -v` does not disable the OOM killer;
+it makes individual allocations fail, which converts one clean kill into an
+unpredictable failure inside whatever library happened to ask. The troubleshooting
+row in the install guide is correct; anything suggesting `ulimit` as OOM policy is
+not describing the mechanism it names.
+
+**`nvidia-persistenced` is described by what it does.** From the man page shipped
+with the installed driver: it "is used to enable persistent software state in the
+NVIDIA driver. When persistence mode is enabled, the daemon prevents the driver
+from releasing device state when the device is not in use. This can improve the
+startup time of new clients in this scenario." It does not remove a per-epoch
+initialisation delay, and it is not what keeps a fan spinning or a clock pinned.
 
 ## Performance Impact
 

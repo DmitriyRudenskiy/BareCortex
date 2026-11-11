@@ -21,10 +21,10 @@ Most "AI performance" tuning is a **runtime** concern, not a patch:
 | Goal | Better than a patch |
 |---|---|
 | Low scheduling latency | `CONFIG_PREEMPT_NONE=y` (already in `.config`) |
-| Large-page allocations | `CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS=y` + `nccl` env |
+| Large-page allocations | `CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS=y` — built in, and nothing here has measured what it buys on this machine |
 | GPU BAR resize above 4G | kernel param `pci=realloc` (already `CONFIG_PCI_REALLOC_ENABLE_AUTO`) |
 | Keep GPUs powered | `nvidia-persistenced` service |
-| Lock CPU clocks | `cpupower frequency-set -g performance` |
+| Hold the CPU governor at `performance` | one mechanism: the `cpufreq` service (`openrc/init.d/cpufreq`, added by `honest-scope-and-config-generation` 7.1) |
 
 Real patch candidates, if you need them, are usually backports of a specific
 PCIe/NVLink fix for your platform errata — which are, by definition,
