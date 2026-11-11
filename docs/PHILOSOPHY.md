@@ -29,10 +29,18 @@ overhead. For a dedicated AI training server, this overhead provides no benefit:
 systemd is a powerful init system, but it pulls in dependencies and services
 that a headless compute node doesn't need. OpenRC provides:
 
-- Simple, readable init scripts (bash-based)
+- `openrc-run` service scripts, one file per service
 - Lower memory footprint
 - Easier debugging when services fail
 - Full compatibility with the LFS ecosystem
+
+The claim, stated so that it can be checked: **no systemd as init or service
+manager, and no `logind`.** Not "no systemd source is compiled" — the pinned
+edition builds udev from `systemd-259.1.tar.xz`, with `-D link-udev-shared=false`
+exactly so that udev does not resolve `libsystemd-shared`. The command behind the
+claim is `scripts/build/check-no-systemd.py --root <image>`, and what PID 1 is
+lives in [the init layer](INIT-LAYER.md). A claim of this kind that no command
+verifies is a sentence waiting for the first package that links it anyway.
 
 ### ❌ No Wayland (by default)
 

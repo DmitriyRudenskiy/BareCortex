@@ -35,7 +35,7 @@ layers, BareCortex is stripped down to the bare minimum needed to:
 | Principle | Implementation |
 |---|---|
 | **No containers** | All AI frameworks run directly on the host system via Python venvs |
-| **No systemd** | Uses lightweight OpenRC init system |
+| **No systemd as init or service manager** | OpenRC is PID 1 (`readlink /proc/1/exe` → `openrc-init`); `scripts/build/check-no-systemd.py --root /` fails the build if any binary resolves `libsystemd`. udev is still built from the systemd tarball — [docs/INIT-LAYER.md](docs/INIT-LAYER.md) |
 | **No Wayland** | Xorg for stability or pure headless mode for servers |
 | **Bare metal** | Zero abstraction between your code and the GPU |
 | **From scratch** | Built with LFS + BLFS + GLFS (OpenRC Edition) |
