@@ -1,0 +1,9 @@
+[package]
+name = "bmc-vram"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Release GPU memory held by processes, without surprising anyone"
+
+[dependencies]
+bmc = { path = "../bmc" }

@@ -65,3 +65,12 @@ fi
 echo ""
 echo "[OK] VRAM cleanup complete."
 nvidia-smi
+
+# Superseded by utils/bmc-vram: dry run by default, targets named on the
+# command line, another user's process refused rather than offered, and a reset
+# refused while a device is held. This file stays as the parity incumbent
+# (utils/tests/parity.sh); the language policy moves an incumbent instead of
+# deleting it. See utils/rust-coverage.toml.
+#
+# Line numbers here are cited by openspec/changes/maintenance-and-updates
+# (proposal, tasks 7.1-7.3), so notes go at the bottom, not the top.

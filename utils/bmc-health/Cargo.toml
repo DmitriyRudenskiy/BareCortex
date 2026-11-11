@@ -1,0 +1,9 @@
+[package]
+name = "bmc-health"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "GPU health check with an exit code that means something"
+
+[dependencies]
+bmc = { path = "../bmc" }

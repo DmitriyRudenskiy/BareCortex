@@ -1,0 +1,9 @@
+[package]
+name = "bmc-run"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Start a training job with the environment the host defines, and record what was used"
+
+[dependencies]
+bmc = { path = "../bmc" }

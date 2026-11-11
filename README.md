@@ -67,6 +67,7 @@ Xorg (optional/headless)      → Display server
 - [Hardware Requirements](docs/HARDWARE_REQUIREMENTS.md)
 - [Installation Guide](docs/INSTALL_GUIDE.md)
 - [Multi-GPU Setup Guide](docs/MULTI_GPU_SETUP.md)
+- [Pre-build Notes](docs/PREBUILD.md) — what is ready for a build and what a machine still owes
 
 ## ⚡ Quick Start
 
@@ -92,6 +93,8 @@ BareCortex/
 ├── graphics/       # Xorg and headless display configs
 ├── ai-stack/       # CUDA, cuDNN, framework setup scripts
 ├── scripts/        # Build, maintenance, and deploy scripts
+├── utils/          # Shipped system utilities (Rust) and the coverage ledger
+├── openspec/       # Specifications and in-flight change proposals
 └── patches/        # NVIDIA and glibc compatibility patches
 ```
 

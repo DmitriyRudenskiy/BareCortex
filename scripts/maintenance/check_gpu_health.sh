@@ -56,3 +56,12 @@ if [ -n "${HOT_GPUS}" ]; then
     echo "[⚠️  WARNING] GPU(s) ${HOT_GPUS} exceed ${TEMP_THRESHOLD}°C!"
     echo "[⚠️  WARNING] Consider increasing fan speed or reducing workload."
 fi
+
+# Superseded by utils/bmc-health, which exits non-zero on the condition it
+# prints. This file stays as the parity incumbent — the replacement's evidence
+# is this script and that binary run against the same canned driver output
+# (utils/tests/parity.sh), and the language policy moves an incumbent rather
+# than deleting it. See utils/rust-coverage.toml.
+#
+# Line numbers in this file are cited by openspec/changes/maintenance-and-updates
+# (proposal, tasks 6.2/6.3), so notes go at the bottom, not the top.

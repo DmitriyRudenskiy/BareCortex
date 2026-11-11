@@ -82,3 +82,12 @@ tmux new-session -d -s "training_${TIMESTAMP}" \
 echo "[OK] Training job deployed!"
 echo "[OK] Monitor with: tmux attach -t training_${TIMESTAMP}"
 echo "[OK] View logs: tail -f ${LOG_FILE}"
+
+# Superseded by utils/bmc-run: the NCCL environment is read from the single
+# source instead of exported inline, the device list is validated index by
+# index, the environment reaches the job even when a tmux server is already
+# running, and every run is recorded. This file stays as the parity incumbent
+# (utils/tests/parity.sh). See utils/rust-coverage.toml.
+#
+# Line numbers here are cited by openspec/changes/userspace-and-ml-stack and
+# honest-scope-and-config-generation, so notes go at the bottom, not the top.

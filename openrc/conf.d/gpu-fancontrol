@@ -1,12 +1,16 @@
 # Configuration for GPU Fan Control
 # BareCortex
 
-# Target fan speed percentage (0-100)
-# Recommended: 70-85 for sustained training loads
+# Target fan speed percentage (0-100), written by `bmc-fan --percent`.
+# The write is per device and the service reports the driver's answer, so a
+# card that ignores manual fan control fails the start instead of passing it.
 FAN_SPEED="80"
 
-# Check interval in seconds (for future fan curve support)
-CHECK_INTERVAL="60"
-
-# Log file location
+# Log file location. One line per start and stop, recording bmc-fan's exit
+# status; the per-device detail goes to the service's own output.
 LOG_FILE="/var/log/gpu-fancontrol.log"
+
+# There is no interval or fan-curve setting here. A polling policy needs the
+# threshold source, the interval and the safe state on a failed read, and those
+# are gpu-stack 7.1-7.3's to decide. The previous file carried a CHECK_INTERVAL
+# that nothing in the service read.

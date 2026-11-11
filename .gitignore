@@ -58,3 +58,8 @@ Thumbs.db
 
 # Checkpoints
 checkpoints/
+
+# Rust build artifacts for the shipped utilities. Cargo.lock is deliberately
+# NOT ignored: a reproducible build wants the resolved graph pinned, and the
+# graph is this workspace (no external crates).
+/utils/target/

@@ -1,0 +1,9 @@
+[package]
+name = "bmc-fan"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Set GPU fan speed and report whether the driver accepted the write"
+
+[dependencies]
+bmc = { path = "../bmc" }

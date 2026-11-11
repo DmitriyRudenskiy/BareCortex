@@ -1,0 +1,164 @@
+#!/bin/bash
+# fake-nvidia-smi — canned driver answers, for the parity harness.
+#
+# Exists because the exit-code contract of the bmc-* utilities is testable
+# without a GPU, and `base-system-and-init` D4 makes parity evidence against
+# the incumbent a condition of a replacement. Feeding both the incumbent and
+# the rewrite the same canned output is the half of that evidence a machine
+# without an NVIDIA card can produce.
+#
+# Controlled by environment:
+#   FAKE_SMI_GPUS      device count (default 2)
+#   FAKE_SMI_SCENARIO  healthy | hot | ecc | empty | nofan | nopersist
+#   FAKE_SMI_APPS      compute processes as "pid:name:mem;pid:name:mem"
+#   FAKE_SMI_LOG       append every accepted write here (fan, reset)
+set -u
+
+GPUS="${FAKE_SMI_GPUS:-2}"
+SCENARIO="${FAKE_SMI_SCENARIO:-healthy}"
+APPS="${FAKE_SMI_APPS:-}"
+
+fail() { echo "$1" >&2; exit 1; }
+
+# One value per query field, per scenario. Anything not listed answers [N/A],
+# which is what the driver does for a field the card does not have.
+field_value() {
+    local f="$1" i="$2"
+    case "$f" in
+        index) echo "$i" ;;
+        name) echo "NVIDIA Test GPU" ;;
+        driver_version) echo "0.0.0+fake" ;;
+        pci.bus_id) printf '00000000:0%02d:00.0\n' "$i" ;;
+        persistence_mode)
+            [ "$SCENARIO" = nopersist ] && echo '[N/A]' || echo Enabled ;;
+        temperature.gpu)
+            case "$SCENARIO" in hot) echo 91 ;; *) echo 45 ;; esac ;;
+        utilization.gpu) echo 0 ;;
+        memory.used) echo 0 ;;
+        memory.total) echo 81920 ;;
+        power.draw) echo 70 ;;
+        power.limit) echo 300 ;;
+        fan.speed)
+            case "$SCENARIO" in nofan) echo '[Not Supported]' ;; *) echo 40 ;; esac ;;
+        pstate) echo P0 ;;
+        clocks.sm) echo 1500 ;;
+        clocks.mem) echo 4000 ;;
+        ecc.errors.corrected.volatile.total)
+            case "$SCENARIO" in ecc) echo 12 ;; *) echo 0 ;; esac ;;
+        ecc.errors.uncorrected.volatile.total)
+            case "$SCENARIO" in ecc) echo 3 ;; *) echo 0 ;; esac ;;
+        pcie.replay.counter) echo 0 ;;
+        gpu_bus_id) printf '00000000:0%02d:00.0\n' "$i" ;;
+        *) echo '[N/A]' ;;
+    esac
+}
+
+row() {
+    local fields="$1" i="$2" out="" f
+    local IFS=,
+    for f in $fields; do
+        [ -n "$out" ] && out="$out, "
+        out="$out$(field_value "$f" "$i")"
+    done
+    echo "$out"
+}
+
+query_gpu() {
+    local fields="$1" only="$2" i
+    # Measured on driver 580.159.03: no matching device is exit 6 plus prose,
+    # not exit 0 plus empty output. The fake answers the way the real thing does.
+    if [ "$SCENARIO" = empty ]; then
+        echo "No devices were found"
+        exit 6
+    fi
+    if [ -n "$only" ]; then
+        row "$fields" "$only"
+    else
+        for ((i = 0; i < GPUS; i++)); do row "$fields" "$i"; done
+    fi
+}
+
+query_apps() {
+    local fields="$1" entry pid name mem bus
+    [ -z "$APPS" ] && return 0
+    local IFS=';'
+    for entry in $APPS; do
+        IFS=: read -r pid name mem <<<"$entry"
+        bus="00000000:00:00.0"
+        local out="" f
+        local IFS=,
+        for f in $fields; do
+            case "$f" in
+                pid) f="$pid" ;;
+                process_name | gpu_name) f="$name" ;;
+                used_memory) f="$mem" ;;
+                gpu_bus_id) f="$bus" ;;
+            esac
+            [ -n "$out" ] && out="$out, "
+            out="$out$f"
+        done
+        echo "$out"
+    done
+}
+
+FIELDS=""
+ONLY=""
+APPFIELDS=""
+CMD=""
+ARGS=("$@")
+for ((n = 0; n < ${#ARGS[@]}; n++)); do
+    a="${ARGS[$n]}"
+    case "$a" in
+        --version) CMD=version ;;
+        -L) CMD=list ;;
+        --query-gpu=*) FIELDS="${a#--query-gpu=}" ;;
+        --query-compute-apps=*) APPFIELDS="${a#--query-compute-apps=}" ;;
+        --format=*) ;;
+        -i) n=$((n + 1)); ONLY="${ARGS[$n]}" ;;
+        -f) n=$((n + 1)); CMD="fan:${ARGS[$n]}" ;;
+        -r) CMD=reset ;;
+        topo) CMD=topo ;;
+        -m) ;;
+        *) ;;
+    esac
+done
+
+case "$CMD" in
+    version)
+        echo "NVIDIA-SMI 0.0.0+fake   Driver Version: 0.0.0+fake   CUDA Version: 0.0"
+        exit 0
+        ;;
+    list)
+        if [ "$SCENARIO" = empty ]; then
+            echo "No devices were found"
+            exit 6
+        fi
+        for ((i = 0; i < GPUS; i++)); do echo "GPU $i: NVIDIA Test GPU (UUID: GPU-00000000-0000-0000-0000-00000000000$i)"; done
+        exit 0
+        ;;
+    topo)
+        echo "	GPU0	GPU1"
+        echo "GPU0	 X	 NV4"
+        echo "GPU1	 NV4	 X"
+        exit 0
+        ;;
+    reset)
+        if [ -n "$APPS" ]; then
+            fail "All devices that are to be reset must be idle and no processes are currently using them."
+        fi
+        [ -n "${FAKE_SMI_LOG:-}" ] && echo "reset" >>"$FAKE_SMI_LOG"
+        exit 0
+        ;;
+    fan:*)
+        target="${CMD#fan:}"
+        if [ "$SCENARIO" = nofan ]; then
+            fail "All devices that are to be altered must first be placed in application clocks locked mode."
+        fi
+        [ -n "${FAKE_SMI_LOG:-}" ] && echo "fan $ONLY $target" >>"$FAKE_SMI_LOG"
+        exit 0
+        ;;
+esac
+
+if [ -n "$FIELDS" ]; then query_gpu "$FIELDS" "$ONLY"; exit 0; fi
+if [ -n "$APPFIELDS" ]; then query_apps "$APPFIELDS"; exit 0; fi
+exit 0

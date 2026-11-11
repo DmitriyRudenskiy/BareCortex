@@ -1,0 +1,112 @@
+# Language coverage ledger
+#
+# The policy truth for "what is Rust here and what deliberately is not".
+# `base-system-and-init` D4: a decision absent from this file has not been
+# made. Nothing running on the installed system reads it — it is consumed at
+# review time and by the build, which installs it to
+# `/srv/manifest/rust-coverage.toml` so an operator at a console with no network
+# can still read it. This file is authoritative: an edit made on the installed
+# system is out of band and the next build overwrites it.
+#
+# Selection order, in one line: maintained port → upstream as-is → do not
+# adopt. A rewrite is admissible only with usage evidence, parity evidence
+# captured from the incumbent on this machine, and a rollback that has been
+# executed once.
+#
+# `status` is one of:
+#   candidate — built and tested against canned driver output, installed nowhere
+#   installed — in the image, incumbent moved aside
+#   reverted  — the rollback was executed and the incumbent runs
+
+[policy]
+selection_order = ["maintained port", "upstream as-is", "do not adopt"]
+accelerator_path_excluded = [
+  "kernel", "nvidia driver", "CUDA runtime", "CPython", "PyTorch",
+]
+rewritten_root = "utils/"
+
+# ---------------------------------------------------------------- keep (shell)
+# Everything below stays shell with a reason. "It is already written" is not a
+# reason; these are.
+
+[[keep]]
+path = "scripts/build/**"
+reason = "Runs before the toolchain it drives exists. A Rust orchestrator would have to be compiled by the toolchain it orchestrates (build-orchestration design, 'the build is shell')."
+decision = "build-orchestration"
+
+[[keep]]
+path = "ai-stack/**"
+reason = "Install-time setup run once against a host that is being built; absorbed by userspace-and-ml-stack, which rewrites these as lock-driven steps, not as binaries."
+decision = "userspace-and-ml-stack"
+
+[[keep]]
+path = "openrc/init.d/**"
+reason = "openrc-run is a shell dialect and the service manager executes it. Where a service needs real behaviour it calls a binary — gpu-fancontrol calls bmc-fan."
+decision = "base-system-and-init"
+
+[[keep]]
+path = "openrc/conf.d/**"
+reason = "Configuration, not code. conf.d files are sourced by OpenRC and must stay shell-readable."
+decision = "base-system-and-init"
+
+[[keep]]
+path = "kernel/**, graphics/**, patches/**"
+reason = "Kernel fragments, Xorg configuration and patch series. No language to choose."
+decision = "honest-scope-and-config-generation"
+
+# ------------------------------------------------------------- rewritten (Rust)
+# All four are `candidate`: nothing has been installed anywhere, because no
+# build has produced an image yet. Usage evidence — which of these binaries
+# actually executes on a real host — is a `(build)`/`(gpu)` observation and is
+# recorded as an input gap below, not as satisfied.
+
+[[rewritten]]
+binary = "bmc-health"
+incumbent = "scripts/maintenance/check_gpu_health.sh"
+status = "candidate"
+usage_evidence = "No host exists. The requirement is written (maintenance-and-updates 6.1-6.5: a check must exit non-zero on the condition it names); the observation that it is used is owed to the first build host."
+parity_evidence = "utils/tests/parity.sh drives both this binary and the incumbent against utils/tests/fake-nvidia-smi: hot GPU, ECC, unreadable persistence field, no devices, driver absent. Field names against an installed driver are unverified — maintenance-and-updates 6.3."
+rollback = "Not executed: nothing is installed to roll back. The incumbent is kept in place, not deleted. Recorded blocked with maintenance-and-updates 4.x."
+
+[[rewritten]]
+binary = "bmc-vram"
+incumbent = "scripts/maintenance/clean_vram.sh"
+status = "candidate"
+usage_evidence = "Same gap. The incumbent cannot be run unattended at all (read -p is its only path), which is the usage argument maintenance-and-updates 7.1-7.4 records."
+parity_evidence = "utils/tests/parity.sh: dry run by default, --apply with no target refused, foreign owner refused (Linux) or reported unknown (non-Linux), reset refused while held."
+rollback = "Not executed; incumbent kept. The (gpu) demonstration against a second user's process is maintenance-and-updates 7.6."
+
+[[rewritten]]
+binary = "bmc-run"
+incumbent = "scripts/deploy/deploy_training_job.sh"
+status = "candidate"
+usage_evidence = "Same gap. Requires tmux, which userspace-and-ml-stack 0.7 records as having no page in the pinned BLFS rendering — the dependency is inherited, not invented here."
+parity_evidence = "utils/tests/parity.sh: device index out of range refused, duplicate refused, no compiled-in device default, plan printed by --dry-run without starting anything."
+rollback = "Not executed; incumbent kept."
+
+[[rewritten]]
+binary = "bmc-fan"
+incumbent = "openrc/init.d/gpu-fancontrol (the nvidia-smi -f writes only)"
+status = "candidate"
+usage_evidence = "The service is enabled by docs/INSTALL_GUIDE.md:87 (rc-update add gpu-fancontrol default), so it executes on every host built from these instructions — the one incumbent here with a written usage claim."
+parity_evidence = "utils/tests/parity.sh: accepted write exits 0, rejected write exits 1 and quotes the driver, --check writes nothing. Whether the driver accepts manual fan control at all is card-dependent and unverified — gpu-stack 7.4."
+rollback = "Not executed. The init script is a wrapper now, so rollback is one file: restore the previous gpu-fancontrol and the shell writes return."
+scope_note = "Mechanism only. Thresholds, interval and the safe state on a failed read are gpu-stack 7.1-7.3 and are deliberately not implemented."
+
+# ---------------------------------------------------------------- input gaps
+# What has to be answered before any of the above becomes `installed`.
+
+[[input-gap]]
+blocks = ["bmc-health", "bmc-vram", "bmc-run", "bmc-fan"]
+missing = "A build host to install onto. Until an image exists there is no usage evidence, no executed rollback, and no driver to verify field names against."
+owner = "build-orchestration group 0"
+
+[[input-gap]]
+blocks = ["bmc-health", "bmc-fan", "bmc-vram"]
+missing = "An NVIDIA host that is not the target, to confirm every nvidia-smi query field these binaries use exists on the installed driver branch, and that a rejected fan write is reported rather than ignored."
+owner = "maintenance-and-updates 6.3, 7.6; gpu-stack 7.4"
+
+[[input-gap]]
+blocks = ["bmc-run"]
+missing = "Where the job record lives, and whether tmux is the session mechanism at all (it has no page in the pinned BLFS rendering)."
+owner = "userspace-and-ml-stack 0.7, 6.3"

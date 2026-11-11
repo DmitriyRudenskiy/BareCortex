@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["bmc", "bmc-health", "bmc-vram", "bmc-run", "bmc-fan"]
+
+# Shipped system utilities, not build tools. See docs/PREBUILD.md.
+#
+# Deliberately dependency-free: the image build runs with the network denied
+# (build-orchestration D5), so the whole dependency graph has to be this
+# directory. `cargo build --offline` is the only honest way to build a
+# distribution component, and it is what makes vendoring unnecessary.
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true

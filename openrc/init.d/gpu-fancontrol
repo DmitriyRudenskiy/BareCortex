@@ -2,17 +2,24 @@
 # OpenRC init script for GPU fan control
 # BareCortex - Bare-metal AI compute OS
 #
-# NOTE: `nvidia-smi -f` (manual fan speed) is unsupported on most GeForce and
-# many Quadro cards — the driver ignores it and those GPUs stay on their own
-# thermal curve. Check with `nvidia-smi -i 0 -f 60` by hand before enabling
-# this service; on unsupported cards, drive the chassis fans with fancontrol
-# from lm-sensors instead.
+# The write itself belongs to `bmc-fan`, which reports per device whether the
+# driver accepted it. That is the whole reason this is a wrapper: `nvidia-smi -f`
+# is unsupported on most GeForce and many Quadro cards, and the previous
+# version piped its stderr to /dev/null behind `|| true`, so the service
+# reported a successful start on cards where nothing had changed.
+#
+# There is no temperature loop and no threshold here. `gpu-stack` 7.1-7.3 owns
+# those decisions (input field, interval, and the state the fans park in when
+# the read fails), and a cooling policy is not something a wrapper invents.
+#
+# Persistence mode is not set here either: this service already declares
+# `need nvidia-persistenced`, and `nvidia-smi -pm 1` beside a running daemon is
+# a second mechanism for one job.
 
 name="GPU Fan Control"
-description="Manages GPU fan speeds for optimal cooling under AI workloads"
+description="Sets GPU fan speeds through bmc-fan and reports what the driver accepted"
 
 FAN_SPEED="${FAN_SPEED:-80}"
-CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
 LOG_FILE="${LOG_FILE:-/var/log/gpu-fancontrol.log}"
 
 pidfile="/run/gpu-fancontrol.pid"
@@ -21,41 +28,24 @@ depend() {
     need nvidia-persistenced
 }
 
-start_pre() {
-    # Verify NVIDIA GPUs are present
-    if ! command -v nvidia-smi > /dev/null 2>&1; then
-        eerror "nvidia-smi not found. Install NVIDIA drivers first."
-        return 1
-    fi
-}
-
 start() {
     ebegin "Starting ${name} (target: ${FAN_SPEED}%)"
 
-    # Enable manual fan control
-    nvidia-smi -pm 1 > /dev/null 2>&1
-
-    # Set fan speed for all GPUs
-    GPU_COUNT=$(nvidia-smi -L | wc -l)
-    for i in $(seq 0 $((GPU_COUNT - 1))); do
-        nvidia-smi -i ${i} -f ${FAN_SPEED} 2>/dev/null || true
-    done
-
-    # Log initial state
-    echo "$(date): Fan control started. Target: ${FAN_SPEED}%, GPUs: ${GPU_COUNT}" >> ${LOG_FILE}
-
-    eend $?
+    # bmc-fan exits 0 only when every device accepted the write, and names the
+    # driver's own reason when one did not.
+    bmc-fan --percent "${FAN_SPEED}"
+    local rc=$?
+    echo "$(date): fan control start requested at ${FAN_SPEED}%, bmc-fan exit ${rc}" >> "${LOG_FILE}"
+    eend ${rc}
 }
 
 stop() {
-    ebegin "Stopping ${name} (resetting to auto)"
+    ebegin "Stopping ${name} (returning control to the driver)"
 
-    # Reset fan control to automatic
-    GPU_COUNT=$(nvidia-smi -L | wc -l)
-    for i in $(seq 0 $((GPU_COUNT - 1))); do
-        nvidia-smi -i ${i} -f 0 2>/dev/null || true
-    done
-
-    echo "$(date): Fan control stopped. Reset to auto." >> ${LOG_FILE}
-    eend $?
+    # 0 is the write that returns the card to its own thermal curve — the same
+    # write the previous stop() made, now with a reported result.
+    bmc-fan --percent 0
+    local rc=$?
+    echo "$(date): fan control stop, bmc-fan exit ${rc}" >> "${LOG_FILE}"
+    eend ${rc}
 }
