@@ -77,8 +77,11 @@ Xorg (optional/headless)      → Display server
 git clone https://github.com/DmitriyRudenskiy/BareCortex.git
 cd BareCortex
 
-# Review the build preparation script
-cat scripts/build/prepare_build.sh
+# See what a build actually does, phase by phase
+cat phases.toml
+
+# Run one phase against the build host
+python3 scripts/build/build.py --help
 
 # Follow the installation guide
 cat docs/INSTALL_GUIDE.md
