@@ -116,14 +116,22 @@ def guest_run(script, timeout=21600, tries=2):
     and a page that never reported a block failure is safe to ask again.
     """
     for attempt in range(tries):
-        p = subprocess.run(GUEST + ["bash -s"], input=script.encode(),
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
-        out = p.stdout.decode("utf-8", "replace")
-        if p.returncode != 255 or "@@RC" in out or attempt + 1 == tries:
-            return p.returncode, out
+        try:
+            p = subprocess.run(GUEST + ["bash -s"], input=script.encode(),
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               timeout=timeout)
+            rc, out = p.returncode, p.stdout.decode("utf-8", "replace")
+        except subprocess.TimeoutExpired as e:
+            # The transport wedged: the guest has no process for this session and
+            # the socket is still ESTAB, so nothing is coming. Say so as a lost
+            # connection, which is what the retry below is written for, instead of
+            # letting the exception take the whole phase down.
+            rc, out = 255, (e.stdout or b"").decode("utf-8", "replace") + f"\n@@TIMEOUT after {timeout}s"
+        if rc != 255 or PAGE_DONE in out or attempt + 1 == tries:
+            return rc, out
         print(f"    connection to the guest was lost, running the page again "
               f"(attempt {attempt + 2} of {tries})", flush=True)
-    return p.returncode, out
+    return rc, out
 
 
 # Chapter 7's four mounts, as the host sees them. Guarded by `findmnt` so the
@@ -433,7 +441,7 @@ def guard_present(pages):
 def run_page(pg, title, context, logdir):
     script, emitted = page_script(pg, title)
     print(f"  {pg} ({len(emitted)} blocks, {context})", flush=True)
-    rc, out = guest_run(wrap(script, context))
+    rc, out = guest_run(wrap(script, context) + f"echo {PAGE_DONE.strip()}\n")
     log = logdir / (pg.split("/")[1][:-5] + ".log")
     log.write_text(f"# {pg}\n# context: {context}\n# ssh exit: {rc}\n\n{out}")
     codes = dict(re.findall(r"@@RC (\d+) (-?\d+)", out))
@@ -477,6 +485,12 @@ def expected_failures(pg, out):
         return set()
     return {i for i, (_, c) in enumerate(book.commands(pg), 1) if TEST_SUITE.search(c)}
 
+
+# Emitted by every page script, after its last block. A page whose output lacks
+# it stopped early, whatever else it managed to print — which is the only
+# question worth asking about a truncated stream, and `@@RC` appearing somewhere
+# is no answer: block 1 reporting is compatible with dying at block 6.
+PAGE_DONE = "@@PAGE-DONE\n"
 
 WRAP_PRELUDE = "export LFS={lfs} SRCDIR={srcdir}; "
 NET_DENIED = "denied (unshare -n: no routes, no interfaces; verified against the same probe outside)"
