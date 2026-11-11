@@ -24,7 +24,13 @@ BASE = "https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0"
 CACHE = pathlib.Path(__file__).resolve().parent.parent.parent / ".book-cache"
 
 PRE_RE = re.compile(r'<pre class="userinput">(.*?)</pre>', re.S)
-BLOCK_RE = re.compile(r'(<p>.*?</p>)?\s*<pre class="userinput">(.*?)</pre>', re.S)
+# The sentence that introduces a block, and only that sentence: a paragraph that
+# ends here, with nothing but whitespace and closing tags between it and the
+# commands. The first version of this let `<p>.*?</p>` run across the document,
+# and a `<p>` in the navigation footer then swallowed the block that followed it —
+# silently, because the block count still looked plausible.
+BLOCK_RE = re.compile(r'<pre class="userinput">(.*?)</pre>', re.S)
+INTRO_RE = re.compile(r'<p>((?:(?!</p>).)*?)</p>((?:\s|</?[a-zA-Z][^>]*>)*)$', re.S)
 TAG_RE = re.compile(r"<[^>]*>")
 
 
@@ -71,11 +77,12 @@ def commands(url_path):
     """
     p = page(url_path)
     out = []
-    for intro, body in BLOCK_RE.findall(p):
-        cmd = _clean(body)
+    for m in BLOCK_RE.finditer(p):
+        cmd = _clean(m.group(1))
         if not cmd:
             continue
-        why = " ".join(html.unescape(TAG_RE.sub(" ", intro or "")).split()) if intro else ""
+        intro = INTRO_RE.search(p[max(0, m.start() - 4000):m.start()])
+        why = " ".join(html.unescape(TAG_RE.sub(" ", intro.group(1))).split()) if intro else ""
         # The nav footer's <p> can precede the first block; that is not an intro.
         if "Prev" in why and "Next" in why:
             why = ""
@@ -112,13 +119,34 @@ def notes(url_path):
 # from the archive name, because for several packages they differ.
 WRAPPER_PRE = """set -e
 cd $SRCDIR
+# The book's general instructions keep a log per package; $LOG is that directory,
+# defaulted here rather than inherited, because the page runs in `env -i` and
+# nothing outside the build sets it. A redirect and not a pipe: the page script
+# runs with -e, and a pipeline would report tee's exit code instead of tar's.
+LOG="${{LOG:-$SRCDIR/logs}}"
+mkdir -p "$LOG"
+# A page that fails leaves its extracted tree behind: the script dies at the
+# failing command and the cleanup at the end never runs. Building again on that
+# tree would happen in a half-configured source directory, which is not the book's
+# environment, and the diff below would find no new directory. So the stale tree
+# goes first; the log of the run that failed stays where it is.
+candidate={archive}
+candidate=${{candidate%.tar.*}}
+candidate=${{candidate%.zip}}
+candidate=${{candidate%.tar}}
+test "$candidate" = {archive} && candidate=""
 before=$(ls -A)
+if test -n "$candidate" && test -d "$candidate"; then
+  echo "STALE: $candidate is left from a run that failed; unpacking fresh"
+  rm -rf "$candidate"
+  before=$(printf '%s\\n' $before | grep -vx "$candidate" | tr '\\n' ' ')
+fi
 case {archive} in
   *.zip) unzip -q {archive} ;;
-  *) tar -xvf {archive} > $LOG/unpack.log ;;
+  *) tar -xvf {archive} > "$LOG/{archive}.unpack.log" ;;
 esac
 newdir=$(comm -13 <(echo "$before" | tr ' ' '\\n' | sort) <(ls -A | sort) | head -1)
-test -n "$newdir" || {{ echo "UNPACK PRODUCED NO DIRECTORY: {archive}"; exit 1; }}
+test -n "$newdir" || {{ echo "UNPACK PRODUCED NO DIRECTORY: {archive} (expected $candidate)"; exit 1; }}
 echo "UNPACKED: $newdir"
 cd "$newdir"
 """

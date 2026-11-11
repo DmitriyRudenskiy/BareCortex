@@ -196,11 +196,29 @@ def page_script(pg, title):
 
 
 def archive_for(pg):
-    """The archive this page builds, from base.lock's own page citations."""
-    for p in load_lock()["package"]:
-        if pg in p["pages"]:
-            return p["url"].rsplit("/", 1)[-1]
-    return None
+    """The archive this page builds, from base.lock's own page citations.
+
+    Eight pages cite more than one source — GCC's page unpacks GMP, MPFR and MPC
+    into the GCC tree, Python's and Tcl's and SQLite's pages unpack documentation
+    beside the source, the udev page has three tarballs — and on those the page
+    that cites a file does not say which one it builds. Returning the first match
+    would be correct today only because of the order `derive-base-lock.py` wrote
+    the file in, so it is refused instead: name the archive in
+    `build-overrides.toml`, where the choice is written down with a reason.
+    """
+    names = [p["url"].rsplit("/", 1)[-1] for p in load_lock()["package"] if pg in p["pages"]]
+    if not names:
+        return None
+    override = OVR.get("page", {}).get(pg, {}).get("archive")
+    if len(names) > 1 and not override:
+        raise AmbiguousArchive(f"{pg} is cited by {len(names)} sources "
+                               f"({', '.join(sorted(names))}); name one with "
+                               f"[page.\"{pg}\"] archive = \"...\" in build-overrides.toml")
+    return override or names[0]
+
+
+class AmbiguousArchive(Exception):
+    """A page cites several sources and nothing says which one it builds."""
 
 
 def load_lock():
@@ -274,6 +292,10 @@ def guard_sources(pages):
     have = lock_files()
     missing = []
     for pg in pages:
+        try:
+            archive_for(pg)
+        except AmbiguousArchive as e:
+            missing.append(str(e))
         for name in sorted(sources_named(pg)):
             if name not in have:
                 missing.append(f"{pg}: {name}")
@@ -428,6 +450,11 @@ def run_phase(name):
     only_page = run_phase.only_page
     todo = [p for p in pages_for(ph)
             if not only_page or p[0].endswith(only_page)]
+    if only_page and not todo:
+        # A typo in --page used to run no pages and report the phase FAILED,
+        # which reads like the build broke rather than like the name did.
+        raise SystemExit(f"--page {only_page!r} matches no page of phase {name!r}; "
+                         f"run: build.py pages {name}")
     missing = guard_sources([pg for pg, _ in todo]) + guard_test_policy([pg for pg, _ in todo])
     if missing:
         # Nothing was downloaded, unpacked or run: the phase is over before it

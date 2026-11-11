@@ -5,12 +5,38 @@
 # page that was not run verbatim says so, with the reason, in the same record as
 # the pages that were.
 #
-# Two kinds of deviation exist and both are mechanical, not editorial:
+# Three kinds of deviation exist and all are mechanical, not editorial:
 #   the page is interactive (`fdisk`, `passwd`) — a machine cannot answer it, so
 #     the equivalent non-interactive command runs and the page says it was replaced;
 #   the page offers alternatives (`mount` with or without a separate /home, a
 #     `-j32` example that is not an instruction) — the block numbers actually run
-#     are recorded rather than left to whoever reads the log.
+#     are recorded rather than left to whoever reads the log;
+#   the page cites several sources and does not say which one it builds — the
+#     archive is named here instead of being guessed from base.lock's order.
+
+# --- which tarball a page builds -------------------------------------------
+# Eight pages cite more than one source: GCC's page unpacks GMP, MPFR and MPC
+# into the GCC tree, Python's, Tcl's and SQLite's pages unpack documentation
+# beside the source, and the udev page has three tarballs. `build.py` refuses to
+# pick one — the order `derive-base-lock.py` wrote base.lock in is not a decision
+# — so each is named here. The other tarballs are still unpacked; that is done by
+# the page's own printed commands, which run verbatim.
+[page."chapter05/gcc-pass1.html"]
+archive = "gcc-15.2.0.tar.xz"   # its first block unpacks mpfr, gmp and mpc into this tree
+[page."chapter06/gcc-pass2.html"]
+archive = "gcc-15.2.0.tar.xz"
+[page."chapter07/Python.html"]
+archive = "Python-3.14.3.tar.xz"   # the -docs-html tarball is unpacked into the source tree
+[page."chapter08/Python.html"]
+archive = "Python-3.14.3.tar.xz"
+[page."chapter08/glibc.html"]
+archive = "glibc-2.43.tar.xz"   # tzdata is copied in for the timezone data
+[page."chapter08/sqlite.html"]
+archive = "sqlite-autoconf-3510200.tar.gz"   # the -doc tarball is documentation
+[page."chapter08/tcl.html"]
+archive = "tcl8.6.17-src.tar.gz"   # the -html tarball is documentation
+[page."chapter08/udev.html"]
+archive = "systemd-259.1.tar.gz"   # udev ships inside the systemd tarball; udev-lfs is the rules
 
 [devices]
 # The book writes `/dev/<xxx>` and says "replace with the name of the LFS

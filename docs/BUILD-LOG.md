@@ -247,3 +247,87 @@ The phase's exit criteria, evaluated after the pages ran:
 - `ok` `sudo -u lfs -H bash -c 'source $HOME/.bashrc; test "$LFS" = /mnt/lfs -a -n "$LFS_TGT" -a -n "$MAKEFLAGS"'`
 
 Checkpoint: `after`
+
+## cross-toolchain — FAILED
+
+2026-11-11T18:25:48 → 2026-11-11T18:25:50, context `host-lfs`, 0 page(s) of chapter 05.
+
+Book pages: 
+
+Exit criteria this phase claims to meet:
+
+- $LFS/tools holds the cross compiler, assembler and linker, and the target's `as --version` answers.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-gcc`
+- `FAILED 127` `/mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-as --version > /dev/null`
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-ld`
+
+Checkpoint: `after`
+
+## cross-toolchain — FAILED
+
+2026-11-11T18:26:47 → 2026-11-11T18:27:47, context `host-lfs`, 1 page(s) of chapter 05.
+
+Book pages: `chapter05/binutils-pass1.html`
+
+Exit criteria this phase claims to meet:
+
+- $LFS/tools holds the cross compiler, assembler and linker, and the target's `as --version` answers.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-gcc`
+- `ok` `/mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-as --version > /dev/null`
+- `ok` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-ld`
+
+Checkpoint: `after`
+
+## cross-toolchain — FAILED
+
+2026-11-11T18:27:59 → 2026-11-11T18:29:07, context `host-lfs`, 2 page(s) of chapter 05.
+
+Book pages: `chapter05/binutils-pass1.html`, `chapter05/gcc-pass1.html`
+
+Exit criteria this phase claims to meet:
+
+- $LFS/tools holds the cross compiler, assembler and linker, and the target's `as --version` answers.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-gcc`
+- `ok` `/mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-as --version > /dev/null`
+- `ok` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-ld`
+
+Checkpoint: `after`
+
+## cross-toolchain — passed
+
+2026-11-11T18:41:42 → 2026-11-11T18:50:38, context `host-lfs`, 4 page(s) of chapter 05.
+
+Book pages: `chapter05/binutils-pass1.html`, `chapter05/gcc-pass1.html`, `chapter05/linux-headers.html`, `chapter05/glibc.html`
+
+Exit criteria this phase claims to meet:
+
+- $LFS/tools holds the cross compiler, assembler and linker, and the target's `as --version` answers.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-gcc`
+- `ok` `/mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-as --version > /dev/null`
+- `ok` `test -x /mnt/lfs/tools/bin/x86_64-lfs-linux-gnu-ld`
+
+Checkpoint: `after`
