@@ -105,10 +105,13 @@ Scope note: every task below is completable without the target machine. Hardware
 - [ ] 9.6 Replace the "Run NCCL test" install step with a single-node check
 - [ ] 9.7 Remove the NCCL environment claim from `kernel/patches/README.md`
 - [ ] 9.8 Grep for remaining multi-node, cluster, and distributed-training claims across `docs/`, `README.md`, and `scripts/`
-- [ ] 9.9 Replace the base-system links in `docs/INSTALL_GUIDE.md`: `lfs/view/stable-openrc/` and `blfs/view/stable-openrc/` return 404. Point Phase 1 and 2 at `lfs/view/stable/` and `blfs/view/stable/` — the SysVinit editions — and state plainly that the OpenRC layer replacing LFS's init chapters is BareCortex's own, with no upstream book
-- [ ] 9.10 Replace the GLFS citation with NVIDIA's own documentation, verified live: the datacenter driver installation guide, the CUDA Installation Guide for Linux, the CUDA Compatibility guide, and the OpenRC repository for the init layer
+- [x] 9.9 Replace the base-system links in `docs/INSTALL_GUIDE.md`: `lfs/view/stable-openrc/` and `blfs/view/stable-openrc/` return 404. Point Phase 1 and 2 at `lfs/view/stable/` and `blfs/view/stable/` — the SysVinit editions — and state plainly that the OpenRC layer replacing LFS's init chapters is BareCortex's own, with no upstream book
+  - Closed, with the instruction's premise corrected. The 404s were read as absence and the cure offered was the SysVinit book; the LFS OpenRC edition exists (`~zeckma/openrc/lfs/13.0/`, `13.0-openrc`, 2026-03-05) and publishes no SysVinit successor, so Phase 1 and 2 now cite the pinned OpenRC renderings — no dead links, and no downgrade to a book this project does not build. `grep -rn stable-openrc` finds the string only in this task's text and in the design correction that recorded the misreading.
+- [x] 9.10 Replace the GLFS citation with NVIDIA's own documentation, verified live: the datacenter driver installation guide, the CUDA Installation Guide for Linux, the CUDA Compatibility guide, and the OpenRC repository for the init layer
+  - Closed by `base-system-and-init` 2.3: the three NVIDIA guides are cited in Phase 3 and the README, each fetched live before citation, and the OpenRC upstream is named in `docs/INIT-LAYER.md`'s substitution table. GLFS survives in exactly one place — the sentence explaining why it was dropped.
 - [x] 9.11 OQ6 resolved: OpenRC, base is the LFS SysVinit edition, systemd not used, GPU stack from NVIDIA docs (design D13)
-- [ ] 9.12 Remove the `stable-systemd` edition from every reference, and add a line to `PHILOSOPHY.md` stating that systemd is not used — so the next reader does not arrive at this same contradiction
+- [x] 9.12 Remove the `stable-systemd` edition from every reference, and add a line to `PHILOSOPHY.md` stating that systemd is not used — so the next reader does not arrive at this same contradiction
+  - Closed, and both halves were already true when checked: `grep -rn stable-systemd` matches only this task's own text, and `docs/PHILOSOPHY.md` states the claim in the checkable form — no systemd as init or service manager and no `logind`, with the udev exception and the command that enforces it. Recorded rather than edited.
 
 ## 10. Verification available without hardware
 

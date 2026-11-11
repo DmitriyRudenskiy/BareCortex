@@ -69,12 +69,24 @@ the CUDA runfile layout, and the driver/toolkit compatibility matrix:
 
 All three resolved and were read on 2026-11-11. Citing a book that does not
 describe the installer being run is how a driver gets installed by guesswork.
+The datacenter guide is cited for the `.run` installer, the kernel-module
+parameters and the persistence daemon; the branch that supports the pinned card
+is read from the driver's own supported-device list, not chosen from a document.
 
 **Required components:**
-- NVIDIA proprietary driver (r580 or r610 branch)
+- NVIDIA proprietary driver — **no branch is decided here.** It comes out of the
+  supported-device list for the pinned card, and `HARDWARE_REQUIREMENTS.md`
+  records the driver as `unknown` until a build records it. A branch number in an
+  install guide is a version claim with no hardware behind it
 - CUDA Toolkit
 - cuDNN
 - NCCL
+
+**No X server.** Compute work does not need a display server: the kernel module,
+the device nodes and `nvidia-smi` exist without one, and the headless default in
+[PHILOSOPHY.md](PHILOSOPHY.md) is not a limitation to work around. Installing X
+so that a GPU "works" is how a training host ends up booting a display manager
+that nothing talks to.
 
 ### Phase 4: Apply BareCortex Configurations
 

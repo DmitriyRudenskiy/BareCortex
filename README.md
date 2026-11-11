@@ -37,7 +37,7 @@ layers, BareCortex is stripped down to the bare minimum needed to:
 | **No containers** | All AI frameworks run directly on the host system via Python venvs |
 | **No systemd as init or service manager** | OpenRC is PID 1 (`readlink /proc/1/exe` → `openrc-init`); `scripts/build/check-no-systemd.py --root /` fails the build if any binary resolves `libsystemd`. udev is still built from the systemd tarball — [docs/INIT-LAYER.md](docs/INIT-LAYER.md) |
 | **No Wayland** | Xorg for stability or pure headless mode for servers |
-| **Bare metal** | Zero abstraction between your code and the GPU |
+| **Bare metal** | Zero abstraction between your code and the GPU — except the GPU driver and CUDA userspace, which are NVIDIA binaries, not built here |
 | **From scratch** | Built from the LFS and BLFS OpenRC editions — the GPU stack comes from NVIDIA's own guides, because GLFS is a gaming book |
 
 ## 🚀 Key Features
@@ -115,3 +115,8 @@ This project is licensed under the MIT License — see the
 ---
 
 > *"Zero overhead. Zero abstraction. Pure compute."*
+
+One exception, stated where the claim is rather than in a footnote: the GPU
+driver, CUDA Toolkit and cuDNN are binary distributions from NVIDIA. They are not
+built from source here, and they are the layer between this system and the
+hardware.

@@ -34,15 +34,21 @@ Scope note: nothing here runs on the **target**. Markers mean the classes in `ta
 
 ## 3. Replace the GLFS citation
 
-- [ ] 3.1 Rewrite `docs/INSTALL_GUIDE.md` phase 3: drop "GLFS OpenRC Edition" and cite the NVIDIA datacenter driver installation guide, the CUDA Installation Guide for Linux, and the CUDA Compatibility guide
-- [ ] 3.2 State in the same section that compute work needs no X server, and that the headless default in `docs/PHILOSOPHY.md:45` is not a limitation to work around
-- [ ] 3.3 Check every URL added resolves, and record the check
+- [x] 3.1 Rewrite `docs/INSTALL_GUIDE.md` phase 3: drop "GLFS OpenRC Edition" and cite the NVIDIA datacenter driver installation guide, the CUDA Installation Guide for Linux, and the CUDA Compatibility guide
+  - Closed by the Phase 3 rewrite done under `base-system-and-init` 2.3 (commit `7cef6b6`), recorded here because the task is this change's. GLFS is gone from the phase; the three guides are cited and each was fetched before being cited.
+- [x] 3.2 State in the same section that compute work needs no X server, and that the headless default in `docs/PHILOSOPHY.md:45` is not a limitation to work around
+  - "**No X server.**" in Phase 3: the module, the device nodes and `nvidia-smi` exist without a display server, and the headless default is not a limitation to work around — installing X so a GPU "works" is how a training host boots a display manager nothing talks to. The same edit scoped the datacenter-guide citation to what it actually documents (the `.run` installer, module parameters, the persistence daemon) and said the supported-device list chooses the branch.
+- [x] 3.3 Check every URL added resolves, and record the check
+  - `grep -rhoE "https?://[^ )>\"\`',]+" README.md docs/ | sort -u`, each fetched with `curl -s -o /dev/null -L -w '%{http_code}'`: every URL in both trees returns 200, zero failures, re-run after each documentation commit in this batch. The scan is over every URL in the two trees rather than only the added ones, because a scan of a diff cannot find the link the last commit broke.
 
 ## 4. The from-scratch claim
 
-- [ ] 4.1 Rewrite `README.md:41` ("From scratch — Built with LFS + BLFS + GLFS"): name the real base book and state the GPU-stack exception on the same line or the one below
-- [ ] 4.2 Rewrite `README.md:40` and `README.md:112` ("Zero abstraction", "Zero overhead") so the proprietary driver and CUDA userspace are named as the layer they are
-- [ ] 4.3 Check that no other file repeats the from-scratch or zero-abstraction claim without the exception
+- [x] 4.1 Rewrite `README.md:41` ("From scratch — Built with LFS + BLFS + GLFS"): name the real base book and state the GPU-stack exception on the same line or the one below
+  - The row reads: *Built from the LFS and BLFS OpenRC editions — the GPU stack comes from NVIDIA's own guides, because GLFS is a gaming book.* The real base books are named and the exception is on the same line, as required.
+- [x] 4.2 Rewrite `README.md:40` and `README.md:112` ("Zero abstraction", "Zero overhead") so the proprietary driver and CUDA userspace are named as the layer they are
+  - Both, with the exception adjacent in each case. The feature row now reads *Zero abstraction between your code and the GPU — except the GPU driver and CUDA userspace, which are NVIDIA binaries, not built here*, and the closing tagline is followed by a paragraph naming driver, CUDA Toolkit and cuDNN as binary distributions and as the layer between the system and the hardware. (The tagline is at `:117` now, not `:112` — line-number citations into a file this change keeps editing are the next task's problem.)
+- [x] 4.3 Check that no other file repeats the from-scratch or zero-abstraction claim without the exception
+  - Checked by grep over everything outside `openspec/changes/` (a change document restating a claim it is fixing is a record, not a claim): seven hits. `README.md:40`, `:41` and the tagline carry the exception; `:109` is the acknowledgment link; `README.md:21` describes the build method with the exception seventeen lines below in the same document. One needed work: `docs/PHILOSOPHY.md`'s "Why build from scratch?" section made the claim with no exception, and now opens by saying the GPU driver, CUDA Toolkit and cuDNN are NVIDIA binaries and that everything else in the file is about the parts where building it yourself is the point.
 
 ## 5. Version pairing
 

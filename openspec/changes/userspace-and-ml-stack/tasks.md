@@ -86,7 +86,8 @@ The guide currently orders the reader to run exactly the scripts this change del
 
 - [ ] 8a.1 Rewrite `docs/INSTALL_GUIDE.md` phase 5 (`:94-101`): it instructs `setup_cuda.sh`, `create_venv.sh` and `install_pytorch.sh`, the three scripts groups 5–6 replace. Point it at the curated wheel install and the venv convention chosen in 6.6
 - [ ] 8a.2 Rewrite phase 6 (`:105-118`): `nvcc --version` and `import torch` are not verification of an installed system, and the line labelled "Run NCCL test (if installed)" runs `deviceQuery`, which tests neither NCCL nor anything multi-device. Each line names what it proves and which change runs it
-- [ ] 8a.3 Fix `README.md:57`'s bare "BLFS (OpenRC Edition) →" arrow — cited in this change's proposal as a defect and left unowned until now. Name the pinned revision and what the arrow was meant to say
+- [x] 8a.3 Fix `README.md:57`'s bare "BLFS (OpenRC Edition) →" arrow — cited in this change's proposal as a defect and left unowned until now. Name the pinned revision and what the arrow was meant to say
+  - Closed by the README stack-diagram rewrite done under `base-system-and-init` 2.3. The row reads `BLFS r13.0-194 (svn) → Server tools: OpenSSH, Git, CMake, curl` — revision and contents. The two arrows beside it were corrected in the same block: `LFS 13.0-openrc` now notes that Python, Ninja and Meson are LFS packages in this edition, and the GLFS arrow became the NVIDIA and CUDA guides.
 - [ ] 8a.4 Grep the docs for any remaining instruction to run a script this change changes, and confirm each is rewritten or explicitly marked superseded with a task reference
 - [ ] 8.5 Record every group-8 task as not yet run, and remove or amend any document that presents framework-on-GPU operation as established
 

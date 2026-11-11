@@ -10,6 +10,11 @@ critically — introduces potential points of failure during long training runs.
 BareCortex is built on the principle: **if it's not directly involved in
 feeding data to the GPU or keeping the system stable, it doesn't belong here.**
 
+One part of the system is not built from source at all, and it is the most
+important part: the GPU driver, CUDA Toolkit and cuDNN are binary distributions
+from NVIDIA. Everything below is about the parts where building it yourself is
+the point.
+
 ## Key Design Decisions
 
 ### ❌ No Docker / No Containers
