@@ -18,11 +18,15 @@ Docker adds filesystem isolation, network namespacing, and cgroup management
 overhead. For a dedicated AI training server, this overhead provides no benefit:
 
 - You control the entire system yourself
-- Python `venv` provides dependency isolation without container overhead
+- A `uv`-managed venv, installed from a lock file, isolates dependencies without a daemon or a second filesystem above the one being debugged
 - Direct PCIe access to GPUs is simpler without device passthrough
 - NCCL multi-GPU communication is more predictable on bare metal
 
-**Alternative:** Python virtual environments + system-level CUDA installation.
+**Alternative:** a uv-managed virtual environment per project, resolved once into
+a lock file, over a system-level CUDA installation. The property containers were
+offered for is reproducibility, and a lock file is what actually provides it —
+decided in [docs/LANGUAGE-POLICY.md](LANGUAGE-POLICY.md), where `create_venv.sh`
+still saying `venv` and `pip` is recorded as the change that has to follow.
 
 ### ❌ No systemd
 

@@ -12,6 +12,8 @@
 # adopt. A rewrite is admissible only with usage evidence, parity evidence
 # captured from the incumbent on this machine, and a rollback that has been
 # executed once.
+# The reasoning behind that order, the accelerator-path exclusion, and the
+# standing proposals judged against it: docs/LANGUAGE-POLICY.md.
 #
 # `status` is one of:
 #   candidate — built and tested against canned driver output, installed nowhere

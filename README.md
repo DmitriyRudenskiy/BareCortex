@@ -68,6 +68,7 @@ Xorg (optional/headless)      → Display server
 - [Installation Guide](docs/INSTALL_GUIDE.md)
 - [Multi-GPU Setup Guide](docs/MULTI_GPU_SETUP.md)
 - [Pre-build Notes](docs/PREBUILD.md) — what is ready for a build and what a machine still owes
+- [Language and dependency policy](docs/LANGUAGE-POLICY.md) — what gets adopted instead of written, and what never gets rewritten
 
 ## ⚡ Quick Start
 
