@@ -117,7 +117,7 @@ def wrap(script, context, net=False):
     build user being unprivileged.
     """
     srcdir = "/sources" if context == "chroot-root" else LFS + "/sources"
-    prelude = f"export LFS={shlex.quote(LFS)} SRCDIR={shlex.quote(srcdir)}; "
+    prelude = WRAP_PRELUDE.format(lfs=shlex.quote(LFS), srcdir=shlex.quote(srcdir))
     ns = "" if net else "unshare -n "
     if context == "host-root":
         cmd = f"sudo {ns}bash -c {shlex.quote(prelude + script)}"
@@ -305,6 +305,96 @@ def expected_failures(pg, out):
     if "@@DONE" not in out:
         return []
     return [n for n in book.notes(pg) if "known to fail" in n.lower()]
+
+
+WRAP_PRELUDE = "export LFS={lfs} SRCDIR={srcdir}; "
+
+# --- one build at a time ---------------------------------------------------------
+
+LOCK = ROOT / ".build-lock"
+
+
+def pid_cmdline(pid):
+    """What a pid is, for the message that tells someone to go ask it to stop."""
+    try:
+        out = subprocess.run(["ps", "-p", str(pid), "-o", "command="],
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10)
+        return out.stdout.decode().strip()[:120] or "unknown command"
+    except Exception:
+        return "unknown command"
+
+
+def acquire_lock(what):
+    """Refuse to start a second build against the same build root.
+
+    Two `build.py run` invocations share one $LFS, one qcow2 and one snapshot
+    chain: the second one's checkpoint would freeze the first one's half-written
+    files and call it a passed phase. The lock is a file holding the owner's pid,
+    created with O_EXCL so two simultaneous starters cannot both believe they won.
+    """
+    try:
+        fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        pid = 0
+        try:
+            pid = int(LOCK.read_text().split("\t")[0])
+        except (ValueError, OSError):
+            pass
+        alive = False
+        if pid > 0:
+            try:
+                os.kill(pid, 0)
+                alive = True
+            except ProcessLookupError:
+                alive = False
+            except PermissionError:
+                alive = True  # somebody else's process, and very much alive
+        if alive:
+            raise SystemExit(
+                f"build root is locked by pid {pid} running {pid_cmdline(pid)} — that run "
+                f"owns $LFS and the snapshot chain; wait for it, or stop it and remove "
+                f"{LOCK}")
+        raise SystemExit(
+            f"stale lock: {LOCK} names pid {pid}, which is not running — the last build "
+            f"died mid-phase. Nothing owns $LFS now; clear it with: rm {LOCK}")
+    with os.fdopen(fd, "w") as f:
+        f.write(f"{os.getpid()}\t{what}\t"
+                f"{datetime.datetime.now().isoformat(timespec='seconds')}\n")
+
+
+def release_lock():
+    LOCK.unlink(missing_ok=True)
+
+
+def chroot_environment():
+    """The variables the book's own chroot invocation passes, as a set.
+
+    `chapter07/chroot.html` prints the command; this reads the `VAR=` tokens off
+    it, so the comparison below is against the page and not against a memory of
+    an older edition's command.
+    """
+    names = set()
+    for _, cmd in book.commands("chapter07/chroot.html"):
+        if "chroot" in cmd and "env -i" in cmd.replace("\n", " "):
+            names |= set(re.findall(r"^\s+([A-Z][A-Z0-9_]*)=", cmd, re.M))
+    return names
+
+
+def wrap_environment_delta():
+    """What this orchestrator hands the chroot beyond the book's invocation.
+
+    Two layers, and the difference between them is the point. `env -i` is the
+    *environment*: the book's own six variables, no more, and the check is that
+    this build adds nothing there. The *shell that runs the page* then gets the
+    prelude's two exports, because a script has to name the source directory
+    without hardcoding where the disk is mounted — `SRCDIR` is `/sources` inside
+    the chroot and `$LFS/sources` outside it, which is the whole reason the
+    orchestrator has a variable for it instead of a literal in 139 page scripts.
+    """
+    book_vars = chroot_environment()
+    env_i = set(re.findall(r"([A-Z][A-Z0-9_]*)=", CHROOT_ENV))
+    prelude = set(re.findall(r"\b([A-Z][A-Z0-9_]*)=", WRAP_PRELUDE))
+    return book_vars, env_i, prelude
 
 
 def write_record(logdir, rec):
@@ -554,6 +644,16 @@ def main():
     ap.add_argument("--page")
     a = ap.parse_args()
     run_phase.only_page = a.page
+    if a.cmd in ("run", "fetch"):
+        acquire_lock(f"{a.cmd} {a.arg}")
+        try:
+            return _dispatch(a)
+        finally:
+            release_lock()
+    return _dispatch(a)
+
+
+def _dispatch(a):
     if a.cmd == "pages":
         for pg, t in pages_for(phases()[a.arg]):
             print(f"{pg:44} {t[:40]}")

@@ -7,6 +7,7 @@ a phase that got the wrong tarball. Run: `python3 scripts/build/test_build.py`.
 """
 
 import json
+import os
 import pathlib
 import sys
 import tempfile
@@ -102,9 +103,59 @@ def check_record_identity_and_atomicity():
     assert json.loads((d / "record.json").read_text())["passed"] is True
 
 
+def check_chroot_environment_is_the_books():
+    """Task 3.5: the chroot gets the book's six variables and nothing else."""
+    book_vars, env_i, prelude = build.wrap_environment_delta()
+    assert book_vars == {"HOME", "TERM", "PS1", "PATH", "MAKEFLAGS", "TESTSUITEFLAGS"}, \
+        "the pinned page's invocation was read differently than the book prints it"
+    assert env_i == book_vars, \
+        f"env -i adds {sorted(env_i - book_vars)} drops {sorted(book_vars - env_i)}"
+    assert prelude == {"LFS", "SRCDIR"}, \
+        f"the page shell is handed {sorted(prelude)} beyond the book's environment"
+
+
+def check_build_root_lock():
+    """Task 4.6: one build per build root, and a dead owner is named as stale."""
+    real = build.LOCK
+    d = pathlib.Path(tempfile.mkdtemp())
+    build.LOCK = d / ".build-lock"
+    dead = next(p for p in range(999999, 999000, -1)
+                if not _alive(p))
+    try:
+        build.acquire_lock("run sources")
+        assert build.LOCK.read_text().split("\t")[0] == str(os.getpid())
+        try:
+            build.acquire_lock("run final-system")
+            raise AssertionError("a second invocation against a locked root must fail")
+        except SystemExit as e:
+            assert f"locked by pid {os.getpid()}" in str(e), e
+            assert "owns $LFS" in str(e), e
+        build.release_lock()
+        assert not build.LOCK.exists()
+        build.LOCK.write_text(f"{dead}\trun sources\t2026-11-11T00:00:00\n")
+        try:
+            build.acquire_lock("run sources")
+            raise AssertionError("a lock whose owner is gone must not be taken silently")
+        except SystemExit as e:
+            assert "stale lock" in str(e) and f"rm {build.LOCK}" in str(e), e
+    finally:
+        build.LOCK = real
+
+
+def _alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 if __name__ == "__main__":
     for fn in (check_mismatches, check_lock_files, check_sources_named,
-               check_record_identity_and_atomicity,
+               check_record_identity_and_atomicity, check_chroot_environment_is_the_books,
+               check_build_root_lock,
                check_guard_on_the_real_pages):
         print(f"{fn.__name__} ...", flush=True)
         fn()

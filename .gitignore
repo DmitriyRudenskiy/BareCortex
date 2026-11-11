@@ -63,3 +63,4 @@ checkpoints/
 # NOT ignored: a reproducible build wants the resolved graph pinned, and the
 # graph is this workspace (no external crates).
 /utils/target/
+.build-lock
