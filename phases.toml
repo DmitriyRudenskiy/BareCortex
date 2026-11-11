@@ -135,6 +135,12 @@ verify = ['sudo chroot /mnt/lfs /bin/bash -c "test -x /usr/bin/perl -a -x /usr/b
 name = "final-system"
 chapter = "08"
 context = "chroot-root"
+# `pkgmgt` is the chapter's package-management discussion, and its three command
+# blocks operate on `libfoo`, a library this book invented to make a point about
+# `DESTDIR`. There is no tarball and no `./configure`; the page is prose, and the
+# only reason its first block exits 0 is that grepping /proc for a deleted library
+# that was never loaded finds nothing.
+skip = ["pkgmgt"]
 entry = ["The temporary system phase passed and the sources are unpackable inside the chroot."]
 exit = ["Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.",
          "The debugging-symbols, stripping and cleanup pages ran."]

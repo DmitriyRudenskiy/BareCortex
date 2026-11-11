@@ -41,7 +41,11 @@ EVIDENCE = ROOT / "build-evidence"
 LOGMD = ROOT / "docs" / "BUILD-LOG.md"
 OVERRIDES = ROOT / "build-overrides.toml"
 
-GUEST = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=25", "-J",
+# `ServerAliveInterval` because a chapter 8 page is silent for hours while Glibc
+# compiles, and an idle timeout on the way to the guest would otherwise be
+# reported as a failed package.
+GUEST = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=25",
+         "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=60", "-J",
          "user@192.168.0.86", "-p", "2222", "bct@127.0.0.1"]
 CHROOT_ENV = ("env -i HOME=/root TERM={term} "
               "PS1='(lfs chroot) \\u:\\w\\$ ' PATH=/usr/bin:/usr/sbin "
@@ -99,7 +103,9 @@ def pages_for(ph):
 # --- running things in the guest --------------------------------------------------
 
 
-def guest_run(script, timeout=10800):
+def guest_run(script, timeout=21600):
+    """Six hours, because a chapter 8 page is Glibc building and then testing itself,
+    and a timeout that fires at three loses the page and the phase with it."""
     p = subprocess.run(GUEST + ["bash -s"], input=script.encode(),
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
     return p.returncode, p.stdout.decode("utf-8", "replace")
@@ -159,12 +165,19 @@ def wrap(script, context, net=False):
     return "set -u\n" + cmd + "\n"
 
 
-def substitute(cmd):
+def substitute(cmd, o=None):
     """The book's placeholders, filled from one place.
 
     The pages write `/dev/<xxx>` and say “replace <xxx> with the name of the LFS
-    partition”, so the value is a bare device name, not a path.
+    partition”, so the value is a bare device name, not a path. The same token
+    means something else elsewhere — Glibc's page asks for `<xxx>` to be replaced
+    with *a timezone*, and filling it with a partition name leaves
+    `/etc/localtime` pointing at `/usr/share/zoneinfo/vdc1`, which `ln -sf`
+    creates without complaint — so a page may rename its own placeholders in
+    `build-overrides.toml`, and what it renames is not touched here.
     """
+    for tok, val in (o or {}).get("placeholder", {}).items():
+        cmd = cmd.replace(tok, val)
     for ph, key in (("<xxx>", "LFS_PART"), ("<yyy>", "SWAP_DEV"), ("<zzz>", "SWAP_DEV")):
         cmd = cmd.replace(ph, DEV[key])
     return cmd
@@ -221,7 +234,7 @@ def page_script(pg, title):
             continue
         n += 1
         lines.append(f'echo "@@BLOCK {i} START: {safe(why)[:120]}"')
-        lines.append(deviate(substitute(cmd), o.get("block_subst", {}).get(str(i), {}), pg, i))
+        lines.append(deviate(substitute(cmd, o), o.get("block_subst", {}).get(str(i), {}), pg, i))
         lines.append("rc=$?")
         lines.append(f'echo "@@RC {i} $rc"')
         lines.append(f'[ "$rc" -eq 0 ] || {{ echo "@@ABORT block {i}"; exit 1; }}')
@@ -409,17 +422,34 @@ def run_page(pg, title, context, logdir):
     blocks = [(i, why, codes.get(str(i))) for i, (why, _) in enumerate(book.commands(pg), 1)
               if str(i) in codes]
     expected = expected_failures(pg, out)
-    bad = [b for b in blocks if b[2] != "0" and not expected]
+    bad = [b for b in blocks if b[2] != "0" and b[0] not in expected]
     return {"page": pg, "title": title, "exit": rc, "blocks": len(blocks),
             "failed": [f"block {b[0]} rc {b[2]}" for b in bad],
-            "expected_failure": bool(expected), "log": str(log.relative_to(ROOT))}
+            "tolerated_blocks": sorted(expected), "log": str(log.relative_to(ROOT))}
+
+
+EXPECTED_FAILURE = re.compile(r"known to fail|safe to ignore|do not pass|are expected", re.I)
+TEST_SUITE = re.compile(r"^\s*[^\n]*\bmake\b[^\n]*\bcheck\b", re.M)
 
 
 def expected_failures(pg, out):
-    """A page that says a test is known to fail has stated its own expectation."""
+    """The blocks whose failure the page itself predicts.
+
+    The wording is the book's, and there is more than one of them: eight pages say
+    a test is `known to fail`, Glibc — the one page whose suite the book calls
+    critical, `do not skip it under any circumstance` — says a few tests
+    `do not pass` and the failures it lists are `usually safe to ignore`, and Zstd
+    says a `failed` in its output is expected. Read narrowly — the tolerance
+    applies to the page's `make check` blocks and to nothing else — because a page
+    that predicts a failing test has said something about its test suite, not
+    about its `make install`, and a run that forgives a failed install while
+    reporting a green build is the failure this whole script exists to catch.
+    """
     if "@@DONE" not in out:
-        return []
-    return [n for n in book.notes(pg) if "known to fail" in n.lower()]
+        return set()
+    if not EXPECTED_FAILURE.search(book.text(pg)):
+        return set()
+    return {i for i, (_, c) in enumerate(book.commands(pg), 1) if TEST_SUITE.search(c)}
 
 
 WRAP_PRELUDE = "export LFS={lfs} SRCDIR={srcdir}; "

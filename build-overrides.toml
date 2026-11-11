@@ -31,6 +31,12 @@ archive = "Python-3.14.3.tar.xz"   # the -docs-html tarball is unpacked into the
 archive = "Python-3.14.3.tar.xz"
 [page."chapter08/glibc.html"]
 archive = "glibc-2.43.tar.xz"   # tzdata is copied in for the timezone data
+# The zoneinfo block reads `ln -sfv /usr/share/zoneinfo/<xxx> /etc/localtime` and
+# here the book's `<xxx>` means “your timezone”, not the LFS partition it means on
+# the chapter 2 pages. This build has no opinion about where it runs; the book's
+# own example is UTC.
+placeholder = { "<xxx>" = "UTC" }
+
 [page."chapter08/sqlite.html"]
 archive = "sqlite-autoconf-3510200.tar.gz"   # the -doc tarball is documentation
 [page."chapter08/tcl.html"]

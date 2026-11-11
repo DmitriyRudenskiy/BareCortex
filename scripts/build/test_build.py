@@ -197,6 +197,37 @@ def check_resume_starts_at_the_failed_phase():
     assert build.next_phase([], order) == "host-prep"
 
 
+def check_a_placeholder_means_what_its_page_says():
+    """The book's `<xxx>` is the LFS partition on the chapter 2 pages and a timezone on Glibc's.
+
+    Filled from one table, the Glibc page got the partition name and `ln -sf`
+    created `/etc/localtime` pointing at `/usr/share/zoneinfo/vdc1` — exit 0, and
+    a system with no timezone, which nothing in the phase checks.
+    """
+    glibc, _ = build.page_script("chapter08/glibc.html", "Glibc")
+    assert "/usr/share/zoneinfo/UTC /etc/localtime" in glibc
+    assert "zoneinfo/vdc" not in glibc, "the partition name is not a timezone"
+    mounting, _ = build.page_script("chapter02/mounting.html", "Mounting")
+    assert "/dev/vdc1" in mounting and "/dev/vdc2" in mounting, "the device pages still get devices"
+
+
+def check_a_predicted_test_failure_covers_only_the_test_suite():
+    """Glibc's `make check` may exit non-zero and the book says so; its install may not.
+
+    The tolerance used to be read from the admonitions only, which missed the pages
+    whose wording is not "known to fail" — Glibc among them, the one suite the book
+    refuses to let you skip — and it forgave every block of any page that mentioned
+    a failing test, including the block that installs the package.
+    """
+    glibc = build.expected_failures("chapter08/glibc.html", "@@DONE")
+    assert 6 in glibc, "block 6 is Glibc's make check"
+    assert 5 not in glibc and 7 not in glibc, "the blocks around it install the package"
+    assert build.expected_failures("chapter08/zstd.html", "@@DONE"), "Zstd: these are expected"
+    assert build.expected_failures("chapter08/gcc.html", "@@DONE"), "GCC: known test failures"
+    assert build.expected_failures("chapter06/gcc-pass2.html", "@@DONE") == set()
+    assert build.expected_failures("chapter08/glibc.html", "") == set(), "a page that never ran predicts nothing"
+
+
 def check_sources_needed_for_every_page():
     """Every page of every phase can be asked what it needs, including pages that need nothing.
 

@@ -790,3 +790,42 @@ The phase's exit criteria, evaluated after the pages ran:
 - `ok` `93 files, MD5 as published by the book`
 
 Checkpoint: `none`
+
+## temp-system — passed
+
+2026-11-11T20:52:19 → 2026-11-11T21:03:12, context `chroot-root`, 8 page(s) of chapter 07.
+
+Book pages: `chapter07/creatingdirs.html`, `chapter07/createfiles.html`, `chapter07/gettext.html`, `chapter07/bison.html`, `chapter07/perl.html`, `chapter07/Python.html`, `chapter07/texinfo.html`, `chapter07/util-linux.html`
+
+Exit criteria this phase claims to meet:
+
+- The chroot's own /etc exists: mtab, hosts, passwd, group, and the directory tree the pages create.
+- Gettext, Bison, Perl, Python, Texinfo and Util-linux are installed in the temporary system.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "test -x /usr/bin/perl -a -x /usr/bin/make -a -x /usr/bin/python3"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-11T21:05:18 → 2026-11-11T21:05:21, context `chroot-root`, 1 page(s) of chapter 08.
+
+Book pages: `chapter08/pkgmgt.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 2 rc 2`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
