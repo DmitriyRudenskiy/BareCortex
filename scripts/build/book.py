@@ -29,10 +29,24 @@ TAG_RE = re.compile(r"<[^>]*>")
 
 
 def page(url_path):
-    """A page of the pinned edition, cached — the build refetches nothing twice."""
+    """A page of the pinned edition, cached — the build refetches nothing twice.
+
+    The cache is valid for exactly one edition, and the file names say nothing
+    about which: `chapter05/binutils-pass1.html` exists in every edition of the
+    book. So the first fetch records the base URL the cache was filled from, and
+    any later build against a different base fails instead of quietly mixing two
+    books' commands into one build. Pointing the build at a new edition is a
+    deliberate act: delete the cache.
+    """
     out = CACHE / (url_path.replace("/", "+") + ".html")
+    marker = CACHE / "BASE"
+    if marker.is_file() and marker.read_text().strip() != BASE:
+        raise SystemExit(
+            f"book cache was filled from {marker.read_text().strip()!r}, this build asks "
+            f"{BASE!r}; run: rm -rf {CACHE} — the cache holds one edition's pages")
     if not out.is_file():
         out.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(BASE + "\n")
         with urllib.request.urlopen(f"{BASE}/{url_path}", timeout=60) as r:
             out.write_text(r.read().decode("utf-8", "replace"))
     return out.read_text()

@@ -22,7 +22,9 @@ code is a failure unless the page's own text expected it.
 
 import argparse
 import datetime
+import hashlib
 import json
+import os
 import pathlib
 import re
 import shlex
@@ -96,7 +98,7 @@ def guest_run(script, timeout=10800):
     return p.returncode, p.stdout.decode("utf-8", "replace")
 
 
-def wrap(script, context):
+def wrap(script, context, net=False):
     """The same command, in the environment the book types it in.
 
     `chroot-root` is the chapter 7 invocation verbatim — `env -i` and its six
@@ -105,19 +107,28 @@ def wrap(script, context):
 
     The variables go *inside* the command, because `sudo` resets the environment
     and `env -i` discards it — which is exactly the behaviour being modelled.
+
+    Every command runs inside `unshare -n`: a new network namespace, empty by
+    construction, so a build step that reaches for the network finds no route
+    rather than silently downloading something `base.lock` never approved. The
+    `sources` phase passes `net=True` because fetching is the one step the design
+    gives network to. The namespace is created by root and the command is then
+    dropped to whoever the context runs as, so the denial does not depend on the
+    build user being unprivileged.
     """
     srcdir = "/sources" if context == "chroot-root" else LFS + "/sources"
     prelude = f"export LFS={shlex.quote(LFS)} SRCDIR={shlex.quote(srcdir)}; "
+    ns = "" if net else "unshare -n "
     if context == "host-root":
-        cmd = f"sudo bash -c {shlex.quote(prelude + script)}"
+        cmd = f"sudo {ns}bash -c {shlex.quote(prelude + script)}"
     elif context == "host-lfs":
         # `-l` would source the chapter 4 .bash_profile, which ends in
         # `exec env -i … /bin/bash` and waits for a human. The variables the
         # build needs are in .bashrc, so that file is sourced and nothing execs.
-        cmd = (f"sudo -u lfs -H bash -c "
+        cmd = (f"sudo {ns}sudo -u lfs -H bash -c "
                + shlex.quote(f"source $HOME/.bashrc; {prelude}{script}"))
     elif context == "chroot-root":
-        cmd = (f"sudo chroot $LFS {CHROOT_ENV.format(term='xterm')} "
+        cmd = (f"sudo {ns}chroot $LFS {CHROOT_ENV.format(term='xterm')} "
                f"/bin/bash --login -c {shlex.quote(prelude + script)}")
         cmd = f"export LFS={shlex.quote(LFS)}; " + cmd
     else:
@@ -186,11 +197,91 @@ def page_script(pg, title):
 
 def archive_for(pg):
     """The archive this page builds, from base.lock's own page citations."""
-    lock = tomllib.loads((ROOT / "base.lock").read_text())
-    for p in lock["package"]:
+    for p in load_lock()["package"]:
         if pg in p["pages"]:
             return p["url"].rsplit("/", 1)[-1]
     return None
+
+
+def load_lock():
+    return tomllib.loads((ROOT / "base.lock").read_text())
+
+
+def lock_files():
+    """Every file name base.lock approves, package and patch together."""
+    lock = load_lock()
+    return ({p["url"].rsplit("/", 1)[-1] for p in lock["package"]}
+            | {p["file"] for p in lock["patch"]})
+
+
+# A file name, not a word that ends like one: the token has to start at a
+# boundary and carry a digit before its extension, or `gzip`, `bunzip` and the
+# `2` of `bzip2-1.0.8-install_docs-1.patch` all read as names.
+ARCHIVE_RE = re.compile(r"(?<![\w.+-])[\w.+:~-]*?\d[\w.+:~-]*?"
+                        r"(?:tar\.(?:xz|gz|bz2|zst|lzma)|zip|patch|diff|tgz|txz)"
+                        r"(?![\w-])")
+
+
+def sources_named(pg):
+    """Archive and patch file names a page's own commands mention.
+
+    The wrapper unpacks what base.lock names. A page can still name a file in a
+    command — a `patch -i ../foo.patch`, a hand-written `tar -xvf`, a `wget` —
+    and that reference is not checked by anything else.
+    """
+    names = set()
+    for _, cmd in book.commands(pg):
+        names |= {t.rsplit("/", 1)[-1] for t in ARCHIVE_RE.findall(cmd)}
+    return names
+
+
+# chapter04/abouttestsuites.html: "the test suites for the core toolchain
+# packages—GCC, binutils, and glibc—are of the utmost importance".
+CORE_SUITES = {"chapter08/binutils.html": "binutils", "chapter08/gcc.html": "GCC",
+               "chapter08/glibc.html": "glibc"}
+
+
+def guard_test_policy(pages):
+    """The three suites the book names as utmost importance are never skipped.
+
+    The only way this build skips a command the book printed is an override in
+    `build-overrides.toml`, so the policy is a check on the overrides rather than
+    a rule in prose: an override that skips, or narrows away, the block holding a
+    core suite command fails the phase and says which package lost its tests.
+    """
+    bad = []
+    for pg in pages:
+        if pg not in CORE_SUITES:
+            continue
+        o = OVR.get("page", {}).get(pg, {})
+        skip, take = set(o.get("skip_blocks", [])), o.get("only_blocks")
+        for i, (_, cmd) in enumerate(book.commands(pg), 1):
+            if "check" not in cmd:
+                continue
+            if i in skip:
+                bad.append(f"{pg}: {CORE_SUITES[pg]} test suite skipped (block {i})")
+            elif take is not None and i not in take:
+                bad.append(f"{pg}: {CORE_SUITES[pg]} test suite not in only_blocks (block {i})")
+    return bad
+
+
+def guard_sources(pages):
+    """Sources a page or an override names but base.lock does not carry.
+
+    Checked before anything is downloaded or unpacked, so a phase that reaches
+    for an unapproved tarball fails with its name instead of building with it.
+    """
+    have = lock_files()
+    missing = []
+    for pg in pages:
+        for name in sorted(sources_named(pg)):
+            if name not in have:
+                missing.append(f"{pg}: {name}")
+    for pg, o in sorted(OVR.get("page", {}).items()):
+        archive = o.get("archive")
+        if archive and archive not in have:
+            missing.append(f"build-overrides.toml page {pg}: {archive}")
+    return missing
 
 
 def run_page(pg, title, context, logdir):
@@ -216,6 +307,26 @@ def expected_failures(pg, out):
     return [n for n in book.notes(pg) if "known to fail" in n.lower()]
 
 
+def write_record(logdir, rec):
+    """One record per phase, replaced atomically.
+
+    The record is written once, after the phase's pages ran and its criteria were
+    evaluated, and it is moved into place rather than opened: a run that dies
+    while writing leaves the previous run's record whole instead of truncated.
+    That is what makes `build.py status` readable after a crash, and what lets a
+    resume decide where to continue from.
+
+    Every record carries the identity of what it was built against — the bytes of
+    `base.lock` and the book it was read from — because a record that does not say
+    which inputs it had cannot be evidence about any of them.
+    """
+    rec = {**rec, "base_lock": hashlib.sha256((ROOT / "base.lock").read_bytes()).hexdigest(),
+           "book": book.BASE}
+    tmp = logdir / "record.json.tmp"
+    tmp.write_text(json.dumps(rec, indent=1) + "\n")
+    os.replace(tmp, logdir / "record.json")
+
+
 def run_phase(name):
     ph = phases()[name]
     logdir = EVIDENCE / name
@@ -224,11 +335,25 @@ def run_phase(name):
     if ph.get("needs_mount", True) and not ensure_mounted():
         raise SystemExit(f"{name}: $LFS is not mounted and the phase cannot start")
     results = []
-    todo = pages_for(ph)
     only_page = run_phase.only_page
+    todo = [p for p in pages_for(ph)
+            if not only_page or p[0].endswith(only_page)]
+    missing = guard_sources([pg for pg, _ in todo]) + guard_test_policy([pg for pg, _ in todo])
+    if missing:
+        # Nothing was downloaded, unpacked or run: the phase is over before it
+        # started, and the record says which page asked for what.
+        rec = {"phase": name, "started": started,
+               "finished": datetime.datetime.now().isoformat(timespec="seconds"),
+               "context": ph["context"], "pages": 0, "pages_passed": False,
+               "evidence_complete": False, "criteria": [], "passed": False,
+               "blocked": missing, "results": [], "entry": ph["entry"],
+               "exit_criteria": ph["exit"], "checkpoint": "none"}
+        write_record(logdir, rec)
+        write_log(rec, ph)
+        print(f"{name}: FAILED before running anything:\n  "
+              + "\n  ".join(missing), flush=True)
+        return rec
     for pg, title in todo:
-        if only_page and not pg.endswith(only_page):
-            continue
         ctx = OVR.get("page", {}).get(pg, {}).get("context", ph["context"])
         r = run_page(pg, title, ctx, logdir)
         results.append(r)
@@ -253,7 +378,7 @@ def run_phase(name):
            "results": results,
            "entry": ph["entry"], "exit_criteria": ph["exit"],
            "checkpoint": ph["checkpoint"]}
-    (logdir / "record.json").write_text(json.dumps(rec, indent=1) + "\n")
+    write_record(logdir, rec)
     print(f"{name}: {'passed' if rec['passed'] else 'FAILED'} "
           f"({len(results)}/{len(todo)} pages, "
           f"{sum(1 for c in checks if c['rc'] == 0)}/{len(checks)} criteria)", flush=True)
@@ -352,7 +477,7 @@ def run_sources():
            "passed": not bad and (logdir / "fetch.log").is_file(),
            "results": [r], "entry": ph["entry"], "exit_criteria": ph["exit"],
            "checkpoint": ph["checkpoint"]}
-    (logdir / "record.json").write_text(json.dumps(rec, indent=1) + "\n")
+    write_record(logdir, rec)
     write_log(rec, ph)
     print(f"sources: {'passed' if rec['passed'] else 'FAILED'}", flush=True)
     if rec["passed"] and ph["checkpoint"] != "none":
@@ -361,8 +486,13 @@ def run_sources():
 
 
 def fetch():
-    """Download what base.lock names, and verify it against the book's checksums."""
-    lock = tomllib.loads((ROOT / "base.lock").read_text())
+    """Download what base.lock names, and verify it against the book's checksums.
+
+    The cache is `$LFS/sources` itself: a file that exists with the published
+    checksum is never requested again, and a file whose checksum does not match
+    is never unpacked. There is no second copy and no second place to be stale.
+    """
+    lock = load_lock()
     if not ensure_mounted():
         raise SystemExit("fetch: $LFS is not mounted; refusing to write into the host's "
                          "directory tree instead of the LFS filesystem")
@@ -380,17 +510,31 @@ def fetch():
                       f'|| {{ rm -f {shlex.quote(name)}.part; echo "@@FETCH-FAIL {name}"; }}; fi')
         script.append(f'echo "@@MD5 {name} $(md5sum {shlex.quote(name)} 2>/dev/null '
                       f'| cut -d" " -f1) {md5}"')
-    rc, out = guest_run(wrap("\n".join(script), "host-root"), timeout=7200)
-    bad = []
-    for line in out.splitlines():
-        if line.startswith("@@MD5"):
-            _, name, got, want = line.split()
-            if got != want:
-                bad.append(name)
+    rc, out = guest_run(wrap("\n".join(script), "host-root", net=True), timeout=7200)
+    bad = mismatches(out)
     (EVIDENCE / "sources").mkdir(parents=True, exist_ok=True)
     (EVIDENCE / "sources" / "fetch.log").write_text(out)
     print(f"fetched {len(items)} files, checksum mismatches: {bad or 'none'}")
     return bad, len(items)
+
+
+def mismatches(fetch_output):
+    """The files the fetch names as not matching what base.lock published.
+
+    Three shapes arrive: a match, a mismatch, and a file that is not there at all
+    (md5sum printed nothing, so the line has one field fewer). All three name the
+    file when they are a problem, and none of them is retried, repaired or
+    ignored — a source that does not match is a build that stops.
+    """
+    bad = []
+    for line in fetch_output.splitlines():
+        if line.startswith("@@FETCH-FAIL"):
+            bad.append(line.split()[1])
+        elif line.startswith("@@MD5"):
+            fields = line.split()
+            if len(fields) != 4 or fields[2] != fields[3]:
+                bad.append(fields[1])
+    return sorted(set(bad))
 
 
 def status():
