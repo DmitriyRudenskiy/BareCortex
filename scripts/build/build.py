@@ -236,10 +236,13 @@ def page_script(pg, title):
     archive = o.get("archive") or archive_for(pg)
     note = "\n".join("#   " + safe(l) for l in o.get("note", "").splitlines() if l.strip())
     lines = ["#!/bin/bash", "# " + pg, "set -u",
+             # Markers on the channel, output in the file. `exec 3>&1` comes
+             # first, so fd 3 is still the ssh session once stdout is the log.
+             'exec 3>&1', f'exec >"{PAGE_LOG}" 2>&1',
              # The book's synopsis runs with -e, so a failing command inside a block
              # stops the page the way stopping to read an error stops a person. The
              # trap is what makes that visible in the log instead of a silent gap.
-             'trap \'echo "@@FAILED line $LINENO: $BASH_COMMAND"\' ERR',
+             'trap \'echo "@@FAILED line $LINENO: $BASH_COMMAND" >&3\' ERR',
              f'echo "PAGE: {safe(pg)} | {safe(title)}"']
     if o.get("pre"):
         lines += ["# override pre: " + note, o["pre"]]
@@ -256,14 +259,14 @@ def page_script(pg, title):
         if take is not None and i not in take:
             continue
         if i in skip:
-            lines.append(f'echo "@@SKIP block {i}: {why_skipped}"')
+            lines.append(f'echo "@@SKIP block {i}: {why_skipped}" >&3')
             continue
         emitted.append(i)
-        lines.append(f'echo "@@BLOCK {i} START: {safe(why)[:120]}"')
+        lines.append(f'echo "@@BLOCK {i} START: {safe(why)[:120]}" >&3')
         lines.append(deviate(substitute(cmd, o), o.get("block_subst", {}).get(str(i), {}), pg, i))
         lines.append("rc=$?")
-        lines.append(f'echo "@@RC {i} $rc"')
-        lines.append(f'[ "$rc" -eq 0 ] || {{ echo "@@ABORT block {i}"; exit 1; }}')
+        lines.append(f'echo "@@RC {i} $rc" >&3')
+        lines.append(f'[ "$rc" -eq 0 ] || {{ echo "@@ABORT block {i}" >&3; exit 1; }}')
     if archive and not o.get("no_unpack"):
         lines.append(book.wrapper_post())
     if o.get("post"):
@@ -272,7 +275,7 @@ def page_script(pg, title):
     # is a power cut. Flushing at the end of a page keeps a phase's files off the
     # list of things a hard stop can lose.
     lines.append("sync")
-    lines.append('echo "@@DONE"')
+    lines.append('echo "@@DONE" >&3')
     return "\n".join(lines), emitted
 
 
@@ -441,9 +444,18 @@ def guard_present(pages):
 def run_page(pg, title, context, logdir):
     script, emitted = page_script(pg, title)
     print(f"  {pg} ({len(emitted)} blocks, {context})", flush=True)
-    rc, out = guest_run(wrap(script, context) + f"echo {PAGE_DONE.strip()}\n")
+    rc, out = guest_run(wrap(script, context))
+    # A second, short connection, which is the point: the page's own channel is
+    # the thing that dies, and it dies with the evidence still in the guest. The
+    # file is capped because a chapter 8 `make check` log runs to hundreds of
+    # megabytes and the head and the tail are what a reader wants of it.
+    fetch = (f'f={PAGE_LOG}; n=$(wc -c <"$f" 2>/dev/null || echo 0); '
+             'if [ "$n" -le 2000000 ]; then cat "$f"; else head -c 1000000 "$f"; '
+             'echo; echo "@@TRUNCATED $n bytes"; tail -c 1000000 "$f"; fi')
+    log_rc, body = guest_run(wrap(fetch, context))
     log = logdir / (pg.split("/")[1][:-5] + ".log")
-    log.write_text(f"# {pg}\n# context: {context}\n# ssh exit: {rc}\n\n{out}")
+    log.write_text(f"# {pg}\n# context: {context}\n# ssh exit: {rc}\n"
+                   f"# markers: {out.strip()[-200:]}\n\n{body}")
     codes = dict(re.findall(r"@@RC (\d+) (-?\d+)", out))
     blocks = [(i, why, codes.get(str(i))) for i, (why, _) in enumerate(book.commands(pg), 1)
               if str(i) in codes]
@@ -457,7 +469,8 @@ def run_page(pg, title, context, logdir):
     ran = {b[0] for b in blocks}
     bad += [f"block {i} never reported (the page stopped early)"
             for i in emitted if i not in ran]
-    return {"page": pg, "title": title, "exit": rc, "blocks": len(blocks),
+    return {"page": pg, "title": title, "exit": rc, "log_rc": log_rc,
+            "done": PAGE_DONE in out, "blocks": len(blocks),
             "failed": bad, "tolerated_blocks": sorted(expected),
             "log": str(log.relative_to(ROOT))}
 
@@ -486,11 +499,17 @@ def expected_failures(pg, out):
     return {i for i, (_, c) in enumerate(book.commands(pg), 1) if TEST_SUITE.search(c)}
 
 
-# Emitted by every page script, after its last block. A page whose output lacks
-# it stopped early, whatever else it managed to print — which is the only
-# question worth asking about a truncated stream, and `@@RC` appearing somewhere
-# is no answer: block 1 reporting is compatible with dying at block 6.
-PAGE_DONE = "@@PAGE-DONE\n"
+# Every page script prints this last, after its `sync`. A page whose stream lacks
+# it stopped early whatever else it managed to print, and that is the only
+# question worth asking about a truncated stream: `@@RC` appearing somewhere is
+# no answer, because block 1 reporting is compatible with dying at block 6.
+PAGE_DONE = "@@DONE"
+
+# Where a page's real output goes. The channel carries markers; the log lives on
+# the disk the checkpoint protects, and is fetched afterwards on a short
+# connection. A ninety minute `make check` streaming a hundred thousand lines
+# through qemu's user-mode networking is the thing that keeps wedging.
+PAGE_LOG = "/tmp/.bct-page.log"
 
 WRAP_PRELUDE = "export LFS={lfs} SRCDIR={srcdir}; "
 NET_DENIED = "denied (unshare -n: no routes, no interfaces; verified against the same probe outside)"
@@ -657,7 +676,11 @@ def run_phase(name):
                        "out": f"{n} files named by base.lock; mismatches and absences: "
                               f"{bad or 'none'}"})
     evidence = results and all(pathlib.Path(ROOT / r["log"]).is_file() for r in results)
-    pages_ok = bool(results) and all(r["exit"] == 0 and not r["failed"] for r in results)
+    # A page is what it did, not what its shell returned: the page script exits
+    # non-zero on a failing block, and a block the page itself predicts failing
+    # (`do not pass`, `usually safe to ignore`) is not a failure. What a page has
+    # to prove is that it ran to the end and that nothing unexpected failed.
+    pages_ok = bool(results) and all(r["done"] and not r["failed"] for r in results)
     # A phase passes on criteria that were evaluated. Not having any is not a pass:
     # the same fail-closed rule the base.lock check applies to an empty class map.
     criteria_ok = bool(checks) and all(c["rc"] == 0 for c in checks)
