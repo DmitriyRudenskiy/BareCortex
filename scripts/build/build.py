@@ -45,7 +45,7 @@ OVERRIDES = ROOT / "build-overrides.toml"
 # compiles, and an idle timeout on the way to the guest would otherwise be
 # reported as a failed package.
 GUEST = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=25",
-         "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=60", "-J",
+         "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=4", "-J",
          "user@192.168.0.86", "-p", "2222", "bct@127.0.0.1"]
 CHROOT_ENV = ("env -i HOME=/root TERM={term} "
               "PS1='(lfs chroot) \\u:\\w\\$ ' PATH=/usr/bin:/usr/sbin "
@@ -103,12 +103,27 @@ def pages_for(ph):
 # --- running things in the guest --------------------------------------------------
 
 
-def guest_run(script, timeout=21600):
+def guest_run(script, timeout=21600, tries=2):
     """Six hours, because a chapter 8 page is Glibc building and then testing itself,
-    and a timeout that fires at three loses the page and the phase with it."""
-    p = subprocess.run(GUEST + ["bash -s"], input=script.encode(),
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
-    return p.returncode, p.stdout.decode("utf-8", "replace")
+    and a timeout that fires at three loses the page and the phase with it.
+
+    Retried once when the *transport* died rather than the build: this build's
+    Glibc page ran for 45 minutes, the ssh session between this machine and the
+    guest went away half-open, the local `ssh` sat waiting out its keepalive
+    timeout, and the phase would have been recorded as a failed package on a
+    system that had no way to know whether Glibc built. `rc 255` with no `@@DONE`
+    is ssh saying it lost the connection — no block of the page said anything —
+    and a page that never reported a block failure is safe to ask again.
+    """
+    for attempt in range(tries):
+        p = subprocess.run(GUEST + ["bash -s"], input=script.encode(),
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
+        out = p.stdout.decode("utf-8", "replace")
+        if p.returncode != 255 or "@@RC" in out or attempt + 1 == tries:
+            return p.returncode, out
+        print(f"    connection to the guest was lost, running the page again "
+              f"(attempt {attempt + 2} of {tries})", flush=True)
+    return p.returncode, out
 
 
 # Chapter 7's four mounts, as the host sees them. Guarded by `findmnt` so the

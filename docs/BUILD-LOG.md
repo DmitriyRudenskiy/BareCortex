@@ -887,3 +887,42 @@ The phase's exit criteria, evaluated after the pages ran:
 - `ok` `93 files, MD5 as published by the book`
 
 Checkpoint: `none`
+
+## temp-system — passed
+
+2026-11-11T21:19:04 → 2026-11-11T21:28:16, context `chroot-root`, 8 page(s) of chapter 07.
+
+Book pages: `chapter07/creatingdirs.html`, `chapter07/createfiles.html`, `chapter07/gettext.html`, `chapter07/bison.html`, `chapter07/perl.html`, `chapter07/Python.html`, `chapter07/texinfo.html`, `chapter07/util-linux.html`
+
+Exit criteria this phase claims to meet:
+
+- The chroot's own /etc exists: mtab, hosts, passwd, group, and the directory tree the pages create.
+- Gettext, Bison, Perl, Python, Texinfo and Util-linux are installed in the temporary system.
+- Every command block of every page exited 0.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "test -x /usr/bin/perl -a -x /usr/bin/make -a -x /usr/bin/python3"`
+
+Checkpoint: `after`
+
+## sources — passed
+
+2026-11-11T22:56:46 → 2026-11-11T22:56:54, context `host-root`, 1 page(s) of chapter 03.
+
+Book pages: `chapter03/packages.html`
+
+Exit criteria this phase claims to meet:
+
+- Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.
+- Nothing was fetched that base.lock does not name.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `93 files, MD5 as published by the book`
+
+Checkpoint: `none`
