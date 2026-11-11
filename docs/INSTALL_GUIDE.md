@@ -22,10 +22,13 @@ Build the core system using the **LFS OpenRC Edition** book.
 export LFS=/mnt/barecortex
 mkdir -p $LFS
 
-# Follow the LFS book, OpenRC Edition — the edition this project pins. The
-# rendering lives under the maintainer's home directory, not under lfs/view/,
-# and base.lock's [edition] row is the authoritative pin.
-# https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0/
+# Build from the LFS OpenRC Edition. It is not in the main view index, so the
+# path is the citation:
+#   https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0/
+# Edition 13.0-openrc, published 2026-03-05, patching LFS 13.0. The edition
+# publishes no SVN revision, so version plus date is the whole pin — and
+# base.lock's [edition] row is what the build actually used. The same directory
+# also offers stable/ and development/; both move, so neither is cited here.
 ```
 
 **Key decisions during build:**
@@ -33,36 +36,39 @@ mkdir -p $LFS
 - Init system: OpenRC
 - Text editor: vim or nano (your choice)
 
-### Phase 2: Server Environment (BLFS)
+### Phase 2: Server tools, Python, compilers
 
-Install essential server packages from **BLFS OpenRC Edition**.
+Not "follow BLFS". The image uses the packages in the table, and each row says
+where it comes from — because the BLFS OpenRC material is an SVN snapshot
+(r13.0-194, 2026-03-23, at
+`https://www.linuxfromscratch.org/~zeckma/openrc/blfs/svn/`) with no released
+edition behind it, and its own version page says it targets the LFS
+*development* book rather than the 13.0 base built above. Every page path below
+is relative to that rendering.
 
-```bash
-# Follow the BLFS book, OpenRC Edition. It publishes no versioned release path
-# — only an SVN rendering, observed as BLFS-BOOK r13.0-194 (2026-03-23), which
-# targets the LFS *development* book rather than the 13.0 the base is built
-# from. Citing it by revision is base-system-and-init 1.3/1.5.
-# https://www.linuxfromscratch.org/~zeckma/openrc/blfs/svn/
-```
+| Package | Where it comes from |
+|---|---|
+| Python 3.14.3, GCC 15.2.0, Make 4.4.1, Ninja 1.13.2, Meson, Pkgconf, OpenSSL 3.6.1 | `base.lock`, built from chapter 8 of the **base** book. Python and Ninja are LFS packages in this edition, not BLFS ones — so "Python 3.12+" is not a choice to make here, the base pins 3.14.3 |
+| OpenSSH, Git, CMake, curl, wget, FFmpeg | Have a page in the pinned BLFS rendering — `postlfs/openssh.html`, `general/git.html`, `general/cmake.html`, `basicnet/curl.html`, `basicnet/wget.html`, `multimedia/ffmpeg.html` — and **no `base.lock` entry yet**. `userspace-and-ml-stack` group 3 adds them, one citation per entry |
+| tmux, chrony, htop, nvtop | **No page in the pinned BLFS rendering**, checked against its own index rather than recalled. `userspace-and-ml-stack` 0.7 names the route before any of them installs; `nvtop` is not a BLFS package at all |
+| Xorg Server | Optional. The default is no X server at all ([PHILOSOPHY.md](PHILOSOPHY.md)) |
 
-**Required packages:**
-- Python 3.12+
-- OpenSSH server
-- Git
-- GCC, CMake, Make, Ninja
-- curl, wget
-- tmux, htop, nvtop
-- FFmpeg (for data preprocessing)
-- Xorg Server (optional, for headless mode)
+`base.lock` is the authority; this table is a reading of the pinned rendering's
+index, and nothing is installed because it appears here.
 
-### Phase 3: NVIDIA Drivers & CUDA (GLFS)
+### Phase 3: NVIDIA drivers and CUDA
 
-Install GPU stack from **GLFS OpenRC Edition**.
+GLFS is a gaming book: its OpenRC rendering installs drivers for a desktop, not
+for a headless node with five cards. The GPU stack comes from the vendor
+documentation, which is what actually describes the datacenter driver installer,
+the CUDA runfile layout, and the driver/toolkit compatibility matrix:
 
-```bash
-# Follow GLFS book (OpenRC Edition)
-# https://www.linuxfromscratch.org/glfs/view/dev-openrc/
-```
+- [NVIDIA Data Center GPU Driver Installation Guide](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/index.html)
+- [CUDA Installation Guide for Linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/)
+- [CUDA Compatibility Guide](https://docs.nvidia.com/deploy/cuda-compatibility/index.html)
+
+All three resolved and were read on 2026-11-11. Citing a book that does not
+describe the installer being run is how a driver gets installed by guesswork.
 
 **Required components:**
 - NVIDIA proprietary driver (r580 or r610 branch)

@@ -102,6 +102,27 @@ Configuration files the operator is told to edit, not write:
 `/etc/conf.d/hwclock`, `/etc/conf.d/consolefont`, `/etc/conf.d/keymaps`,
 `/etc/conf.d/agetty`, `/etc/conf.d/network`, `/etc/rc.conf` (§9.4–§9.5.8).
 
+## The delta no book covers
+
+Everything above is the edition's work, citable to a page. What this repository
+adds beyond the edition is three services and three configuration files, and the
+substitution table's last column has one honest answer for all of them: **none —
+this repository is the upstream.** The pinned edition's 161 pages contain no
+NVIDIA service, OpenRC ships none, and NVIDIA's own documentation and packages
+assume systemd units that this system does not have.
+
+| File | What it is the only source of | What breaks if it stops being maintained |
+|---|---|---|
+| `openrc/init.d/nvidia-persistenced`, `conf.d/nvidia-persistenced` | starting the driver's persistence daemon with the right user and pidfile, and loading the modules first | the binary's path and options move with the driver branch; OpenRC still reports **started** as long as the command exits 0, so the service can be doing nothing for months and the symptom shows up as a driver that has to be re-initialised between jobs |
+| `openrc/init.d/gpu-fancontrol`, `conf.d/gpu-fancontrol` | the boot-time fan write, delegated to `bmc-fan` because `nvidia-smi -f` is unsupported on most GeForce cards | the wrapper outlives the binary it wraps — `bmc-fan` is a `candidate` in `utils/rust-coverage.toml`, installed nowhere — so today the service cannot succeed on a real host. The unmaintained failure is thermal throttling that reads as a slow training run |
+| `openrc/init.d/ai-training`, `conf.d/ai-training` | running a training script as a boot service, with `CUDA_VISIBLE_DEVICES` exported from `GPU_IDS` | it is the one service that executes user code, so every path in it is a guess about a machine that does not exist yet: `PYTHON_BIN=/opt/ai/venv/bin/python` predates the `uv` decision, and `GPU_IDS="0,1"` ships as the boot behaviour of a five-GPU host — the compiled-in device default that `bmc-run` was made to refuse, in a config file |
+
+Maintenance here is not a style preference, it is the mechanism: an `openrc-run`
+script that rots does not announce it, because start-success is the script's exit
+status and the script cannot tell that the thing it launched is not doing its
+job. That is why each of the three names its requirements, its runlevel, and its
+failure mode, and why `gpu-fancontrol` delegates the one write that can lie.
+
 ## Open question the build will hit at chapter 9
 
 The edition's own `rc-update` commands enable exactly three things:

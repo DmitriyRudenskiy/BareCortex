@@ -38,7 +38,7 @@ layers, BareCortex is stripped down to the bare minimum needed to:
 | **No systemd as init or service manager** | OpenRC is PID 1 (`readlink /proc/1/exe` → `openrc-init`); `scripts/build/check-no-systemd.py --root /` fails the build if any binary resolves `libsystemd`. udev is still built from the systemd tarball — [docs/INIT-LAYER.md](docs/INIT-LAYER.md) |
 | **No Wayland** | Xorg for stability or pure headless mode for servers |
 | **Bare metal** | Zero abstraction between your code and the GPU |
-| **From scratch** | Built with LFS + BLFS + GLFS (OpenRC Edition) |
+| **From scratch** | Built from the LFS and BLFS OpenRC editions — the GPU stack comes from NVIDIA's own guides, because GLFS is a gaming book |
 
 ## 🚀 Key Features
 
@@ -53,11 +53,11 @@ layers, BareCortex is stripped down to the bare minimum needed to:
 ## 📋 Base Technology Stack
 
 ```
-LFS (OpenRC Edition)          → Base system
-BLFS (OpenRC Edition)         → Server tools, Python, compilers
-GLFS (OpenRC Edition)         → NVIDIA drivers, CUDA Toolkit
+LFS 13.0-openrc               → Base system (Python, Ninja and Meson are LFS packages here)
+BLFS r13.0-194 (svn)          → Server tools: OpenSSH, Git, CMake, curl
+NVIDIA + CUDA guides          → Driver, toolkit, cuDNN, NCCL
 Custom kernel config          → AI-optimized
-Python venv                   → Framework isolation (instead of Docker)
+uv-managed venv               → Framework isolation (instead of Docker)
 Xorg (optional/headless)      → Display server
 ```
 
@@ -107,8 +107,9 @@ This project is licensed under the MIT License — see the
 ## 🙏 Acknowledgments
 
 - [Linux From Scratch](https://www.linuxfromscratch.org/) — the foundation
-- [GLFS (OpenRC Edition)](https://www.linuxfromscratch.org/glfs/) — NVIDIA & CUDA instructions
-- [BLFS (OpenRC Edition)](https://www.linuxfromscratch.org/blfs/) — server packages
+- [LFS OpenRC Edition](https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0/) — the pinned base, 13.0-openrc of 2026-03-05
+- [BLFS OpenRC Edition](https://www.linuxfromscratch.org/~zeckma/openrc/blfs/svn/) — server packages, an SVN rendering with no released edition
+- [NVIDIA Data Center GPU Driver Installation Guide](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/index.html), [CUDA Installation Guide for Linux](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/), [CUDA Compatibility Guide](https://docs.nvidia.com/deploy/cuda-compatibility/index.html) — the GPU stack
 - The LFS community for patches and hints
 
 ---

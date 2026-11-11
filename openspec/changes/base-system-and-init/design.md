@@ -22,7 +22,7 @@ So the OpenRC layer is not BareCortex-owned software with no upstream, as this d
 | grub / kmod / util-linux / openssl / sysklogd | 2.14 / 34.2 / 2.41.3 / 3.6.1 / 2.7.2 | |
 | PAM | **absent** | the string does not occur in the package list; there is no `pam` page in chapter 8 |
 
-Three consequences, each of which contradicts something this design or a sibling change asserted: PID 1 is OpenRC's own init, not sysvinit's (OQ1 below); "no systemd" cannot be stated without naming the udev exception (D2); and `pam_limits` is not available as a mechanism anywhere in this system, which is corrected in `honest-scope-and-config-generation` D14.
+Three consequences, each of which contradicts something this design or a sibling change asserted: PID 1 is OpenRC's own init, not sysvinit's (OQ1 below); "no systemd" cannot be stated without naming the udev exception (D2); and `pam_limits` is not available as a mechanism anywhere in this system, which is corrected in `honest-scope-and-config-generation` D15.
 
 ## Goals / Non-Goals
 
@@ -65,6 +65,8 @@ BLFS has **no released OpenRC edition at all** — `~zeckma/openrc/blfs/` contai
 The SysVinit alternative was checked rather than assumed: `lfs/view/13.0/` and `lfs/view/13.1/` return 404 while `lfs/view/12.4/` returns 200. LFS 13.x publishes no SysVinit edition, so choosing the OpenRC edition is a **version** decision and not only an init decision — the alternative to 13.0-openrc is 12.4-sysvinit, four minor versions and a year of package updates behind, or 13.1 with systemd built into the base.
 
 **When the two books disagree about a base package version, the base book wins**, because `base.lock` is derived from the base book's package page and the build installs what `base.lock` names; a BLFS page describing a different version is not a competing instruction, it is evidence that the BLFS instruction was written against a newer base. The re-verification is owned by the change that derives the BLFS-side entries — `userspace-and-ml-stack` group 3, whose 0.7 route already exists for packages the rendering does not cover — and it is triggered by the only event that can move the pin: a re-run of `derive-base-lock.py` against a different edition directory. What is *not* in place is a check that notices the drift automatically; the trigger is procedural, and saying so is cheaper than a check that cannot be written before a build exists.
+
+**The pinned edition has no PAM.** Checked against `base.lock`, which is derived from the edition's own package page: no entry's name contains PAM, and the edition builds OpenRC with `-D pam=false` for the stated reason that Linux-PAM "is not installed yet". So anything in this repository that reaches for PAM — a `pam_limits` line, a `pam.d` file, a `pam_systemd` module — is describing a system this project does not build. Two consequences, one closed and one open: the only PAM paths in the tree are inside `scripts/build/check-no-systemd.py`, which reads `etc/pam.d/*` to *fail* on `pam_systemd` and is correct to do so; and the `memlock` limit that an external plan proposed to set with `pam_limits` is supposed to be set in a service's `rc_ulimit` (`honest-scope-and-config-generation` D15) — a string which appears in **no file in this repository**, so the mechanism D15 chose is not implemented anywhere yet. `gpu-stack` owns the training job's resource limits and should be told the mechanism is missing rather than assumed present.
 
 ### D2 — "No systemd" is a link scan with a named exception, not a badge
 
