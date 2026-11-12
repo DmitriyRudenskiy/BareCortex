@@ -983,3 +983,326 @@ The phase's exit criteria, evaluated after the pages ran:
 - `ok` `93 files, MD5 as published by the book`
 
 Checkpoint: `none`
+
+## sources — passed
+
+2026-11-12T02:07:09 → 2026-11-12T02:07:17, context `host-root`, 1 page(s) of chapter 03.
+
+Book pages: `chapter03/packages.html`
+
+Exit criteria this phase claims to meet:
+
+- Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.
+- Nothing was fetched that base.lock does not name.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `93 files, MD5 as published by the book`
+
+Checkpoint: `none`
+
+## final-system — FAILED
+
+2026-11-12T04:32:25 → 2026-11-12T08:04:09, context `chroot-root`, 15 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 1 never reported (the page stopped early)`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`, `block 4 never reported (the page stopped early)`, `block 5 never reported (the page stopped early)`, `block 6 never reported (the page stopped early)`, `block 7 never reported (the page stopped early)`, `block 8 never reported (the page stopped early)`, `block 9 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-12T21:01:02 → 2026-11-12T21:01:07, context `chroot-root`, 15 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 1 never reported (the page stopped early)`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`, `block 4 never reported (the page stopped early)`, `block 5 never reported (the page stopped early)`, `block 6 never reported (the page stopped early)`, `block 7 never reported (the page stopped early)`, `block 8 never reported (the page stopped early)`, `block 9 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-12T21:32:03 → 2026-11-12T21:37:46, context `chroot-root`, 15 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-12T22:03:36 → 2026-11-12T22:13:44, context `chroot-root`, 20 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 1 rc 1`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`, `block 4 never reported (the page stopped early)`, `block 5 never reported (the page stopped early)`, `block 6 never reported (the page stopped early)`, `block 7 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-12T22:36:33 → 2026-11-12T22:36:36, context `chroot-root`, 20 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 1 rc 1`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`, `block 4 never reported (the page stopped early)`, `block 5 never reported (the page stopped early)`, `block 6 never reported (the page stopped early)`, `block 7 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-12T22:37:44 → 2026-11-12T22:39:56, context `chroot-root`, 27 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 10 rc 1`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-12T23:08:59 → 2026-11-13T01:00:38, context `chroot-root`, 35 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 6 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-13T01:17:27 → 2026-11-13T02:00:32, context `chroot-root`, 63 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 1 rc 1`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`, `block 4 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-13T02:19:08 → 2026-11-13T02:24:56, context `chroot-root`, 72 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`, `chapter08/grub.html`, `chapter08/gzip.html`, `chapter08/iproute2.html`, `chapter08/kbd.html`, `chapter08/make.html`, `chapter08/patch.html`, `chapter08/tar.html`, `chapter08/texinfo.html`, `chapter08/vim.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 2 rc 1`, `block 3 never reported (the page stopped early)`, `block 4 never reported (the page stopped early)`, `block 5 never reported (the page stopped early)`, `block 6 never reported (the page stopped early)`, `block 7 never reported (the page stopped early)`, `block 8 never reported (the page stopped early)`, `block 9 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-13T02:51:00 → 2026-11-13T02:56:05, context `chroot-root`, 75 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`, `chapter08/grub.html`, `chapter08/gzip.html`, `chapter08/iproute2.html`, `chapter08/kbd.html`, `chapter08/make.html`, `chapter08/patch.html`, `chapter08/tar.html`, `chapter08/texinfo.html`, `chapter08/vim.html`, `chapter08/markupsafe.html`, `chapter08/jinja2.html`, `chapter08/udev.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 8 rc 1`, `block 9 never reported (the page stopped early)`, `block 10 never reported (the page stopped early)`, `block 11 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-13T03:23:18 → 2026-11-13T03:24:24, context `chroot-root`, 76 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`, `chapter08/grub.html`, `chapter08/gzip.html`, `chapter08/iproute2.html`, `chapter08/kbd.html`, `chapter08/make.html`, `chapter08/patch.html`, `chapter08/tar.html`, `chapter08/texinfo.html`, `chapter08/vim.html`, `chapter08/markupsafe.html`, `chapter08/jinja2.html`, `chapter08/udev.html`, `chapter08/man-db.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 1 rc 1`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`, `block 4 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-13T03:48:33 → 2026-11-13T03:48:35, context `chroot-root`, 68 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`, `chapter08/grub.html`, `chapter08/gzip.html`, `chapter08/iproute2.html`, `chapter08/kbd.html`, `chapter08/libpipeline.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 1 rc 1`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-13T03:59:51 → 2026-11-13T04:13:02, context `chroot-root`, 73 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`, `chapter08/grub.html`, `chapter08/gzip.html`, `chapter08/iproute2.html`, `chapter08/kbd.html`, `chapter08/libpipeline.html`, `chapter08/make.html`, `chapter08/patch.html`, `chapter08/tar.html`, `chapter08/texinfo.html`, `chapter08/vim.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 5 rc 1`, `block 7 rc 1`, `block 8 never reported (the page stopped early)`, `block 9 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-13T04:34:07 → 2026-11-13T04:43:23, context `chroot-root`, 79 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`, `chapter08/grub.html`, `chapter08/gzip.html`, `chapter08/iproute2.html`, `chapter08/kbd.html`, `chapter08/libpipeline.html`, `chapter08/make.html`, `chapter08/patch.html`, `chapter08/tar.html`, `chapter08/texinfo.html`, `chapter08/vim.html`, `chapter08/markupsafe.html`, `chapter08/jinja2.html`, `chapter08/udev.html`, `chapter08/man-db.html`, `chapter08/procps-ng.html`, `chapter08/util-linux.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 3 rc 1`, `block 4 never reported (the page stopped early)`, `block 5 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — FAILED
+
+2026-11-13T05:03:07 → 2026-11-13T05:05:35, context `chroot-root`, 84 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`, `chapter08/grub.html`, `chapter08/gzip.html`, `chapter08/iproute2.html`, `chapter08/kbd.html`, `chapter08/libpipeline.html`, `chapter08/make.html`, `chapter08/patch.html`, `chapter08/tar.html`, `chapter08/texinfo.html`, `chapter08/vim.html`, `chapter08/markupsafe.html`, `chapter08/jinja2.html`, `chapter08/udev.html`, `chapter08/man-db.html`, `chapter08/procps-ng.html`, `chapter08/util-linux.html`, `chapter08/e2fsprogs.html`, `chapter08/sysklogd.html`, `chapter08/openrc.html`, `chapter08/aboutdebug.html`, `chapter08/stripping.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: `block 1 rc 1`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`
+
+## final-system — passed
+
+2026-11-13T05:32:19 → 2026-11-13T05:32:29, context `chroot-root`, 85 page(s) of chapter 08.
+
+Book pages: `chapter08/man-pages.html`, `chapter08/iana-etc.html`, `chapter08/glibc.html`, `chapter08/zlib.html`, `chapter08/bzip2.html`, `chapter08/xz.html`, `chapter08/lz4.html`, `chapter08/zstd.html`, `chapter08/file.html`, `chapter08/readline.html`, `chapter08/pcre2.html`, `chapter08/m4.html`, `chapter08/bc.html`, `chapter08/flex.html`, `chapter08/tcl.html`, `chapter08/expect.html`, `chapter08/dejagnu.html`, `chapter08/pkgconf.html`, `chapter08/binutils.html`, `chapter08/gmp.html`, `chapter08/mpfr.html`, `chapter08/mpc.html`, `chapter08/attr.html`, `chapter08/acl.html`, `chapter08/libcap.html`, `chapter08/libxcrypt.html`, `chapter08/shadow.html`, `chapter08/gcc.html`, `chapter08/ncurses.html`, `chapter08/sed.html`, `chapter08/psmisc.html`, `chapter08/gettext.html`, `chapter08/bison.html`, `chapter08/grep.html`, `chapter08/bash.html`, `chapter08/libtool.html`, `chapter08/gdbm.html`, `chapter08/gperf.html`, `chapter08/expat.html`, `chapter08/inetutils.html`, `chapter08/less.html`, `chapter08/perl.html`, `chapter08/xml-parser.html`, `chapter08/intltool.html`, `chapter08/autoconf.html`, `chapter08/automake.html`, `chapter08/openssl.html`, `chapter08/libelf.html`, `chapter08/libffi.html`, `chapter08/sqlite.html`, `chapter08/Python.html`, `chapter08/flit-core.html`, `chapter08/packaging.html`, `chapter08/wheel.html`, `chapter08/setuptools.html`, `chapter08/ninja.html`, `chapter08/meson.html`, `chapter08/kmod.html`, `chapter08/coreutils.html`, `chapter08/diffutils.html`, `chapter08/gawk.html`, `chapter08/findutils.html`, `chapter08/groff.html`, `chapter08/grub.html`, `chapter08/gzip.html`, `chapter08/iproute2.html`, `chapter08/kbd.html`, `chapter08/libpipeline.html`, `chapter08/make.html`, `chapter08/patch.html`, `chapter08/tar.html`, `chapter08/texinfo.html`, `chapter08/vim.html`, `chapter08/markupsafe.html`, `chapter08/jinja2.html`, `chapter08/udev.html`, `chapter08/man-db.html`, `chapter08/procps-ng.html`, `chapter08/util-linux.html`, `chapter08/e2fsprogs.html`, `chapter08/sysklogd.html`, `chapter08/openrc.html`, `chapter08/aboutdebug.html`, `chapter08/stripping.html`, `chapter08/cleanup.html`
+
+Exit criteria this phase claims to meet:
+
+- Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.
+- The debugging-symbols, stripping and cleanup pages ran.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
+
+Checkpoint: `after`

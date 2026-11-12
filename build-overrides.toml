@@ -44,11 +44,33 @@ archive = "glibc-2.43.tar.xz"   # tzdata is copied in for the timezone data
 # the chapter 2 pages. This build has no opinion about where it runs; the book's
 # own example is UTC.
 placeholder = { "<xxx>" = "UTC" }
+# Block 7 is the book's own diagnostic — `grep "Timed out" $(find -name \*.out)` —
+# and on a suite where nothing timed out, finding nothing is the wanted result and
+# grep's exit code is 1. Block 19 is `tzselect`, a menu read from a terminal this
+# build does not have, choosing a zone the placeholder above has already fixed.
+expected_blocks = [7]
+skip_blocks = [19]
+note = """Glibc: block 7 is the book s did-any-test-time-out diagnostic and exits 1
+when none did; block 19 is tzselect, an interactive menu with no terminal and
+nothing downstream reading its answer, the zone being UTC per the placeholder."""
 
 [page."chapter08/sqlite.html"]
 archive = "sqlite-autoconf-3510200.tar.gz"   # the -doc tarball is documentation
 [page."chapter08/tcl.html"]
 archive = "tcl8.6.17-src.tar.gz"   # the -html tarball is documentation
+# Tcl's own suite does not finish in this build. Observed 2026-11-11 on the
+# final-system page: `make test` reached chanio.test, its `echo.tcl` helper sat
+# waiting on a child that would not answer, the guest's load average went to zero,
+# and the helper had to be killed 30 minutes in before the suite would report —
+# when it did, 142 tests, 2 failing, in thread.test. The book says nothing about
+# Tcl's failures, so this is a deviation and not a prediction: the block is
+# declared expected and capped, so a hang cannot hold the phase, and the page goes
+# on to `make install`, which is what Expect and DejaGNU actually need.
+expected_blocks = [3]
+test_block_timeout = 5400
+note = """Tcl: its chanio suite hangs in this build (echo.tcl waits on a child that
+never answers, load average zero) and the interrupted suite reports thread.test
+failing; declared expected so the page reaches make install, capped at 90m."""
 [page."chapter08/udev.html"]
 archive = "systemd-259.1.tar.gz"   # udev ships inside the systemd tarball; udev-lfs is the rules
 
@@ -155,3 +177,99 @@ No such file or directory` after configure correctly printed `checking for
 exception... no`. Nothing is lost: chapter 8 builds Ncurses again, with the
 compiler that has libstdc++, and that is the copy whose C++ bindings end up in
 the installed system."""
+
+
+[page."chapter08/gmp.html"]
+skip_blocks = [1]
+note = """The book's note on 32-bit x86 reads: invoke the configure command below
+with `ABI=32 ./configure ...` — and marks that fragment as a userinput block, so
+the extractor sees an abbreviation ending in an ellipsis as the page's first
+command. It is not runnable and it is not the configure line; the real one is the
+next block. A rule for blocks containing `...` would be wrong: that next block is
+a real `sed` whose replacement text is literally `(...)`.
+"""
+
+[page."chapter08/shadow.html"]
+skip_blocks = [10]
+note = """`passwd root` reads the password from a terminal with echo off. There is
+no password for this script to supply and inventing one silently is not its
+decision to make, so the last block of the chapter is a human step: the book is
+asking whoever is at the keyboard to choose a secret. Everything the build itself
+needs — the toolchain, the test suites, the later chapters' chroot work — is
+installed by block 9.
+"""
+
+[page."chapter08/bash.html"]
+skip_blocks = [6]
+note = """`exec /usr/bin/bash --login` replaces the shell that is running the page —
+which for a person means the terminal they are typing in, and for this script
+means the page ends with no shell left to report it. Nothing is lost by skipping
+it: block 5 has already installed the new bash, and every later page starts a
+fresh `bash --login` in the chroot, which is exactly the state the book is asking
+for. Running it would also hand the rest of the page to a login shell waiting for
+a keyboard.
+"""
+
+[page."chapter08/vim.html"]
+skip_blocks = [10]
+note = """`vim -c ':options'` opens the editor so a person can look at the default
+vimrc; it produces no output, changes nothing on disk, and waits for `:q`. The
+file it displays was written by the previous block, and that file is the evidence.
+"""
+
+[page."chapter08/groff.html"]
+# `PAGE=<paper_size> ./configure --prefix=/usr`. Left alone the shell reads the
+# placeholder as two redirections — `< paper_size > ./configure` — and the page
+# dies looking for a file named paper_size, having configured nothing. A4 is the
+# paper this machine's printer would be fed; the book offers `letter` as the
+# other answer.
+placeholder = { "<paper_size>" = "a4" }
+
+# The page unpacks `udev-lfs-20251217.tar.xz` and runs its Makefile.lfs, which
+# begins `VERSION=20230818` and then copies out of `udev-lfs-$(VERSION)/`. The
+# pinned edition's tarball has no such directory, so the book's command as
+# written installs nothing and exits 1 — the package's own version stamp was left
+# behind when the tarball was renamed. Overriding the variable on the command
+# line is the smallest deviation that fixes it, and `deviate` puts the command
+# that actually ran, with the override visible, in the page's log.
+[page."chapter08/udev.html".block_subst."8"]
+"make -f udev-lfs-20251217/Makefile.lfs install" = "make -f udev-lfs-20251217/Makefile.lfs VERSION=20251217 install"
+
+# Three pages link with `ln -sv`, which refuses to replace what is already there.
+# Each of these pages ran to completion earlier in this phase, on the same disk,
+# and is being run again only because a page was inserted in front of it; the
+# link it wants is the link its previous run left behind. `-f` makes the command
+# mean what the page means — this is the link that should exist — and `deviate`
+# puts the command that actually ran in the page's log.
+[page."chapter08/vim.html".block_subst."7"]
+"ln -sv vim /usr/bin/vi" = "ln -svf vim /usr/bin/vi"
+"ln -sv vim.1 $(dirname $L)/vi.1" = "ln -svf vim.1 $(dirname $L)/vi.1"
+
+[page."chapter08/vim.html".block_subst."8"]
+"ln -sv ../vim/vim92/doc" = "ln -svf ../vim/vim92/doc"
+
+[page."chapter08/openrc.html".block_subst."6"]
+"ln -sv openrc-$i" = "ln -svf openrc-$i"
+
+[page."chapter08/util-linux.html"]
+skip_blocks = [3]
+note = """`bash tests/run.sh --srcdir=$PWD --builddir=$PWD` is quoted from the page's
+note, which says it may be run “by booting into the completed LFS system” — a
+command for the installed system, marked up as a userinput block on a page whose
+real test run is the next block (`su tester -c "make -k check"`, which the derived
+table already predicts failing). Run during the build it answers `Tests not
+compiled!` and exits 1, because nothing has compiled the test programs yet.
+"""
+
+[page."chapter08/stripping.html"]
+expected_blocks = [1]
+note = """The page says so itself, in its own words, after the loop: “A large number of
+files will be flagged as errors because their file format is not recognized.
+These warnings can be safely ignored. They indicate that those files are scripts,
+not binaries.” In this edition the scripts are OpenRC's, under /usr/libexec/rc,
+and the loop's `find /usr/{bin,sbin,libexec} -type f` walks straight into them, so
+`strip --strip-debug` exits 1 on each one and the block's status is 1 whatever the
+libraries did. The tolerance is the whole block because the block is one command;
+what it can forgive is a strip that failed for a different reason, and the page's
+log is where that would show.
+"""
