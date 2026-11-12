@@ -141,6 +141,13 @@ context = "chroot-root"
 # only reason its first block exits 0 is that grepping /proc for a deleted library
 # that was never loaded finds nothing.
 skip = ["pkgmgt"]
+# Libpipeline-1.5.8 is chapter 8's own page — `kbd.html`'s Next link is
+# `libpipeline.html`, and man-db's configure stops with `Package requirements
+# (libpipeline >= 1.5.0) were not met` without it — but this edition's index.html
+# never lists it, so following the index alone omits it. `guard_chapter_complete`
+# walks the book's Next links and refuses to start the phase if a page like this
+# is missing from the plan again.
+extra = [ { page = "chapter08/libpipeline.html", after = "chapter08/kbd.html" } ]
 entry = ["The temporary system phase passed and the sources are unpackable inside the chroot."]
 exit = ["Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.",
          "The debugging-symbols, stripping and cleanup pages ran."]

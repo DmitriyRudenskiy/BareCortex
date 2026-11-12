@@ -19,6 +19,7 @@ URL and the book's own MD5, and chapter 3's patch table for the patch series.
 
 Stdlib only, and no network beyond plain HTTP GETs of the edition.
 """
+import book
 import html
 import re
 import sys
@@ -66,6 +67,11 @@ def toc_pages(index_html, base):
 
 TARBALL_RE = re.compile(r"[A-Za-z0-9._:+-]+\.(?:tar\.(?:xz|gz|bz2|zst)|tar|tgz|zip)")
 H2_RE = re.compile(r"<h2[^>]*>(.*?)</h2>", re.S)
+# The page's own heading, for the pages whose `<h2>`s are only the section
+# titles: chapter 8's Libpipeline page never says `Libpipeline-1.5.8` below
+# its own `<h1>`, so without this line the derivation files the package as a
+# download no page builds, and the page that does build it has no archive.
+H1_RE = re.compile(r"<h1[^>]*>(.*?)</h1>", re.S)
 CD_RE = re.compile(r"\bcd\s+([A-Za-z0-9._+/-]+)")
 TAIL_PKG_RE = re.compile(r"([A-Za-z][A-Za-z0-9.:+_-]*)-(\d[\w.]*)")
 
@@ -88,7 +94,7 @@ def page_downloads(url):
     """
     page = get(url)
     stems = set()
-    for h2 in H2_RE.findall(page):
+    for h2 in H1_RE.findall(page) + H2_RE.findall(page):
         title = " ".join(strip(h2).split())
         m = TAIL_PKG_RE.search(title)
         if m:
@@ -194,6 +200,13 @@ def main():
                  f"write a lock file that does not name what it was derived from")
 
     all_pages, pkgs = toc_pages(index, base)
+    # The index is not the table of contents. `book.sequence` follows the book's
+    # own Next links, and in this edition that finds one page the index never
+    # lists — chapter 8's Libpipeline — whose absence from `all_pages` is also an
+    # absence from the lock file's citations, so the page that builds it has no
+    # archive to unpack.
+    all_pages = sorted(set(all_pages) | {p for ch in {h.split("/")[0] for h in all_pages}
+                                         for p in book.sequence(ch[7:])})
     # The index's own link text is the book's page → package mapping: `Acl-2.3.2`
     # on chapter08/acl.html, `Udev from Systemd-259.1` on chapter08/udev.html.
     # That is the primary attribution, and it is why no alias table is needed —

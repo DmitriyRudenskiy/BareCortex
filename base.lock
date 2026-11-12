@@ -17,7 +17,7 @@
 [edition]
 name = 'LFS 13.0-openrc'
 url = 'https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0/'
-package_pages = 161
+package_pages = 162
 unattributed_downloads = 1
 
 [[package]]
@@ -434,6 +434,16 @@ revision = 'v3.5.2'
 md5 = '92af9efad4ba398995abf44835c5d9e9'
 class = "source-built"
 pages = ['chapter08/libffi.html']
+
+[[package]]
+name = 'Libpipeline'
+version = '1.5.8'
+url = 'https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.8.tar.gz'
+remote = 'https://download.savannah.gnu.org'
+revision = '1.5.8'
+md5 = '17ac6969b2015386bcb5d278a08a40b5'
+class = "source-built"
+pages = ['chapter08/libpipeline.html']
 
 [[package]]
 name = 'Libtool'
@@ -904,15 +914,6 @@ revision = 'v1.5.7'
 md5 = '780fc1896922b1bc52a4e90980cdda48'
 class = "source-built"
 pages = ['chapter08/zstd.html']
-
-[[unattributed-download]]
-name = 'Libpipeline'
-version = '1.5.8'
-url = 'https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.8.tar.gz'
-remote = 'https://download.savannah.gnu.org'
-revision = '1.5.8'
-md5 = '17ac6969b2015386bcb5d278a08a40b5'
-reason = 'listed by chapter03/packages.html; no page of this edition names it'
 
 # --- patch series, chapter 3.3. Applied by the package named, on the page
 # --- named; the series is part of that version, per D3.

@@ -118,12 +118,12 @@ def notes(url_path):
 # to enter is discovered from what the extraction created rather than guessed
 # from the archive name, because for several packages they differ.
 WRAPPER_PRE = """set -e
-cd $SRCDIR
+cd $BCT_SRCDIR
 # The book's general instructions keep a log per package; $LOG is that directory,
 # defaulted here rather than inherited, because the page runs in `env -i` and
 # nothing outside the build sets it. A redirect and not a pipe: the page script
 # runs with -e, and a pipeline would report tee's exit code instead of tar's.
-LOG="${{LOG:-$SRCDIR/logs}}"
+LOG="${{LOG:-$BCT_SRCDIR/logs}}"
 mkdir -p "$LOG"
 # A page that fails leaves its extracted tree behind: the script dies at the
 # failing command and the cleanup at the end never runs. Building again on that
@@ -146,12 +146,33 @@ case {archive} in
   *) tar -xvf {archive} > "$LOG/{archive}.unpack.log" ;;
 esac
 newdir=$(comm -13 <(echo "$before" | tr ' ' '\\n' | sort) <(ls -A | sort) | head -1)
+if test -z "$newdir"; then
+  # The stale tree above is found by the name the archive was downloaded under,
+  # and for Tcl those two disagree: tcl8.6.17-src.tar.gz extracts to tcl8.6.17,
+  # so the tree a failed attempt left behind was neither noticed nor removed, the
+  # extraction overwrote into it, and the diff saw nothing new. Ask the archive
+  # what it holds, throw the half-built tree away, extract again — the book's
+  # environment is a fresh one, not the one a dead run left behind.
+  newdir=$(tar -tf {archive} 2>/dev/null | head -1 | cut -d/ -f1)
+  if test -n "$newdir" && test -d "$newdir"; then
+    echo "STALE: $newdir is left from a run that failed; unpacking fresh"
+    rm -rf "$newdir"
+    tar -xvf {archive} >> "$LOG/{archive}.unpack.log"
+  else
+    newdir=""
+  fi
+fi
 test -n "$newdir" || {{ echo "UNPACK PRODUCED NO DIRECTORY: {archive} (expected $candidate)"; exit 1; }}
 echo "UNPACKED: $newdir"
 cd "$newdir"
 """
 
-WRAPPER_POST = """cd $SRCDIR
+WRAPPER_POST = """# The runner's own name, not $SRCDIR: the book uses SRCDIR as a scratch
+# variable of its own (Tcl's second block ends with `unset SRCDIR`, which is what
+# made the cleanup below die on an unbound variable after every block of Tcl had
+# passed), and Vim's top-level configure stub does `cd "${SRCDIR:-src}"`, so a
+# shared name means either the package wins or the page does.
+cd "${BCT_SRCDIR:-.}"
 echo "CLEANUP: $newdir"
 rm -rf "$newdir"
 """
@@ -163,3 +184,34 @@ def wrapper(archive):
 
 def wrapper_post():
     return WRAPPER_POST
+
+
+NEXT_RE = re.compile(r'class="next">\s*<a[^>]*href="([^"]+)"', re.S)
+
+
+def sequence(chapter):
+    """Every page of a chapter, in the order the book links them.
+
+    Not the index: the 13.0-openrc edition's chapter 8 has a page for
+    Libpipeline-1.5.8 — `kbd.html`'s Next link is `libpipeline.html`, and man-db's
+    `configure` stops with `Package requirements (libpipeline >= 1.5.0) were not
+    met` without it — and `index.html` does not list it. Anything that asks the
+    book what a chapter contains has to follow the book's own links, or it builds
+    a system missing a library and finds out pages later.
+    """
+    import posixpath
+    ch = f"chapter{chapter}"
+    out, cur, seen = [], f"{ch}/introduction.html", set()
+    while cur and cur not in seen:
+        seen.add(cur)
+        try:
+            m = NEXT_RE.search(page(cur))
+        except OSError:
+            break  # a page that will not load is a gap to report, not a crash here
+        if not m:
+            break
+        cur = posixpath.normpath(posixpath.join(posixpath.dirname(cur), m.group(1)))
+        if not cur.startswith(ch + "/"):
+            break
+        out.append(cur)
+    return out

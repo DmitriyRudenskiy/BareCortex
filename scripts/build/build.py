@@ -26,10 +26,12 @@ import hashlib
 import json
 import os
 import pathlib
+import posixpath
 import re
 import shlex
 import subprocess
 import sys
+import threading
 import time
 import tomllib
 
@@ -97,15 +99,20 @@ def pages_for(ph):
         if only and slug not in only:
             continue
         out.append((href, title))
+    # A page the index forgot is still a page of the chapter. `extra` puts one
+    # back where the book's own Next links say it belongs; `guard_chapter_complete`
+    # is what notices it is needed.
+    for e in ph.get("extra", []):
+        at = next((i for i, (h, _) in enumerate(out) if h == e.get("after")), len(out))
+        out.insert(at + 1, (e["page"], e.get("title", e["page"].split("/")[-1][:-5])))
     return out
 
 
 # --- running things in the guest --------------------------------------------------
 
 
-def guest_run(script, timeout=21600, tries=2):
-    """Six hours, because a chapter 8 page is Glibc building and then testing itself,
-    and a timeout that fires at three loses the page and the phase with it.
+def guest_run(script, timeout=None, tries=2, done=None, restart=None, poll=90):
+    """Three hours for one page, and a page that says it finished is not re-run.
 
     Retried once when the *transport* died rather than the build: this build's
     Glibc page ran for 45 minutes, the ssh session between this machine and the
@@ -114,20 +121,73 @@ def guest_run(script, timeout=21600, tries=2):
     system that had no way to know whether Glibc built. `rc 255` with no `@@DONE`
     is ssh saying it lost the connection — no block of the page said anything —
     and a page that never reported a block failure is safe to ask again.
+
+    `restart` is asked before that retry, and answers a question the transport
+    cannot: whether running the script again is safe, given what the first attempt
+    already did to the guest.
+
+    `done` is for the case the retry cannot see: the page finished, printed its
+    `@@DONE` into the log on the guest's disk, and the connection carrying its
+    stdout never noticed — the guest has no session for it, the socket is still
+    ESTAB, and the keepalives keep answering over a channel that will never
+    deliver anything again. Glibc's page did exactly that at 03:41: twenty-two
+    blocks, `@@DONE`, `@@EXIT 0` in the log, and the runner still waiting on it
+    an hour and a half later, three hours from deciding to run the whole thing
+    again. When `done()` says the page is over, this stops waiting on the channel
+    and returns what it has; the log, which the page writes as it goes, is the
+    evidence, and the channel was only ever a copy of it.
     """
+    timeout = timeout or PAGE_TIMEOUT
     for attempt in range(tries):
+        p = subprocess.Popen(GUEST + ["bash -s"], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # Read on another thread: a page that streams has to keep streaming while
+        # this one is asking whether it is finished, and a full pipe stops it.
+        got = []
+        reader = threading.Thread(target=lambda: got.append(
+            p.stdout.read().decode("utf-8", "replace")), daemon=True)
+        reader.start()
         try:
-            p = subprocess.run(GUEST + ["bash -s"], input=script.encode(),
-                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               timeout=timeout)
-            rc, out = p.returncode, p.stdout.decode("utf-8", "replace")
-        except subprocess.TimeoutExpired as e:
-            # The transport wedged: the guest has no process for this session and
-            # the socket is still ESTAB, so nothing is coming. Say so as a lost
-            # connection, which is what the retry below is written for, instead of
-            # letting the exception take the whole phase down.
-            rc, out = 255, (e.stdout or b"").decode("utf-8", "replace") + f"\n@@TIMEOUT after {timeout}s"
+            with p.stdin:
+                p.stdin.write(script.encode())
+        except (BrokenPipeError, ValueError, OSError):
+            pass  # the page is not obliged to consume all of its script
+        why, end = None, time.monotonic() + timeout
+        while True:
+            left = end - time.monotonic()
+            if left <= 0:
+                why = f"@@TIMEOUT after {timeout}s"
+                break
+            try:
+                p.wait(timeout=poll if done else left)
+                break
+            except subprocess.TimeoutExpired:
+                if done and done():
+                    why = "@@CHANNEL-ABANDONED: the page finished; the connection did not notice"
+                    break
+        if why:
+            p.kill()
+        reader.join(60)
+        out = "".join(got)
+        # An abandoned channel is not a failure: the page said it was done. A
+        # timeout is, and is reported as a lost connection so the retry below,
+        # which is written for exactly that, gets to decide.
+        abandoned = bool(why) and why.startswith("@@CHANNEL-ABANDONED")
+        rc = 0 if abandoned else (255 if why else p.returncode)
+        if why:
+            out += "\n" + why + "\n"
         if rc != 255 or PAGE_DONE in out or attempt + 1 == tries:
+            return rc, out
+        if restart is not None and not restart():
+            # The page is part-built and its own log says so. Running it again
+            # unpacks a second copy, installs over what the first attempt installed,
+            # and reports blocks that never ran — this build's Tcl page did exactly
+            # that at 06:40, nine blocks "never reported" over a Tcl that was
+            # already on the disk. Left where it stopped, the phase fails once and
+            # says so; run again, it silently lies.
+            print("    connection lost mid-page; its own log has markers in it, so "
+                  "the page is left where it stopped rather than run twice",
+                  flush=True)
             return rc, out
         print(f"    connection to the guest was lost, running the page again "
               f"(attempt {attempt + 2} of {tries})", flush=True)
@@ -163,7 +223,15 @@ def wrap(script, context, net=False):
     """
     srcdir = "/sources" if context == "chroot-root" else LFS + "/sources"
     prelude = WRAP_PRELUDE.format(lfs=shlex.quote(LFS), srcdir=shlex.quote(srcdir))
-    ns = "" if net else "unshare -n "
+    # A fresh namespace has a loopback interface and leaves it DOWN, which is fine
+    # until a package's testsuite opens a socket: Tcl's chanio tests run `echo.tcl`,
+    # which does `socket -server accept 0`, prints its port, and `vwait`s for a
+    # client that can never connect to 127.0.0.1 with no interface to reach it. The
+    # test does not fail, it hangs, and it took two 90-minute page timeouts to see
+    # it. Loopback is not the network this denial is about — a namespace with only
+    # `lo` still has no route out, which is what `NET_DENIED` below claims.
+    ns = "" if net else ('unshare -n bash -c \'ip link set lo up 2>/dev/null; '
+                         'exec "$0" "$@"\' ')
     if context == "host-root":
         cmd = f"sudo {ns}bash -c {shlex.quote(prelude + script)}"
     elif context == "host-lfs":
@@ -236,18 +304,51 @@ def page_script(pg, title, tolerates=()):
     archive = o.get("archive") or archive_for(pg)
     note = "\n".join("#   " + safe(l) for l in o.get("note", "").splitlines() if l.strip())
     lines = ["#!/bin/bash", "# " + pg, "set -u",
-             # Markers on the channel, output in the file. `exec 3>&1` comes
-             # first, so fd 3 is still the ssh session once stdout is the log.
+             # The runner's own bookkeeping, kept under a name the book cannot
+             # collide with: Tcl's second block ends with `unset SRCDIR`, and the
+             # cleanup that follows the last block needs the source directory.
+             'BCT_SRCDIR="${BCT_SRCDIR:-}"', 
+             # fd 3 stays the ssh session; stdout becomes the log. A marker goes to
+             # both, because the channel is what dies and the log is what survives,
+             # and a marker that exists only on the dead one is not evidence.
              'exec 3>&1', f'exec >"{PAGE_LOG}" 2>&1',
+             'm() { echo "$*" | tee -a "' + PAGE_LOG + '" >&3; }',
+             # If the shell goes without printing @@DONE, this says it went, and
+             # with what. A SIGKILL takes the trap with it, which is also an answer.
+             'trap \'m "@@EXIT $?"\' EXIT',
+             # The page runs under `set -e`, which the unpack synopsis turns on and
+             # nothing turns off, so a failing command ends the shell where it
+             # stands — before `rc=$?`, before the abort marker. Without this the
+             # page just stops, and a page that stops and a page whose connection
+             # died look identical from here. Glibc's testsuite is the case: the
+             # suite failed, errexit killed the shell, blocks 7-22 (the install)
+             # never ran, and the channel sat open waiting for a shell that was gone.
+             # $BCT_RC first: the assignment to FAIL below resets $?, so a trap that
+             # reads $? inside the message reports the assignment's success — every
+             # failure logged as rc 0, which is a lie in the one place the evidence
+             # is supposed to be honest.
+             'trap \'BCT_RC=$?; FAIL="$FAIL rc$BCT_RC@$LINENO"; '
+             'm "@@FAILED block ${BLOCK:-pre} line $LINENO rc $BCT_RC: '
+             '$BASH_COMMAND"\' ERR',
              # The book's synopsis runs with -e, so a failing command inside a block
              # stops the page the way stopping to read an error stops a person. The
              # trap is what makes that visible in the log instead of a silent gap.
-             'trap \'echo "@@FAILED line $LINENO: $BASH_COMMAND" >&3\' ERR',
-             f'echo "PAGE: {safe(pg)} | {safe(title)}"']
+              f'echo "PAGE: {safe(pg)} | {safe(title)}"']
+    if tolerates:
+        lines.append(f'm "@@EXPECTED blocks {sorted(tolerates)} may fail: '
+                     + safe(o.get("note", "predicted by the page itself"))[:200] + '"')
     if o.get("pre"):
         lines += ["# override pre: " + note, o["pre"]]
     if archive and not o.get("no_unpack"):
-        lines.append(book.wrapper(archive).replace("$SRCDIR", '"$SRCDIR"'))
+        lines.append(book.wrapper(archive).replace("$BCT_SRCDIR", '"$BCT_SRCDIR"'))
+    # `set -e` comes in with the unpack synopsis above and stops here. Left on, it
+    # ends the shell at the first command that returns non-zero, and the book
+    # expects a person to read that result rather than abort on it — chapter 8's
+    # Glibc page asks for `grep "Timed out" *.out`, where finding nothing is the
+    # success, and its testsuite exits 2 by design. With it off, the ERR trap
+    # records every failing command and the page stops at the block boundary,
+    # which is where this script's own judgement of a block has always lived.
+    lines.append("set +e")
     take = o.get("only_blocks")
     skip = set(o.get("skip_blocks", []))
     why_skipped = safe(o.get("note", "overridden"))
@@ -259,20 +360,39 @@ def page_script(pg, title, tolerates=()):
         if take is not None and i not in take:
             continue
         if i in skip:
-            lines.append(f'echo "@@SKIP block {i}: {why_skipped}" >&3')
+            lines.append(f'm "@@SKIP block {i}: {why_skipped}"')
             continue
         emitted.append(i)
-        lines.append(f'echo "@@BLOCK {i} START: {safe(why)[:120]}" >&3')
-        lines.append(deviate(substitute(cmd, o), o.get("block_subst", {}).get(str(i), {}), pg, i))
-        lines.append("rc=$?")
-        lines.append(f'echo "@@RC {i} $rc" >&3')
+        lines.append(f'BLOCK={i}; FAIL=""')
+        lines.append(f'm "@@BLOCK {i} START: {safe(why)[:120]}"')
+        block = deviate(substitute(cmd, o), o.get("block_subst", {}).get(str(i), {}), pg, i)
+        if i in tolerates:
+            # A test suite the page predicts failing is also a test suite that can
+            # sit there forever: chapter 8's Tcl page hung half an hour in `chanio`,
+            # its `echo.tcl` helper waiting on a child that would never answer, the
+            # load average at zero and the page's three-hour clock running. A
+            # predicted failure is cheap; a predicted hang costs the phase. So the
+            # blocks the book expects to fail get a wall clock — `timeout` puts the
+            # suite in its own process group and signals the group, which a plain
+            # background job would not: killing the shell leaves `tcltest`'s
+            # grandchildren alive and holding the log open.
+            cap = o.get("test_block_timeout", TEST_BLOCK_TIMEOUT)
+            lines.append("cat > /tmp/.bct-block.sh <<'BCTBLOCK'\n" + block + "\nBCTBLOCK")
+            lines.append(f"timeout -k 60 {cap} bash /tmp/.bct-block.sh")
+        else:
+            lines.append(block)
+        # The block's own exit code, and the ERR trap's verdict: a block whose
+        # third command failed and whose last one succeeded did not succeed, and
+        # a page that reports it as passed is the lie this script exists to catch.
+        lines.append('rc=$?; [ -z "$FAIL" ] || rc=1')
+        lines.append(f'm "@@RC {i} $rc"')
         if i in tolerates:
             # The page predicts this one failing, so the page keeps going: stopping
             # here would abandon `make install` over a test the book calls safe to
             # ignore, and the phase would report a package that was never installed.
-            lines.append(f'[ "$rc" -eq 0 ] || echo "@@TOLERATED block {i} rc $rc" >&3')
+            lines.append(f'[ "$rc" -eq 0 ] || m "@@TOLERATED block {i} rc $rc"')
         else:
-            lines.append(f'[ "$rc" -eq 0 ] || {{ echo "@@ABORT block {i}" >&3; exit 1; }}')
+            lines.append(f'[ "$rc" -eq 0 ] || {{ m "@@ABORT block {i}"; exit 1; }}')
     if archive and not o.get("no_unpack"):
         lines.append(book.wrapper_post())
     if o.get("post"):
@@ -281,7 +401,7 @@ def page_script(pg, title, tolerates=()):
     # is a power cut. Flushing at the end of a page keeps a phase's files off the
     # list of things a hard stop can lose.
     lines.append("sync")
-    lines.append('echo "@@DONE" >&3')
+    lines.append('m "@@DONE"')
     return "\n".join(lines), emitted
 
 
@@ -386,6 +506,32 @@ def guard_test_policy(pages):
     return bad
 
 
+def guard_chapter_complete(ph, planned):
+    """Refuse to start a phase whose chapter has a page the plan does not run.
+
+    The edition's index is not its table of contents. In 13.0-openrc the chapter 8
+    page for Libpipeline-1.5.8 sits in the sequence — `kbd.html`'s Next link points
+    at it, and the man-db page after it fails its `configure` with
+    `Package requirements (libpipeline >= 1.5.0) were not met` — but `index.html`
+    never lists it, so a build that follows the index alone omits a library the
+    chapter depends on and finds out eight pages later. Following the Next links
+    is the book's own order, and it costs nothing after the first walk because
+    every page is cached.
+    """
+    chain = book.sequence(ph["chapter"])
+    # Only pages the *index* dropped. A page that is in the index and not in this
+    # phase is a page the phase said no to by name, in `only` or in `skip`, and
+    # that is a decision, not a hole: chapter 7's phase runs eight of its pages.
+    listed = {h for h, _ in index_pages()}
+    skip = {p + ".html" for p in ph.get("skip", [])}
+    want = {p for p in chain if p not in listed and p.split("/")[1] not in skip}
+    gap = sorted(want - {p for p, _ in planned})
+    return [f"{ch} has {g} in the book's own page sequence and the phase does not "
+            f"run it; add it to phases.toml as "
+            f'extra = [{{ page = "{g}", after = "<previous page>" }}]'
+            for g in gap]
+
+
 def guard_sources(pages):
     """Sources a page or an override names but base.lock does not carry.
 
@@ -447,7 +593,20 @@ def guard_present(pages):
             for pg in pages for a in sorted(need[pg] - have)]
 
 
-def run_page(pg, title, context, logdir):
+def page_reported_anything(context):
+    """Whether the page now running has written a single marker to its own log.
+
+    Asked after a connection dies, because the log is on the guest's disk, out of
+    reach of whatever went wrong with the socket, and it is the only record of how
+    far a page whose channel died actually got.
+    """
+    rc, out = guest_run(wrap(f"grep -c '^@@' {PAGE_LOG} 2>/dev/null || echo 0", context),
+                        timeout=60)
+    counts = [line for line in out.splitlines() if line.strip().isdigit()]
+    return bool(counts) and counts[-1].strip() != "0"
+
+
+def run_page(pg, title, context, logdir, timeout_long=True):
     # What the page predicts about its own test suite, asked of the book before
     # the run: a page that stops at a predicted failure never reaches the install
     # that follows it, which is the difference between a tolerated test and a
@@ -455,7 +614,15 @@ def run_page(pg, title, context, logdir):
     predicts = expected_failures(pg, PAGE_DONE)
     script, emitted = page_script(pg, title, predicts)
     print(f"  {pg} ({len(emitted)} blocks, {context})", flush=True)
-    rc, out = guest_run(wrap(script, context))
+    # The page prints `@@DONE` into its own log as its last act, so the log can be
+    # asked directly, on a short connection of its own, whether the page is over.
+    # Only worth asking for a page that can run for an hour; a short page that
+    # loses its connection is cheaper to re-run than to poll.
+    finished = (lambda: PAGE_DONE in guest_run(
+        wrap(f"tail -c 4096 {PAGE_LOG} 2>/dev/null", context), timeout=60)[1]
+    ) if timeout_long else None
+    rc, out = guest_run(wrap(script, context), done=finished,
+                        restart=lambda: not page_reported_anything(context))
     # A second, short connection, which is the point: the page's own channel is
     # the thing that dies, and it dies with the evidence still in the guest. The
     # file is capped because a chapter 8 `make check` log runs to hundreds of
@@ -464,6 +631,10 @@ def run_page(pg, title, context, logdir):
              'if [ "$n" -le 2000000 ]; then cat "$f"; else head -c 1000000 "$f"; '
              'echo; echo "@@TRUNCATED $n bytes"; tail -c 1000000 "$f"; fi')
     log_rc, body = guest_run(wrap(fetch, context))
+    # The channel is a copy of the log, and a copy that stopped being written.
+    # When the two disagree about whether the page finished, the log is right.
+    if PAGE_DONE not in out and PAGE_DONE in body:
+        out = body + "\n" + out
     log = logdir / (pg.split("/")[1][:-5] + ".log")
     log.write_text(f"# {pg}\n# context: {context}\n# ssh exit: {rc}\n"
                    f"# markers: {out.strip()[-200:]}\n\n{body}")
@@ -486,28 +657,34 @@ def run_page(pg, title, context, logdir):
             "log": str(log.relative_to(ROOT))}
 
 
-EXPECTED_FAILURE = re.compile(r"known to fail|safe to ignore|do not pass|are expected", re.I)
-TEST_SUITE = re.compile(r"^\s*[^\n]*\bmake\b[^\n]*\bcheck\b", re.M)
-
-
 def expected_failures(pg, out):
-    """The blocks whose failure the page itself predicts.
+    """The blocks whose failure the book predicts, read from the derived table.
 
-    The wording is the book's, and there is more than one of them: eight pages say
-    a test is `known to fail`, Glibc — the one page whose suite the book calls
-    critical, `do not skip it under any circumstance` — says a few tests
-    `do not pass` and the failures it lists are `usually safe to ignore`, and Zstd
-    says a `failed` in its output is expected. Read narrowly — the tolerance
-    applies to the page's `make check` blocks and to nothing else — because a page
-    that predicts a failing test has said something about its test suite, not
-    about its `make install`, and a run that forgives a failed install while
-    reporting a green build is the failure this whole script exists to catch.
+    `test-expectations.toml` is re-read from the pinned edition by
+    derive-test-expectations.py: it knows which block of a page runs that page's
+    suite — `make test` and `make check` and the ones wrapped in `su tester -c`
+    alike, which no regex of mine matched without going on a guessing spree — and
+    it knows whether the page says anything at all about failures. Both halves
+    matter. A suite the book calls failing is expected and the page continues to
+    its `make install`; a suite the book says nothing about (Tcl, DejaGNU) has
+    said nothing, and a red line from it is news, not weather.
+
+    Tolerance is read narrowly: the page's suite blocks and nothing else, because
+    a page that predicts a failing test has spoken about its test suite, not about
+    its `make install`, and a run that forgives a failed install while reporting a
+    green build is the failure this whole script exists to catch.
     """
+    # The override says so, whatever the book says: a block that reports the news a
+    # person wanted (chapter 8's `grep "Timed out" *.out`, which exits 1 when
+    # nothing timed out) is not a failure, and no command can tell that by itself.
+    declared = {int(i) for i in OVR.get("page", {}).get(pg, {}).get("expected_blocks", [])}
     if "@@DONE" not in out:
-        return set()
-    if not EXPECTED_FAILURE.search(book.text(pg)):
-        return set()
-    return {i for i, (_, c) in enumerate(book.commands(pg), 1) if TEST_SUITE.search(c)}
+        return declared
+    predicts = EXPECTATIONS.get(pg) or {}
+    if not predicts.get("expect"):
+        return declared
+    return declared | {int(b["block"]) for b in predicts.get("suite", [])}
+
 
 
 # Every page script prints this last, after its `sync`. A page whose stream lacks
@@ -522,7 +699,18 @@ PAGE_DONE = "@@DONE"
 # through qemu's user-mode networking is the thing that keeps wedging.
 PAGE_LOG = "/tmp/.bct-page.log"
 
-WRAP_PRELUDE = "export LFS={lfs} SRCDIR={srcdir}; "
+# Three hours for one page: long enough for the slowest thing the book asks of a
+# single package (GCC, with its testsuite), short enough that a channel that has
+# stopped carrying anything costs a retry rather than half a working day.
+PAGE_TIMEOUT = 3 * 3600
+
+# Ninety minutes for one test suite, on the pages that predict it failing: long
+# enough that nothing the book asks of chapter 8 is cut short (Glibc's suite runs
+# about an hour), short enough that a hung helper costs a suite and not a day.
+# A page whose suite genuinely needs longer says so with `test_block_timeout`.
+TEST_BLOCK_TIMEOUT = 90 * 60
+
+WRAP_PRELUDE = "export LFS={lfs} BCT_SRCDIR={srcdir}; "
 NET_DENIED = "denied (unshare -n: no routes, no interfaces; verified against the same probe outside)"
 
 # --- one build at a time ---------------------------------------------------------
@@ -603,7 +791,7 @@ def wrap_environment_delta():
     *environment*: the book's own six variables, no more, and the check is that
     this build adds nothing there. The *shell that runs the page* then gets the
     prelude's two exports, because a script has to name the source directory
-    without hardcoding where the disk is mounted — `SRCDIR` is `/sources` inside
+    without hardcoding where the disk is mounted — `BCT_SRCDIR` is `/sources` inside
     the chroot and `$LFS/sources` outside it, which is the whole reason the
     orchestrator has a variable for it instead of a literal in 139 page scripts.
     """
@@ -651,7 +839,8 @@ def run_phase(name):
                          f"run: build.py pages {name}")
     missing = (guard_sources([pg for pg, _ in todo])
                + guard_test_policy([pg for pg, _ in todo])
-               + guard_present([pg for pg, _ in todo]))
+               + guard_present([pg for pg, _ in todo])
+               + ([] if only_page else guard_chapter_complete(ph, todo)))
     if missing:
         # Nothing was downloaded, unpacked or run: the phase is over before it
         # started, and the record says which page asked for what.
@@ -666,8 +855,26 @@ def run_phase(name):
         print(f"{name}: FAILED before running anything:\n  "
               + "\n  ".join(missing), flush=True)
         return rec
+    # A phase that died on page 15 of 84 has 14 pages of work on the disk that no
+    # record can point at, because the record is per phase and says FAILED. With
+    # --skip-passed the previous attempt's passed pages are believed: the disk is
+    # the same disk, nothing rolled back underneath it, and rebuilding Glibc to
+    # find out that Tcl still hangs costs two hours an attempt.
+    already = set()
+    if getattr(run_phase, "skip_passed", False) and (logdir / "record.json").is_file():
+        prev = json.loads((logdir / "record.json").read_text())
+        already = {r["page"]: r for r in prev.get("results", [])
+                   if r.get("done") and not r.get("failed") and r.get("log")}
     for pg, title in todo:
         ctx = OVR.get("page", {}).get(pg, {}).get("context", ph["context"])
+        if pg in already:
+            print(f"  {pg} (passed in the previous attempt of this phase)", flush=True)
+            # The previous attempt's log, named in this record: the evidence a
+            # phase has to point at is still on the disk, and a record that
+            # invents a page with no log would fail its own evidence check.
+            results.append({**already[pg], "title": title,
+                            "skipped": "already passed; --skip-passed"})
+            continue
         r = run_page(pg, title, ctx, logdir)
         results.append(r)
         print(f"    -> exit {r['exit']} blocks {r['blocks']} failed {r['failed']}", flush=True)
@@ -979,8 +1186,12 @@ def main():
     ap.add_argument("cmd", choices=["pages", "run", "fetch", "resume", "status", "guest"])
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--page")
+    ap.add_argument("--skip-passed", action="store_true",
+                    help="in a phase that failed part way, do not re-run the pages "
+                         "its last record says passed; the disk is unchanged")
     a = ap.parse_args()
     run_phase.only_page = a.page
+    run_phase.skip_passed = a.skip_passed
     if a.cmd in ("run", "fetch", "resume"):
         acquire_lock(f"{a.cmd} {a.arg}")
         try:

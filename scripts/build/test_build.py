@@ -32,7 +32,7 @@ def check_mismatches():
 
 def check_lock_files():
     have = build.lock_files()
-    assert len(have) == 93, f"base.lock carries 88 packages and 5 patches, got {len(have)}"
+    assert len(have) == 94, f"base.lock carries 89 packages and 5 patches, got {len(have)}"
     assert "acl-2.3.2.tar.xz" in have
     assert "glibc-fhs-1.patch" in have
 
@@ -110,7 +110,7 @@ def check_chroot_environment_is_the_books():
         "the pinned page's invocation was read differently than the book prints it"
     assert env_i == book_vars, \
         f"env -i adds {sorted(env_i - book_vars)} drops {sorted(book_vars - env_i)}"
-    assert prelude == {"LFS", "SRCDIR"}, \
+    assert prelude == {"LFS", "BCT_SRCDIR"}, \
         f"the page shell is handed {sorted(prelude)} beyond the book's environment"
 
 
@@ -278,6 +278,26 @@ def check_core_suite_cannot_be_skipped():
     assert bad and "glibc" in bad[0] and str(block) in bad[0], bad
 
 
+def check_a_predicted_test_failure_does_not_stop_the_page():
+    # The page's shell runs under `set -e` for as long as the book's unpack
+    # synopsis owns it, and not one line longer: left on, Glibc's testsuite —
+    # which the book says will fail — ends the shell before the block reports,
+    # and `make install` three blocks later never runs.
+    pg = "chapter08/glibc.html"
+    script, emitted = build.page_script(pg, "Glibc", build.expected_failures(pg, "@@DONE"))
+    assert script.index("set -e") < script.index("set +e") < script.index("@@BLOCK 1"), \
+        "errexit has to end where the blocks begin"
+    assert 'FAIL=' in script and "@@FAILED" in script, "a failing command has to be recorded"
+    assert "[ -z \"$FAIL\" ] || rc=1" in script, \
+        "a block whose third command failed is not a block that passed"
+    for block, marker in ((5, "@@ABORT block 5"), (6, "@@TOLERATED block 6")):
+        at = script.index(f"@@BLOCK {block} ")
+        window = script[at:script.index(f"@@BLOCK {block + 1} ")]
+        assert marker in window, f"block {block} should end at {marker}, not stop the page"
+        assert ("exit 1" in window) == marker.startswith("@@ABORT"), window
+    assert 19 not in emitted, "tzselect prompts a terminal this build does not have"
+
+
 def _alive(pid):
     try:
         os.kill(pid, 0)
@@ -296,7 +316,8 @@ if __name__ == "__main__":
                check_no_page_is_dropped_from_the_index,
                check_sources_needed_for_every_page,
                check_resume_starts_at_the_failed_phase,
-               check_guard_on_the_real_pages):
+               check_guard_on_the_real_pages,
+               check_a_predicted_test_failure_does_not_stop_the_page):
         print(f"{fn.__name__} ...", flush=True)
         fn()
         print(f"  ok")
