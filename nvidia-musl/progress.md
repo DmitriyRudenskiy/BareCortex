@@ -15,9 +15,11 @@ Initiative page: kp-d1460c9f8f824d61b78e14b7da38339c.
   correction: Debian 12 glibc libc does NOT set DF_1_STATIC_TLS (no DT_FLAGS_1 at all)
   — the handoff's 'libc STATIC_TLS=True' claim does not hold for this build; the flag
   lives on dlopen'd libs (libnvidia-tls). Detector is a bit test; asserted IRELATIVE +
-  GLIBC max, TLS reported only. Committed fa1fab3 (local, nvidia-musl/** only, no push).
+  GLIBC max, TLS reported only. Committed fa1fab3 (nvidia-musl/** only; amended to
+  74e7c9b before first push).
 - Ruling: work on the current branch, commit only nvidia-musl/** files (repo has unrelated
-  uncommitted changes), never push — push is not part of this task.
+  uncommitted changes). Push APPROVED by operator 12.11.2026 — first push: 17 commits
+  (this task + prior build work) to origin/main.
 - Environment: this Mac has no NVIDIA GPU and no running QEMU guest yet
   (vm-host.sh pipeline exists for the LFS build host; Docker daemon down). GPU work
   (ladder steps 1, 3, 4) needs the operator's GPU machine — D1 (580 vs 620) unresolved.
