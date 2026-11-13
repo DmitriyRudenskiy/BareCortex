@@ -85,6 +85,11 @@ LFS = "/mnt/lfs"
 LFS_DISK = "/dev/vdc"
 LFS_PART = "vdc1"
 SWAP_DEV = "vdc2"
+# The book's fstab page writes the root line as `/dev/<xxx> / <fff> defaults 1 1`
+# and tells the reader to replace `<fff>` with the filesystem of that partition.
+# `mkfs.ext4` made it ext4 in this build, in the same override that chose the
+# partition, so the answer is recorded next to the partition's name.
+ROOT_FS = "ext4"
 
 [page."chapter02/creatingpartition.html"]
 note = """The page is `fdisk /dev/<xxx>` — an interactive editor. The partition
@@ -273,3 +278,137 @@ libraries did. The tolerance is the whole block because the block is one command
 what it can forgive is a strip that failed for a different reason, and the page's
 log is where that would show.
 """
+
+[page."chapter09/symlinks.html"]
+skip_blocks = [1, 3, 4, 5]
+note = """“Managing Devices” is a page about udev behaviour, and these three blocks are
+its illustrations: `cat /etc/udev/rules.d/70-persistent-net.rules` (“inspect the
+… file, to find out which name was assigned to which network device” — udev has
+not written that file since it stopped renaming devices), `udevadm test
+/sys/block/hdd` (“if you wish to see the values that the udev scripts will use”,
+against an IDE disk this machine does not have), and `udevadm info -a -p
+/sys/class/video4linux/video0` (“for each of your devices that is likely to have
+this problem”, against a video4linux device that does not exist), and the sed
+that turns `83-cdrom-symlinks.rules` into the customised version edits a rules
+file the page never said to create and this system does not have. Each one exits
+1 on a machine with no such device, which is every machine. The blocks that write
+rules — the sed edits and the example rules file — are the page's own work and
+run.
+"""
+
+[page."chapter09/locale.html"]
+skip_blocks = [2, 3]
+note = """`LC_ALL=<locale name> locale charmap` and its two siblings carry the book's own
+placeholder, `<locale name>`, which the page asks the reader to replace with a
+locale they have chosen; run literally, the redirection of `<` is a syntax error
+and the block exits 2. The page's real work is the last block, which writes
+/etc/profile.
+"""
+
+[page."chapter10/kernel.html".block_subst."2"]
+"make menuconfig" = '''
+make defconfig
+scripts/config \
+    --disable WERROR \
+    --enable PSI \
+    --disable PSI_DEFAULT_DISABLED \
+    --disable IKHEADERS \
+    --enable CGROUPS \
+    --enable MEMCG \
+    --disable EXPERT \
+    --enable RELOCATABLE \
+    --enable RANDOMIZE_BASE \
+    --enable STACKPROTECTOR \
+    --enable STACKPROTECTOR_STRONG \
+    --disable UEVENT_HELPER \
+    --enable DEVTMPFS \
+    --enable DEVTMPFS_MOUNT \
+    --enable SYSFB_SIMPLEFB \
+    --enable DRM \
+    --enable DRM_PANIC \
+    --set-str DRM_PANIC_SCREEN kmsg \
+    --enable DRM_FBDEV_EMULATION \
+    --enable DRM_SIMPLEDRM \
+    --enable FRAMEBUFFER_CONSOLE \
+    --enable PCI \
+    --enable PCI_MSI \
+    --enable IOMMU_SUPPORT \
+    --enable IRQ_REMAP \
+    --enable X86_X2APIC \
+    --enable BLK_DEV_NVME \
+    --enable VIRTIO_PCI \
+    --enable VIRTIO_BLK \
+    --enable EXT4_FS \
+    --enable BLK_DEV_SD \
+    --enable ATA \
+    --enable SERIAL_8250 \
+    --enable SERIAL_8250_CONSOLE \
+    --enable TMPFS \
+    --enable PROC_FS \
+    --enable SYSFS \
+    --enable UNIX \
+    --enable NET
+make olddefconfig
+bad=""
+for e in WERROR=n PSI=y PSI_DEFAULT_DISABLED=n IKHEADERS=n CGROUPS=y MEMCG=y EXPERT=n RELOCATABLE=y RANDOMIZE_BASE=y STACKPROTECTOR=y STACKPROTECTOR_STRONG=y UEVENT_HELPER=n DEVTMPFS=y DEVTMPFS_MOUNT=y SYSFB_SIMPLEFB=y DRM=y DRM_PANIC=y DRM_FBDEV_EMULATION=y DRM_SIMPLEDRM=y FRAMEBUFFER_CONSOLE=y PCI=y PCI_MSI=y IOMMU_SUPPORT=y IRQ_REMAP=y X86_X2APIC=y BLK_DEV_NVME=y VIRTIO_PCI=y VIRTIO_BLK=y EXT4_FS=y BLK_DEV_SD=y ATA=y SERIAL_8250=y SERIAL_8250_CONSOLE=y TMPFS=y PROC_FS=y SYSFS=y UNIX=y NET=y; do
+    s=${e%%=*}; want=${e##*=}; have=$(scripts/config --state $s)
+    [ "$have" = "$want" ] || bad="$bad CONFIG_$s: want $want, .config says $have"
+done
+[ -z "$bad" ] || { echo "kernel configuration did not hold:$bad" >&2; exit 1; }
+scripts/config --state DRM_PANIC_SCREEN > /dev/null
+grep -E "^CONFIG_DRM_PANIC_SCREEN=" .config > /dev/null || { echo "CONFIG_DRM_PANIC_SCREEN not set" >&2; exit 1; }
+''' 
+
+[page."chapter10/kernel.html"]
+skip_blocks = [5]
+note = """`mount /boot` is the page's conditional step — “If you've decided to use a
+separate /boot partition for the LFS system (maybe sharing a /boot partition with
+the host distro), you may need to run mount /boot” — and this build has no
+separate /boot: the fstab page writes one root partition and no /boot line, so the
+command answers `can't find in /etc/fstab` and the blocks that copy the kernel,
+System.map and .config into /boot never run. They are the next blocks and they do
+their work against the /boot directory of the root filesystem, which is what the
+page installs to when there is no partition to mount.
+
+`make menuconfig` is the page's own step, and it is a person at a keyboard: the
+page says so (“Usually, this is done through a menu-driven interface”), and run
+unattended it draws an ncurses screen on a pipe and waits forever — it sat at 96%
+CPU for two hours and printed nothing the runner could read. What the page offers
+instead is in its own note: “A good starting place for setting up the kernel
+configuration is to run `make defconfig`. This will set the base configuration to
+a good state that takes your current system architecture into account. Be sure to
+enable/disable/set the following features or the system might not work correctly
+or boot at all”, followed by the list. So: `make defconfig`, then every entry of
+that list, in the page's order and with the page's states, applied with the
+kernel's own `scripts/config` (`--set-str DRM_PANIC_SCREEN kmsg` for the one entry
+whose book state is a value, `(kmsg)`), then `make olddefconfig` to let
+dependencies settle. The page's 32-bit `HIGHMEM4G` entry is not applied, because
+this is x86_64; its NVMe entry is applied whatever the disk, because it costs one
+driver and the page's condition is about the machine.
+
+Then the additions the page cannot know: this system's disk is virtio (`/dev/vda`,
+driver `virtio_blk`) and there is no initramfs in the book's install step, so
+every driver needed to mount the root filesystem has to be built in, not `m` —
+`VIRTIO_PCI`, `VIRTIO_BLK`, `EXT4_FS`, `BLK_DEV_SD`, `ATA` — plus `SERIAL_8250`
+and its console, which is how this build is watched at all.
+
+Last, the list is a requirement, so the block asks the resulting `.config` whether
+each entry held, and says which one did not. `make olddefconfig` is allowed to
+refuse an option for a dependency the page did not mention; that is exactly the
+news worth failing on rather than discovering at boot.
+"""
+
+# The book's own instruction for this page is “replace <xxx> with the name of the
+# LFS partition”, and this build does — with `vdc1`, the name the partition has
+# while the build guest is running. That name is not the name it has at boot: the
+# overrides above say so (“At the first boot test the disk is the only disk
+# attached and becomes /dev/vda”), and a root line naming a disk that is not
+# there, with fsck order 1, is a boot that stops. So the two device names become
+# `/dev/disk/by-uuid/…`, resolved by `blkid` when the page runs, which is the
+# book's file with the book's instruction applied to a machine whose disk names
+# move. The heredoc loses its quotes so the shell can expand them; nothing else in
+# the file is special to the shell.
+[page."chapter10/fstab.html".block_subst."1"]
+'cat > /etc/fstab << "EOF"' = 'cat > /etc/fstab <<EOF'
+"/dev/vdc1     /            ext4    defaults            1     1" = "/dev/disk/by-uuid/$(blkid -s UUID -o value /dev/vdc1) / ext4 defaults 1 1"
+"/dev/vdc2     swap         swap     pri=1               0     0" = "/dev/disk/by-uuid/$(blkid -s UUID -o value /dev/vdc2) swap swap pri=1 0 0"

@@ -1306,3 +1306,81 @@ The phase's exit criteria, evaluated after the pages ran:
 - `ok` `sudo chroot /mnt/lfs /bin/bash -c "command -v gcc > /dev/null && command -v make > /dev/null && command -v perl > /dev/null && command -v python3 > /dev/null"`
 
 Checkpoint: `after`
+
+## configuration — FAILED
+
+2026-11-13T05:35:57 → 2026-11-13T05:36:01, context `chroot-root`, 2 page(s) of chapter 09.
+
+Book pages: `chapter09/udev.html`, `chapter09/symlinks.html`
+
+Exit criteria this phase claims to meet:
+
+- The device symlinks, network configuration, locale, inputrc and shells files exist with the contents the pages give them.
+- OpenRC's default runlevel is set.
+
+Failures: `block 1 rc 1`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`, `block 4 never reported (the page stopped early)`, `block 5 never reported (the page stopped early)`, `block 6 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `sudo test -s /mnt/lfs/etc/hostname -a -s /mnt/lfs/etc/hosts -a -s /mnt/lfs/etc/resolv.conf`
+
+Checkpoint: `after`
+
+## configuration — FAILED
+
+2026-11-13T05:38:41 → 2026-11-13T05:38:43, context `chroot-root`, 2 page(s) of chapter 09.
+
+Book pages: `chapter09/udev.html`, `chapter09/symlinks.html`
+
+Exit criteria this phase claims to meet:
+
+- The device symlinks, network configuration, locale, inputrc and shells files exist with the contents the pages give them.
+- OpenRC's default runlevel is set.
+
+Failures: `block 4 rc 1`, `block 6 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `sudo test -s /mnt/lfs/etc/hostname -a -s /mnt/lfs/etc/hosts -a -s /mnt/lfs/etc/resolv.conf`
+
+Checkpoint: `after`
+
+## configuration — passed
+
+2026-11-13T05:42:49 → 2026-11-13T05:42:56, context `chroot-root`, 7 page(s) of chapter 09.
+
+Book pages: `chapter09/udev.html`, `chapter09/symlinks.html`, `chapter09/network.html`, `chapter09/usage.html`, `chapter09/locale.html`, `chapter09/inputrc.html`, `chapter09/etcshells.html`
+
+Exit criteria this phase claims to meet:
+
+- The device symlinks, network configuration, locale, inputrc and shells files exist with the contents the pages give them.
+- OpenRC's default runlevel is set.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo test -s /mnt/lfs/etc/hostname -a -s /mnt/lfs/etc/hosts -a -s /mnt/lfs/etc/resolv.conf`
+
+Checkpoint: `after`
+
+## bootable — FAILED
+
+2026-11-13T07:44:00 → 2026-11-13T07:49:05, context `chroot-root`, 2 page(s) of chapter 10.
+
+Book pages: `chapter10/fstab.html`, `chapter10/kernel.html`
+
+Exit criteria this phase claims to meet:
+
+- fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.
+- The kernel on the disk is the version base.lock names.
+
+Failures: `block 5 rc 1`, `block 6 never reported (the page stopped early)`, `block 7 never reported (the page stopped early)`, `block 8 never reported (the page stopped early)`, `block 9 never reported (the page stopped early)`, `block 10 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `sudo grep -q UUID /mnt/lfs/etc/fstab`
+- `FAILED 2` `ls /mnt/lfs/boot/vmlinuz-* > /dev/null`
+- `FAILED 1` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
+
+Checkpoint: `after`

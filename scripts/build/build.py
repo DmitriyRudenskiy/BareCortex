@@ -269,7 +269,8 @@ def substitute(cmd, o=None):
     """
     for tok, val in (o or {}).get("placeholder", {}).items():
         cmd = cmd.replace(tok, val)
-    for ph, key in (("<xxx>", "LFS_PART"), ("<yyy>", "SWAP_DEV"), ("<zzz>", "SWAP_DEV")):
+    for ph, key in (("<xxx>", "LFS_PART"), ("<yyy>", "SWAP_DEV"), ("<zzz>", "SWAP_DEV"),
+                 ("<fff>", "ROOT_FS")):
         cmd = cmd.replace(ph, DEV[key])
     return cmd
 
