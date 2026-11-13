@@ -117,6 +117,8 @@ already in the way. The base stays LFS 13.0-openrc and `base.lock` does not chan
 What it leaves behind is one rule with a command behind it — the image carries no
 32-bit code, `scripts/build/check-amd64-only.py` fails when it does — and the
 measurement that shows the rule is free. The first real test of it will be the
-NVIDIA driver's 32-bit compatibility blobs, which `gpu-stack` owns; if something
+NVIDIA driver, which `gpu-stack` owns and whose 32-bit behaviour this
+measurement did not examine — the check is what will say whether it installs any
+32-bit code; if something
 we need turns out to exist only as 32-bit code, that reopens the rule in
 `openspec/` on purpose rather than by an exception quietly added to a check.

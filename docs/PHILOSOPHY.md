@@ -51,6 +51,27 @@ claim is `scripts/build/check-no-systemd.py --root <image>`, and what PID 1 is
 lives in [the init layer](INIT-LAYER.md). A claim of this kind that no command
 verifies is a sentence waiting for the first package that links it anyway.
 
+### ✅ 64-bit only, no 32-bit code
+
+The image is built for one architecture and one word size: every ELF file in it
+is `ELFCLASS64` for `EM_X86_64`, and there is no `lib32` or `libx32` directory.
+32-bit support is not a feature that costs nothing to keep — it is a second copy
+of every library, a second kernel ABI surface, and a loader that has to know
+which one a binary wants. The command behind the claim is
+`scripts/build/check-amd64-only.py --root <image>`, which reads `EI_CLASS` and
+`e_machine` out of every ELF header it finds and refuses to run at all without
+an image root.
+
+It became a rule by measuring a distribution that already ships it: Gentoo's
+`stage3-amd64-nomultilib-openrc` is a complete OpenRC system of 1 487 ELF files
+of which none is 32-bit, and the one file in it whose name looks 32-bit
+(`crtprec32.o`) turns out to be `ELFCLASS64` — the architecture is a property of
+the binary, so the check reads the binary and not the name. What the rule is
+worth, and what a distro seed costs against it, is in
+[the base comparison](GENTOO-AS-BASE.md). What it will be tested by first is the
+NVIDIA driver, whose 32-bit behaviour nobody here has measured yet — the check is
+what will say.
+
 ### ❌ No Wayland (by default)
 
 Wayland compositors add complexity for multi-GPU NVIDIA setups. Xorg is:

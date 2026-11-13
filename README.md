@@ -36,6 +36,7 @@ layers, BareCortex is stripped down to the bare minimum needed to:
 |---|---|
 | **No containers** | All AI frameworks run directly on the host system via Python venvs |
 | **No systemd as init or service manager** | OpenRC is PID 1 (`readlink /proc/1/exe` → `openrc-init`); `scripts/build/check-no-systemd.py --root /` fails the build if any binary resolves `libsystemd`. udev is still built from the systemd tarball — [docs/INIT-LAYER.md](docs/INIT-LAYER.md) |
+| **64-bit only, no 32-bit code** | Every ELF file in the image is `ELFCLASS64` `EM_X86_64` and there is no `lib32`/`libx32` directory; `scripts/build/check-amd64-only.py --root <image>` reads `EI_CLASS` and `e_machine` from every header and refuses to run without an image root — [docs/GENTOO-AS-BASE.md](docs/GENTOO-AS-BASE.md) |
 | **No Wayland** | Xorg for stability or pure headless mode for servers |
 | **Bare metal** | Zero abstraction between your code and the GPU — except the GPU driver and CUDA userspace, which are NVIDIA binaries, not built here |
 | **From scratch** | Built from the LFS and BLFS OpenRC editions — the GPU stack comes from NVIDIA's own guides, because GLFS is a gaming book |

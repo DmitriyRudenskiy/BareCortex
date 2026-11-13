@@ -15,6 +15,18 @@ Scope note: nothing here runs on the **target**. Markers mean the classes in `ta
 - [ ] 1.2 Record what the driver installer emits about installed files and choose the recording mechanism (OQ3), from its own options rather than from assumption
 - [ ] 1.3 **(gpu)** In the default environment, run `ldd` on the loaded `libtorch_cuda.so` and record which NCCL resolves (OQ4). **This change owns the answer** — `userspace-and-ml-stack 1.1` references this task instead of repeating the probe. If it is the framework's bundled copy, decide here whether source-built NCCL is part of this stack at all
 - [ ] 1.4 Record OQ2 (`nvidia-open` vs proprietary module) as explicitly deferred to the target hardware, with the table that will decide it
+- [ ] 1.5 Record the driver installer's option that keeps 32-bit compatibility code
+      out of the image (OQ3 covers what the installer emits; this is what it must
+      be told not to install). `base-image` now requires that every ELF file in
+      the image be `ELFCLASS64` `EM_X86_64` and that no `lib32`/`libx32`
+      directory exist, and `scripts/build/check-amd64-only.py --root <image>`
+      directory exist, and `scripts/build/check-amd64-only.py --root <image>`
+      fails on any file that is not. Whether the driver installs 32-bit code at
+      all is **not measured by `amd64-only-userspace`** — the check is what will
+      say, on the image, which is why the option has to be chosen from the
+      installer's own `--help` and not assumed; an exception list in the check is
+      not available, and `openspec/changes/amd64-only-userspace/`
+      is where such a list would have to be argued for first
 
 ## 2. Component inventory and `base.lock` entries
 
