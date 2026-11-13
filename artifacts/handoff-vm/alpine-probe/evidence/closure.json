@@ -1,0 +1,169 @@
+{
+ "seed": [
+  "openrc",
+  "busybox",
+  "musl"
+ ],
+ "packages": {
+  "musl": {
+   "version": "1.2.6-r3",
+   "arch": "x86_64",
+   "size": 415466,
+   "depend": [],
+   "provides": [
+    "so:libc.musl-x86_64.so.1=1"
+   ],
+   "desc": "the musl c library (libc) implementation",
+   "apk": "musl-1.2.6-r3.apk"
+  },
+  "busybox": {
+   "version": "1.37.0-r31",
+   "arch": "x86_64",
+   "size": 504769,
+   "depend": [
+    "so:libc.musl-x86_64.so.1"
+   ],
+   "provides": [
+    "cmd:busybox=1.37.0-r31"
+   ],
+   "desc": "Size optimized toolbox of many common UNIX utilities",
+   "apk": "busybox-1.37.0-r31.apk"
+  },
+  "openrc": {
+   "version": "0.63.2-r0",
+   "arch": "x86_64",
+   "size": 217933,
+   "depend": [
+    "ifupdown-any",
+    "openrc-user=0.63.2-r0",
+    "/bin/sh",
+    "so:libc.musl-x86_64.so.1",
+    "so:libcap.so.2"
+   ],
+   "provides": [
+    "ifupdown-ng-openrc=0.12.1-r4",
+    "cmd:mkmntdirs=0.63.2-r0",
+    "cmd:openrc-run=0.63.2-r0",
+    "cmd:openrc=0.63.2-r0",
+    "cmd:rc-service=0.63.2-r0",
+    "cmd:rc-sstat=0.63.2-r0",
+    "cmd:rc-status=0.63.2-r0",
+    "cmd:rc-update=0.63.2-r0",
+    "cmd:service=0.63.2-r0",
+    "cmd:start-stop-daemon=0.63.2-r0",
+    "cmd:supervise-daemon=0.63.2-r0",
+    "so:libeinfo.so.1=1",
+    "so:librc.so.1=1"
+   ],
+   "desc": "OpenRC manages the services, startup and shutdown of a host",
+   "apk": "openrc-0.63.2-r0.apk"
+  },
+  "libcap2": {
+   "version": "2.78-r0",
+   "arch": "x86_64",
+   "size": 21582,
+   "depend": [
+    "so:libc.musl-x86_64.so.1"
+   ],
+   "provides": [
+    "so:libcap.so.2=2.78",
+    "so:libpsx.so.2=2.78"
+   ],
+   "desc": "POSIX 1003.1e capabilities (libraries)",
+   "apk": "libcap2-2.78-r0.apk"
+  },
+  "busybox-binsh": {
+   "version": "1.37.0-r31",
+   "arch": "x86_64",
+   "size": 1571,
+   "depend": [
+    "busybox=1.37.0-r31"
+   ],
+   "provides": [
+    "/bin/sh",
+    "cmd:sh=1.37.0-r31"
+   ],
+   "desc": "busybox ash /bin/sh",
+   "apk": "busybox-binsh-1.37.0-r31.apk"
+  },
+  "openrc-user": {
+   "version": "0.63.2-r0",
+   "arch": "x86_64",
+   "size": 6113,
+   "depend": [
+    "so:libc.musl-x86_64.so.1",
+    "so:libeinfo.so.1"
+   ],
+   "provides": [],
+   "desc": "OpenRC user services without PAM support",
+   "apk": "openrc-user-0.63.2-r0.apk"
+  },
+  "busybox-ifupdown": {
+   "version": "1.37.0-r31",
+   "arch": "x86_64",
+   "size": 1331,
+   "depend": [],
+   "provides": [
+    "ifupdown-any"
+   ],
+   "desc": "placeholder package for busybox ifupdown",
+   "apk": "busybox-ifupdown-1.37.0-r31.apk"
+  }
+ },
+ "edges": [
+  [
+   "busybox",
+   "so:libc.musl-x86_64.so.1"
+  ],
+  [
+   "openrc",
+   "ifupdown-any"
+  ],
+  [
+   "openrc",
+   "openrc-user=0.63.2-r0"
+  ],
+  [
+   "openrc",
+   "/bin/sh"
+  ],
+  [
+   "openrc",
+   "so:libc.musl-x86_64.so.1"
+  ],
+  [
+   "openrc",
+   "so:libcap.so.2"
+  ],
+  [
+   "libcap2",
+   "so:libc.musl-x86_64.so.1"
+  ],
+  [
+   "busybox-binsh",
+   "busybox=1.37.0-r31"
+  ],
+  [
+   "openrc-user",
+   "so:libc.musl-x86_64.so.1"
+  ],
+  [
+   "openrc-user",
+   "so:libeinfo.so.1"
+  ]
+ ],
+ "ambiguous": [
+  [
+   "/bin/sh",
+   "busybox-binsh dash-binsh yash-binsh"
+  ],
+  [
+   "openrc-user=0.63.2-r0",
+   "openrc-user openrc-user-pam"
+  ],
+  [
+   "ifupdown-any",
+   "busybox-ifupdown ifupdown-ng"
+  ]
+ ]
+}

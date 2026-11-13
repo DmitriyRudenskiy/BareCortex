@@ -1,0 +1,22 @@
+seed openrc+busybox+musl: 7 packages, 1,168,765 bytes declared installed size
+  busybox                    504,769  1.37.0-r31       Size optimized toolbox of many common 
+  musl                       415,466  1.2.6-r3         the musl c library (libc) implementati
+  openrc                     217,933  0.63.2-r0        OpenRC manages the services, startup a
+  libcap2                     21,582  2.78-r0          POSIX 1003.1e capabilities (libraries)
+  openrc-user                  6,113  0.63.2-r0        OpenRC user services without PAM suppo
+  busybox-binsh                1,571  1.37.0-r31       busybox ash /bin/sh
+  busybox-ifupdown             1,331  1.37.0-r31       placeholder package for busybox ifupdo
+
+depends on something outside the closure / ambiguous:
+  /bin/sh                            busybox-binsh dash-binsh yash-binsh
+  ifupdown-any                       busybox-ifupdown ifupdown-ng
+  openrc-user=0.63.2-r0              openrc-user openrc-user-pam
+
+apk files:
+busybox-1.37.0-r31.apk
+busybox-binsh-1.37.0-r31.apk
+busybox-ifupdown-1.37.0-r31.apk
+libcap2-2.78-r0.apk
+musl-1.2.6-r3.apk
+openrc-0.63.2-r0.apk
+openrc-user-0.63.2-r0.apk

@@ -1,0 +1,1620 @@
+[
+ {
+  "path": "bin/busybox",
+  "elf": "dyn",
+  "size": 804616,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "bin/rc-status",
+  "elf": "dyn",
+  "size": 26512,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/bin/getent",
+  "elf": "dyn",
+  "size": 18480,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/bin/getconf",
+  "elf": "dyn",
+  "size": 22344,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/bin/ssl_client",
+  "elf": "dyn",
+  "size": 14384,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libssl.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libssl.so.3"
+   },
+   {
+    "soname": "libcrypto.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcrypto.so.3"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/bin/iconv",
+  "elf": "dyn",
+  "size": 14152,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/bin/scanelf",
+  "elf": "dyn",
+  "size": 67504,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/libpsx.so.2.78",
+  "elf": "dyn",
+  "size": 14008,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/libapk.so.3.0.0",
+  "elf": "dyn",
+  "size": 281344,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libssl.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libssl.so.3"
+   },
+   {
+    "soname": "libcrypto.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcrypto.so.3"
+   },
+   {
+    "soname": "libz.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libz.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/libssl.so.3",
+  "elf": "dyn",
+  "size": 843640,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libcrypto.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcrypto.so.3"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/libcap.so.2.78",
+  "elf": "dyn",
+  "size": 34608,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/libcrypto.so.3",
+  "elf": "dyn",
+  "size": 4993808,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/libz.so.1.3.2",
+  "elf": "dyn",
+  "size": 108376,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/librc.so.1",
+  "elf": "dyn",
+  "size": 55080,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/libeinfo.so.1",
+  "elf": "dyn",
+  "size": 26312,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/engines-3/padlock.so",
+  "elf": "dyn",
+  "size": 22360,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libcrypto.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcrypto.so.3"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/engines-3/loader_attic.so",
+  "elf": "dyn",
+  "size": 47608,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libcrypto.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcrypto.so.3"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/engines-3/afalg.so",
+  "elf": "dyn",
+  "size": 18504,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libcrypto.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcrypto.so.3"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/engines-3/capi.so",
+  "elf": "dyn",
+  "size": 13864,
+  "rc": 0,
+  "needed": [],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/lib/ossl-modules/legacy.so",
+  "elf": "dyn",
+  "size": 100184,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libcrypto.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcrypto.so.3"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/vewarn",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/ebegin",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/checkpath",
+  "elf": "dyn",
+  "size": 14224,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_crashed",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/vebegin",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_starting",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/esyslog",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/is_older_than",
+  "elf": "dyn",
+  "size": 14080,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_stopping",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/is_newer_than",
+  "elf": "dyn",
+  "size": 14080,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/ewarnn",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/rc-depend",
+  "elf": "dyn",
+  "size": 18320,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_set_value",
+  "elf": "dyn",
+  "size": 14152,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/veinfo",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/einfon",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/fstabinfo",
+  "elf": "dyn",
+  "size": 14224,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/kill_all",
+  "elf": "dyn",
+  "size": 18392,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/eindent",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/mountinfo",
+  "elf": "dyn",
+  "size": 14224,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/eend",
+  "elf": "dyn",
+  "size": 18544,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/eval_ecolors",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_started_daemon",
+  "elf": "dyn",
+  "size": 14240,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/veend",
+  "elf": "dyn",
+  "size": 18544,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/shell_var",
+  "elf": "dyn",
+  "size": 14072,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/eerrorn",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_hotplugged",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/veoutdent",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/veindent",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_get_value",
+  "elf": "dyn",
+  "size": 14152,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/vewend",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/eoutdent",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/save_options",
+  "elf": "dyn",
+  "size": 14152,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_started",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/ewaitfile",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/openrc-user",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_stopped",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/eerror",
+  "elf": "dyn",
+  "size": 18552,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/einfo",
+  "elf": "dyn",
+  "size": 18544,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/get_options",
+  "elf": "dyn",
+  "size": 14152,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/ewend",
+  "elf": "dyn",
+  "size": 18544,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/ewarn",
+  "elf": "dyn",
+  "size": 18544,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_wasinactive",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/bin/service_inactive",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_started",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_starting",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/seedrng",
+  "elf": "dyn",
+  "size": 22416,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_inactive",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_stopping",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/swclock",
+  "elf": "dyn",
+  "size": 14224,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_hotplugged",
+  "elf": "dyn",
+  "size": 14240,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/rc-abort",
+  "elf": "dyn",
+  "size": 14144,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_stopped",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_wasinactive",
+  "elf": "dyn",
+  "size": 14240,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_failed",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "usr/libexec/rc/sbin/mark_service_crashed",
+  "elf": "dyn",
+  "size": 14232,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "sbin/rc-update",
+  "elf": "dyn",
+  "size": 18320,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "sbin/supervise-daemon",
+  "elf": "dyn",
+  "size": 47248,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libcap.so.2",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcap.so.2"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "sbin/rc-service",
+  "elf": "dyn",
+  "size": 14224,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "sbin/openrc-run",
+  "elf": "dyn",
+  "size": 38816,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "sbin/openrc",
+  "elf": "dyn",
+  "size": 42920,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "sbin/apk",
+  "elf": "dyn",
+  "size": 115096,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libapk.so.3.0.0",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libapk.so.3.0.0"
+   },
+   {
+    "soname": "libz.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libz.so.1"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   },
+   {
+    "soname": "libssl.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libssl.so.3"
+   },
+   {
+    "soname": "libcrypto.so.3",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcrypto.so.3"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "sbin/mkmntdirs",
+  "elf": "dyn",
+  "size": 14144,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "sbin/start-stop-daemon",
+  "elf": "dyn",
+  "size": 42904,
+  "rc": 0,
+  "needed": [
+   {
+    "soname": "librc.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/librc.so.1"
+   },
+   {
+    "soname": "libeinfo.so.1",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libeinfo.so.1"
+   },
+   {
+    "soname": "libcap.so.2",
+    "resolved": "/home/user/.cache/bc-alpine/root/usr/lib/libcap.so.2"
+   },
+   {
+    "soname": "libc.musl-x86_64.so.1",
+    "resolved": "/lib/ld-musl-x86_64.so.1"
+   }
+  ],
+  "unresolved": [],
+  "stderr": ""
+ },
+ {
+  "path": "lib/ld-musl-x86_64.so.1",
+  "elf": "dyn",
+  "size": 670312,
+  "rc": 0,
+  "needed": [],
+  "unresolved": [],
+  "stderr": ""
+ }
+]

@@ -1,0 +1,3 @@
+.SIGN.RSA.alpine-devel@lists.alpinelinux.org-6165ee59.rsa.pub
+.PKGINFO
+bin/sh

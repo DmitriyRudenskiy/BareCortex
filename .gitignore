@@ -48,6 +48,9 @@ Thumbs.db
 # Datasets (too large for git)
 *.csv
 *.json
+# ...except measurement evidence: a spec requirement that the recorded figures
+# are reproducible from the committed output of the run that produced them.
+!artifacts/**/evidence/*.json
 *.parquet
 *.tfrecord
 *.h5

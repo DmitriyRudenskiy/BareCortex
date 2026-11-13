@@ -1,0 +1,12 @@
+.SIGN.RSA.alpine-devel@lists.alpinelinux.org-6165ee59.rsa.pub
+.PKGINFO
+.post-install
+.post-upgrade
+.trigger
+bin/busybox
+etc/busybox-paths.d/busybox
+etc/logrotate.d/acpid
+etc/network/if-up.d/dad
+etc/securetty
+etc/udhcpc/udhcpc.conf
+usr/share/udhcpc/default.script
