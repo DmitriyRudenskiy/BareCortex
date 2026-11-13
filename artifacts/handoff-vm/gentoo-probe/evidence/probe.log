@@ -1,0 +1,71 @@
+sha256 published: 433f0f43db2f3db9515339bca0f2b340650ad87d85ab9d7ec34155b14bcc0228
+sha256 computed : 433f0f43db2f3db9515339bca0f2b340650ad87d85ab9d7ec34155b14bcc0228
+tarball: 260157720 bytes
+root: 61480 paths, 49626 files, 1038605377 bytes
+== package database (Gentoo's vdb: /var/db/pkg/<cat>/<pkgver>)
+  categories+packages: 292
+  sys-apps/openrc              openrc-0.63.3
+  sys-apps/baselayout          baselayout-2.18-r1
+  sys-apps/portage             portage-3.0.83-r1
+  sys-libs/glibc               glibc-2.43-r4
+  sys-process/procps           procps-4.0.6
+  sys-apps/util-linux          util-linux-2.42.3
+  dev-lang/python              python-3.14.10_p1
+  sys-devel/gcc                gcc-16.2.1_p20260926
+  sys-fs/eudev                 eudev ABSENT
+  net-misc/dhcpcd              dhcpcd-10.5.2
+  total packages: 292
+== 32-bit census: ELF class and machine of every file with an ELF header
+  ('64-bit', 'EM_X86_64', 'dyn'): 1461, ('64-bit', 'EM_X86_64', 'rel'): 26
+  total ELF: 1487, bytes: 426,635,000
+  multilib dirs: none found
+  loader=lib64/ld-linux-x86-64.so.2 checked=1461 rc0=1461 unresolved=0
+  top libraries by edges: /home/user/.cache/bc-gentoo/root/lib64/libc.so.6=1444, /home/user/.cache/bc-gentoo/root/lib64/ld-linux-x86-64.so.2=736, /home/user/.cache/bc-gentoo/root/lib64/libm.so.6=147, /home/user/.cache/bc-gentoo/root/lib64/libxtables.so.12=100, /home/user/.cache/bc-gentoo/root/lib64/libz.so.1=93, /home/user/.cache/bc-gentoo/root/lib64/libpam.so.0=65, /home/user/.cache/bc-gentoo/root/lib64/libeinfo.so.1=61, /home/user/.cache/bc-gentoo/root/usr/lib/gcc/x86_64-pc-linux-gnu/16/libgcc_s.so.1=58
+  failures: 0 (of 1487 ELF; 26 relocatable objects excluded)
+  PAM-linked binaries: 65
+== what each package owns, from its vdb CONTENTS
+  sys-apps/openrc            214 files +  100 symlinks     2,072,578 bytes
+  sys-apps/baselayout         23 files +    4 symlinks        57,355 bytes
+  sys-libs/glibc            1509 files +   11 symlinks    52,849,340 bytes
+  sys-apps/portage          3065 files +   14 symlinks    27,406,462 bytes
+  dev-lang/python           2728 files +    6 symlinks    59,471,011 bytes
+  sys-devel/gcc             1804 files +   50 symlinks   337,408,853 bytes
+  net-misc/dhcpcd             20 files +    0 symlinks       438,472 bytes
+  sys-apps/systemd-utils     247 files +    3 symlinks    18,689,277 bytes
+  sys-apps/shadow            461 files +    4 symlinks     4,846,280 bytes
+  sys-libs/pam               413 files +    6 symlinks     2,668,257 bytes
+== where the bytes are
+  81036	root/usr/share/locale
+  78028	root/usr/share/sgml
+  41544	root/usr/share/doc
+  39760	root/usr/share/man
+  19004	root/usr/share/gcc-data
+  usr/lib/python3.14       145456 KB
+  usr/libexec/gcc          179320 KB
+  usr/lib/gcc              76704 KB
+  var/db/pkg               48988 KB
+  etc/pam.d                96 KB
+== udev / systemd sources
+  sys-apps/systemd-utils-260.1-r1
+  sys-fs/udev-init-scripts-35
+  virtual/udev-217-r7
+== init scripts and services
+  etc/init.d         51 entries
+  etc/runlevels/boot 19 entries
+  etc/conf.d         27 entries
+== the biggest things in the image
+1093960	root/usr
+49152	root/var
+15836	root/etc
+4	root/tmp
+4	root/run
+4	root/root
+354992	root/usr/share
+239648	root/usr/lib
+182516	root/usr/libexec
+160848	root/usr/lib64
+66600	root/usr/bin
+60268	root/usr/x86_64-pc-linux-gnu
+elf-census.json
+ldd.json
+vdb.txt
