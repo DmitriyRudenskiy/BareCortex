@@ -116,9 +116,10 @@ already in the way. The base stays LFS 13.0-openrc and `base.lock` does not chan
 
 What it leaves behind is one rule with a command behind it — the image carries no
 32-bit code, `scripts/build/check-amd64-only.py` fails when it does — and the
-measurement that shows the rule is free. The first real test of it will be the
-NVIDIA driver, which `gpu-stack` owns and whose 32-bit behaviour this
-measurement did not examine — the check is what will say whether it installs any
-32-bit code; if something
-we need turns out to exist only as 32-bit code, that reopens the rule in
-`openspec/` on purpose rather than by an exception quietly added to a check.
+measurement that shows the rule is free. The first real test of it was the NVIDIA
+driver, and it passes for the price of one flag: the 580.196.07 `.run` carries 35
+32-bit ELF files (392 MB, all under `32/`), and `nvidia-installer --help` names
+`--no-install-compat32-libs` to skip them
+([the audit](../nvidia-musl/report/02-elf-audit.md), census and installer wording).
+If something we need turns out to exist only as 32-bit code, that reopens the rule
+in `openspec/` on purpose rather than by an exception quietly added to a check.

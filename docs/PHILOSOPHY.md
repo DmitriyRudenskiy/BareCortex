@@ -68,9 +68,11 @@ of which none is 32-bit, and the one file in it whose name looks 32-bit
 (`crtprec32.o`) turns out to be `ELFCLASS64` — the architecture is a property of
 the binary, so the check reads the binary and not the name. What the rule is
 worth, and what a distro seed costs against it, is in
-[the base comparison](GENTOO-AS-BASE.md). What it will be tested by first is the
-NVIDIA driver, whose 32-bit behaviour nobody here has measured yet — the check is
-what will say.
+[the base comparison](GENTOO-AS-BASE.md). The first real test of it is the NVIDIA
+driver, and that has now been measured: its 580.196.07 `.run` carries 35 32-bit
+ELF files — 392 MB — and `nvidia-installer` is told to leave them out with
+`--no-install-compat32-libs` ([the audit](../nvidia-musl/report/02-elf-audit.md)).
+The rule costs one installer flag.
 
 ### ❌ No Wayland (by default)
 

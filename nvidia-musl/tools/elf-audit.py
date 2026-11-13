@@ -41,6 +41,7 @@ except ImportError:
     sys.exit("pyelftools required: pip install pyelftools")
 
 DF1_STATIC_TLS = 0x800000
+DF_STATIC_TLS = 0x10  # the DT_FLAGS spelling of the same fact (<elf.h>)
 IRELATIVE = {"EM_X86_64": 37, "EM_AARCH64": 1032}
 TPOFF64 = {"EM_X86_64": 38, "EM_AARCH64": 268}
 DTPMOD64 = {"EM_X86_64": 12, "EM_AARCH64": 266}
@@ -74,7 +75,12 @@ def dynamic_info(elf):
         elif d["d_tag"] == "DT_SONAME":
             soname = getattr(tag, "need", None) or _dyn_str(elf, sec, d["d_val"])
         elif d["d_tag"] == "DT_FLAGS_1":
-            static_tls = bool(d["d_val"] & DF1_STATIC_TLS)
+            static_tls = static_tls or bool(d["d_val"] & DF1_STATIC_TLS)
+        elif d["d_tag"] == "DT_FLAGS":
+            # libnvidia-tls/glcore/GLX_nvidia/vdpau/glxserver set DF_STATIC_TLS
+            # in DT_FLAGS, not DF_1_STATIC_TLS; reading only the latter reported
+            # 0 static-TLS users in the 580 tree where readelf finds 5.
+            static_tls = static_tls or bool(d["d_val"] & DF_STATIC_TLS)
     return needed, soname, static_tls
 
 
@@ -82,7 +88,9 @@ def reloc_census(elf, machine):
     counts = {"irelative": 0, "tpoff64": 0, "dtpmod64": 0, "total": 0}
     irel, tp, dm = IRELATIVE.get(machine), TPOFF64.get(machine), DTPMOD64.get(machine)
     for sec in elf.iter_sections():
-        if sec.name not in (".rela.dyn", ".rel.dyn"):
+        # Any relocation section: the one IRELATIVE in libnvidia-glcore.580 lives
+        # in .rela.plt, which a .rela.dyn/.rel.dyn name filter walks past.
+        if sec.header["sh_type"] not in ("SHT_RELA", "SHT_REL"):
             continue
         try:
             rels = sec.iter_relocations()
@@ -112,31 +120,45 @@ def ifunc_count(elf):
     return n
 
 
+def parse_verneed(data, get_string):
+    """{required lib: {version-name}} from raw .gnu.version_r bytes.
+
+    Verneed: vn_version@0 vn_cnt@2 vn_file@4 vn_aux@8 vn_next@12 (16 bytes).
+    Vernaux: vna_hash@0 vna_flags@2 vna_other@4 vna_name@8 vna_next@12 (16 bytes).
+    vn_next / vna_next are offsets RELATIVE TO THE ENTRY THEY SIT IN, 0 = last.
+    (Advancing by the value instead of adding it walks the same entry forever —
+    the bug that hung the 580.196.07 audit on any file with 3+ Verneed entries.)
+    """
+    out, i, guard = {}, 0, 0
+    while i + 16 <= len(data):
+        guard += 1
+        if guard > len(data):  # a cyclic vn_next cannot outlive the section
+            break
+        vn_cnt = _u16(data, i + 2)
+        lib = get_string(_u32(data, i + 4))
+        j = i + _u32(data, i + 8)
+        for _ in range(vn_cnt):
+            if j + 16 > len(data):
+                break
+            out.setdefault(lib, set()).add(get_string(_u32(data, j + 8)))
+            vna_next = _u32(data, j + 12)
+            if vna_next == 0:
+                break
+            j += vna_next
+        vn_next = _u32(data, i + 12)
+        if vn_next == 0:
+            break
+        i += vn_next
+    return out
+
+
 def version_reqs(elf):
-    """{required lib: {version-name}} from .gnu.version_r (parsed by hand)."""
+    """{required lib: {version-name}} from .gnu.version_r."""
     sec = elf.get_section_by_name(".gnu.version_r")
     if sec is None:
         return {}
     st = elf.get_section(sec["sh_link"])
-    data = sec.data()
-    out, i = {}, 0
-    while i + 20 <= len(data):
-        vn_cnt = _u16(data, i + 2)
-        vn_file = _u32(data, i + 4)
-        vn_aux = _u32(data, i + 8)
-        vn_next = _u32(data, i + 12)
-        lib = st.get_string(vn_file)
-        j = i + vn_aux
-        for _ in range(vn_cnt):
-            if j + 16 > len(data):
-                break
-            name = st.get_string(_u32(data, j + 8))
-            out.setdefault(lib, set()).add(name)
-            j = _u32(data, j + 12)
-        if vn_next == 0:
-            break
-        i = vn_next
-    return out
+    return parse_verneed(sec.data(), st.get_string)
 
 
 def glibc_max(reqs):
@@ -202,7 +224,42 @@ def find_files(root, all_elf):
     return sorted(out)
 
 
+def verneed_selfcheck():
+    """Synthetic .gnu.version_r: 2 libs, 2 versions on the first, gaps between
+    entries. Fails on the pre-fix chain walk. Returns [] or [problem]."""
+    import struct
+
+    strings = b"\x00".join([b"", b"libc.so.6", b"libm.so.6", b"2.17", b"2.28",
+                            b"2.4"]) + b"\x00"
+
+    def off(s):
+        return strings.index(s.encode() + b"\x00")
+
+    def verneed(cnt, file_off, aux, nxt):
+        return struct.pack("<HHIII", 1, cnt, file_off, aux, nxt)
+
+    def vernaux(name_off, nxt):
+        return struct.pack("<IHHII", 0, 0, 2, name_off, nxt)
+
+    data = (verneed(2, off("libc.so.6"), 16, 64)
+            + vernaux(off("2.17"), 16) + vernaux(off("2.28"), 0)
+            + b"\0" * 16
+            + verneed(1, off("libm.so.6"), 16, 0)
+            + vernaux(off("2.4"), 0))
+    table = {}
+    got = parse_verneed(data, lambda o: strings[o:strings.index(b"\x00", o)].decode())
+    for k, v in got.items():
+        table[k] = sorted(v)
+    want = {"libc.so.6": ["2.17", "2.28"], "libm.so.6": ["2.4"]}
+    return [] if table == want else [f"verneed walk: got {table}, want {want}"]
+
+
 def selftest(path):
+    problems = verneed_selfcheck()
+    if problems:
+        print("selftest FAIL:", "; ".join(problems), file=sys.stderr)
+        return 1
+    print("selftest: verneed walk OK (synthetic, 2 libs / 3 versions)")
     cands = [path] if path not in (None, "auto") else [
         "/lib64/libc.so.6", "/lib/x86_64-linux-gnu/libc.so.6",
         "/lib/aarch64-linux-gnu/libc.so.6",
