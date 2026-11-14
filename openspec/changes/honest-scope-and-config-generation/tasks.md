@@ -49,13 +49,13 @@ Scope note: every task below is completable without the target machine. Hardware
 
 ## 4. Target fragment scaffolding
 
-- [ ] 4.1 Add `kernel/fragments/target-nic.fragment.example` documenting the manual mapping step, clearly marked as an example that generation rejects
-- [ ] 4.2 Add `kernel/scripts/detect_target_devices.sh` that prints PCI class `02` devices with vendor:device IDs — rename from "generate fragment", since it cannot generate anything (design D3)
-- [ ] 4.3 Fix the device filter: match the bracketed class field that `lspci -nn` actually emits, and exit non-zero when no network device is found
-- [ ] 4.4 Fix the human-readable device name extraction so the one unautomatable step is not fed garbage
-- [ ] 4.5 Have the detector write the target fragment with vendor:device IDs and unresolved TODO markers, and exit non-zero while any TODO remains
-- [ ] 4.6 Refuse to overwrite a target fragment that has no unresolved TODOs, so a hand-mapped file cannot be destroyed by re-running the detector
-- [ ] 4.7 Document the collection procedure in `docs/INSTALL_GUIDE.md` as a prerequisite, not a troubleshooting step
+- [x] 4.1 Add `kernel/fragments/target-nic.fragment.example` documenting the manual mapping step, clearly marked as an example that generation rejects. Written; the generator already refuses any `*.example` in the fragments directory (test case 11 of test_generate_config.sh)
+- [x] 4.2 Add `kernel/scripts/detect_target_devices.sh` that prints PCI class `02` devices with vendor:device IDs — rename from "generate fragment", since it cannot generate anything (design D3). Written; it lists class 02 devices with vendor:device IDs and writes the fragment with TODO markers. No existing script was present in the repository, so "rename" landed as: the new script is named detect and its header says why it is not generate
+- [x] 4.3 Fix the device filter: match the bracketed class field that `lspci -nn` actually emits, and exit non-zero when no network device is found. The awk filter matches the bracketed `\[02xx\]:` field, not the human-readable class name, and the run fails with an explanation when nothing class 02 is present — proven by test cases 15–17 (fake lspci with only a host bridge: rc 1, message, no fragment written)
+- [x] 4.4 Fix the human-readable device name extraction so the one unautomatable step is not fed garbage. The name is everything between the class field and the `[vendor:device]` brackets, right-trimmed, and is kept on the comment line above each TODO so the human mapping step sees `00:02.0  Intel Corporation Ethernet Controller I219-V  8086:15bb` — proven by test case 3
+- [x] 4.5 Have the detector write the target fragment with vendor:device IDs and unresolved TODO markers, and exit non-zero while any TODO remains. One TODO per class 02 device plus one for the storage controller; a fresh write exits 1 with the remaining count and the mapping instructions — proven by test cases 1, 2, and 6
+- [x] 4.6 Refuse to overwrite a target fragment that has no unresolved TODOs, so a hand-mapped file cannot be destroyed by re-running the detector. Re-run on a complete file: exit 0, message, file byte-identical — proven by test cases 10 and 11
+- [x] 4.7 Document the collection procedure in `docs/INSTALL_GUIDE.md` as a prerequisite, not a troubleshooting step. New "Collecting the target fragment (prerequisite)" section under Prerequisites, with the two-run procedure and the generator's refusal rules
 
 ## 5. Untrack the generated config
 

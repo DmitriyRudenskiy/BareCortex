@@ -1,0 +1,24 @@
+# EXAMPLE — not a real target fragment. The generator refuses to merge any
+# *.example file; delete this one once you have written the real
+# kernel/fragments/target.fragment (detect_target_devices.sh scaffolds it).
+#
+# A target fragment maps this machine's hardware to kernel driver symbols.
+# The two required lines and how each is found:
+#
+# 1. The network controller driver. Run `lspci -nn` on the machine, read the
+#    vendor:device ID of the class 02 device, and find the driver symbol in
+#    the kernel's PCI ID table (drivers/net/ethernet/<vendor>/Kconfig) or
+#    with modinfo on a matching module:
+#      00:02.0 Network controller [0200]: Intel Corporation I219-V [8086:15bb]
+#      -> CONFIG_IGB=y
+# CONFIG_IGB=y
+#
+# 2. The storage controller driver of the device holding the root
+#    filesystem, from `lspci -nn | grep ' \[01'`:
+#      01:00.0 Non-Volatile memory controller [0108]: Samsung NVMe [144d:a808]
+#      -> CONFIG_NVME=y
+# CONFIG_NVME=y
+#
+# Every other line is optional. A line here is a build decision: the
+# generator verifies each one against the merged config and fails on a
+# mismatch.

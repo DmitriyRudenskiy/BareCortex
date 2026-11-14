@@ -22,6 +22,24 @@
 - Internet connection
 - Patience and a good book
 
+### Collecting the target fragment (prerequisite)
+
+The kernel is built from fragments: `kernel/fragments/ai-workload.fragment`
+(checked into the repository) plus a per-machine
+`kernel/fragments/target.fragment` naming this machine's network and storage
+controller drivers. On the target machine, before the first build:
+
+```bash
+sh kernel/scripts/detect_target_devices.sh
+# lists the class 02 devices and writes target.fragment with TODO lines
+# replace each TODO with CONFIG_<DRIVER>=y for the vendor:device ID
+sh kernel/scripts/detect_target_devices.sh
+# again: no TODOs left, the hand-mapped file is not overwritten
+```
+
+The generator (`kernel/scripts/generate_config.sh`) refuses to build while
+any TODO remains, or while an `*.example` file sits in `kernel/fragments/`.
+
 ## Step-by-Step Overview
 
 ### Phase 1: Base System (LFS)
