@@ -381,3 +381,19 @@ Ladder: 1 open (Alpine image), 2 PASS, 3 PASS, 4 PASS, **GL-closure loader
 PASS**.
 Next candidates: D3 runtime GL (context/rendering + exit-teardown), rung 1 on
 Chimera (needs window), or pinned-driver jail variant (optional).
+
+2026-11-15 (exit-crash triage, report/13):
+- The teardown std::system_error is MUSL-SPECIFIC: same unpatched glcore in the
+  glibc jail (ubuntu 24.04, host driver bound) → LOADER_OK, exit 0, no crash.
+- Not threads (zero pthread_create/join/detach), not files (zero failing
+  open/unlink/rmdir/access/mkdir). "No error information" = default-constructed
+  error_code → deliberate bare std::system_error() — an internal NVIDIA panic
+  in static teardown; some invariant fails under musl exit ordering.
+- Timing: after dlopen, in normal exit processing; a harness calling _exit(0)
+  right after dlopen → clean exit 0. (LD_PRELOAD exit() wrapper is inert: musl
+  libc calls its own exit directly, not via PLT.)
+- Practice: test harnesses/CI terminate with _exit(); real processes get 134
+  instead of 0 at exit — cosmetic, results flushed before teardown.
+- Deeper root (which object) needs gdb vs the static libstdc++ inside glcore —
+  separate task, not a blocker. Artifact: tools/diag/fo.c.
+- Report: `report/13-teardown-crash-triage.md`.
