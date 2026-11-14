@@ -106,7 +106,9 @@ that nothing talks to.
 git clone https://github.com/DmitriyRudenskiy/BareCortex.git /opt/barecortex
 cd /opt/barecortex
 
-# Install kernel config
+# Install kernel config — generated from kernel/fragments/ by
+# kernel/scripts/generate_config.sh (honest-scope-and-config-generation
+# group 3), written to kernel/.config
 cp kernel/.config /usr/src/linux/.config
 
 # Install OpenRC services

@@ -24,6 +24,9 @@ venv/
 /var/log/
 
 # Kernel build
+# The config is generated from kernel/fragments/ into kernel/.config —
+# the tracked content lives in the fragment, the generated file does not
+/kernel/.config
 /kernel/.config.old
 /kernel/Module.symvers
 /kernel/modules.order

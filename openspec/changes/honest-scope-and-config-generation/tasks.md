@@ -6,30 +6,30 @@ Scope note: every task below is completable without the target machine. Hardware
 
 - [x] 1.1 Resolve OQ1 — resolved: passthrough out of scope (design D7); `IRQ_REMAP` stays, for x2APIC
 - [x] 1.2 Resolve OQ3 — resolved: v6.12 pinned, `PATCHLEVEL`-gated (design D10)
-- [ ] 1.3 Record the pinned kernel version in the fragment header
+- [x] 1.3 Record the pinned kernel version in the fragment header — the header records v6.12 (6.12.116, 2026-11-08) as the audited pin, with the `--allow-unaudited-kernel` path named for any other tree
 - [ ] 1.4 Re-audit the fragment against the kernel the base book actually ships — LFS 13.1 pins Linux 7.1.8, verified from the book's package list, while this change audited v6.12 (still maintained: 6.12.116 as of 2026-11-08). Until this runs, v6.12 stays the audited pin and every build on a 7.x tree goes through the `--allow-unaudited-kernel` flag, which is the D10 path becoming normal rather than exceptional
 
 ## 2. Fragment hygiene
 
-- [ ] 2.1 Move `kernel/.config` to `kernel/fragments/ai-workload.fragment`, keeping its content as a starting point
-- [ ] 2.2 Strip every line to `CONFIG_X=value` or `# CONFIG_X is not set` with no trailing text; move all rationale into comments on their own lines
-- [ ] 2.3 Delete `CONFIG_DRM_NVIDIA` and `CONFIG_DRM_NVIDIA_MODESET`; keep `CONFIG_DRM=m` and `# CONFIG_DRM_NOUVEAU is not set`
-- [ ] 2.4 Delete `CONFIG_64BIT` and `CONFIG_NR_CPUS` entirely rather than expressing them as commented-out lines (design D2)
-- [ ] 2.5 Remove `CONFIG_PCI_P2PDMA` and state in a comment that NVIDIA P2P comes from `nvidia_p2p` in `nvidia.ko`
-- [ ] 2.6 Do not add EDAC to the workload fragment at all — core without a controller driver reports nothing; the whole subsystem belongs in the target fragment (design D5)
-- [ ] 2.7 Add `CONFIG_MAGIC_SYSRQ=y` and **no** `CONFIG_MAGIC_SYSRQ_DEFAULT_ENABLE` line — `0x1`, the default, already means all functions (`sysrq_on_mask`: "A value of 1 means 'all'"), so any explicit value only narrows it (design D6)
-- [ ] 2.8 Leave `CONFIG_CPU_FREQ` at its base value; do not disable it (design D4)
-- [ ] 2.9 Add `# CONFIG_NUMA_BALANCING is not set` with the jitter rationale and the `numactl` alternative
-- [ ] 2.10 Mark the symbols already set by the base as pins in a comment, so a reader knows they are not a delta
-- [ ] 2.11 Remove `CONFIG_VFIO`, `CONFIG_VFIO_PCI`, `CONFIG_PCI_IOV`, `CONFIG_PCI_PASID` — passthrough is out of scope (design D7)
-- [ ] 2.12 Keep `CONFIG_IRQ_REMAP` with a comment naming the dependency (`X86_X2APIC` depends on `IRQ_REMAP || HYPERVISOR_GUEST`) — not a CPU-count threshold, which reads as a reason to delete it on a 64-core box
-- [ ] 2.13 Leave `CONFIG_PANIC_TIMEOUT` at `0` and add no `PSTORE` symbols — pstore without a backend records nothing, and the backend is firmware-dependent (design D6)
-- [ ] 2.14 Remove `CONFIG_IOMMU_SUPPORT`, `CONFIG_AMD_IOMMU`, `CONFIG_INTEL_IOMMU` from the fragment as **redundant pins** — `=y` builds a driver, `CONFIG_INTEL_IOMMU_DEFAULT_ON` decides activation, and the base leaves that unset, so the base already follows the BIOS (design D12)
-- [ ] 2.15 Record the audited kernel version in the fragment header as the single reference for the D10 gate
-- [ ] 2.16 Add `CONFIG_CPU_FREQ=y` as an explicit pin — `x86_64_defconfig` does not contain it; it is enabled only transitively by `X86_ACPI_CPUFREQ select CPU_FREQ`, so "the base has it" is an inference, and the cpufreq service depends on it
-- [ ] 2.17 Mark `CONFIG_PREEMPT_NONE=y` as an override of the base's explicit `CONFIG_PREEMPT_VOLUNTARY=y`, or leave the base choice alone — the throughput benefit for training is unmeasured
-- [ ] 2.18 Note in the fragment header that `CONFIG_MAGIC_SYSRQ=y` is already set by `x86_64_defconfig` — a pin, not the addition it was believed to be
-- [ ] 2.19 Delete `# CONFIG_PCI_P2PDMA is not set` (absent from the base, so the line is a no-op); keep `# CONFIG_DRM_NOUVEAU is not set` only with a comment that it is a defensive pin against a future base
+- [x] 2.1 Move `kernel/.config` to `kernel/fragments/ai-workload.fragment`, keeping its content as a starting point — done, and the old path is now the generator's output location (group 3), untracked
+- [x] 2.2 Strip every line to `CONFIG_X=value` or `# CONFIG_X is not set` with no trailing text; move all rationale into comments on their own lines
+- [x] 2.3 Delete `CONFIG_DRM_NVIDIA` and `CONFIG_DRM_NVIDIA_MODESET`; keep `CONFIG_DRM=m` and `# CONFIG_DRM_NOUVEAU is not set`
+- [x] 2.4 Delete `CONFIG_64BIT` and `CONFIG_NR_CPUS` entirely rather than expressing them as commented-out lines (design D2)
+- [x] 2.5 Remove `CONFIG_PCI_P2PDMA` and state in a comment that NVIDIA P2P comes from `nvidia_p2p` in `nvidia.ko` — comment present, and no line is written because the symbol is absent from the base, where a `is not set` line would be a no-op
+- [x] 2.6 Do not add EDAC to the workload fragment at all — core without a controller driver reports nothing; the whole subsystem belongs in the target fragment (design D5)
+- [x] 2.7 Add `CONFIG_MAGIC_SYSRQ=y` and **no** `CONFIG_MAGIC_SYSRQ_DEFAULT_ENABLE` line — `0x1`, the default, already means all functions (`sysrq_on_mask`: "A value of 1 means 'all'"), so any explicit value only narrows it (design D6)
+- [x] 2.8 Leave `CONFIG_CPU_FREQ` at its base value; do not disable it (design D4) — the fragment disables nothing and pins `=y` per 2.16
+- [x] 2.9 Add `# CONFIG_NUMA_BALANCING is not set` with the jitter rationale and the `numactl` alternative
+- [x] 2.10 Mark the symbols already set by the base as pins in a comment, so a reader knows they are not a delta — base-set symbols carry `# pin:` comments; the header states that unmarked value lines are deltas or kept values, not asserted either way, pending the 1.4 re-audit
+- [x] 2.11 Remove `CONFIG_VFIO`, `CONFIG_VFIO_PCI`, `CONFIG_PCI_IOV`, `CONFIG_PCI_PASID` — passthrough is out of scope (design D7); `CONFIG_PCI_STUB` went with them, since with no VFIO there is nothing to stub
+- [x] 2.12 Keep `CONFIG_IRQ_REMAP` with a comment naming the dependency (`X86_X2APIC` depends on `IRQ_REMAP || HYPERVISOR_GUEST`) — not a CPU-count threshold, which reads as a reason to delete it on a 64-core box
+- [x] 2.13 Leave `CONFIG_PANIC_TIMEOUT` at `0` and add no `PSTORE` symbols — pstore without a backend records nothing, and the backend is firmware-dependent (design D6) — no line for either; the base default stands
+- [x] 2.14 Remove `CONFIG_IOMMU_SUPPORT`, `CONFIG_AMD_IOMMU`, `CONFIG_INTEL_IOMMU` from the fragment as **redundant pins** — `=y` builds a driver, `CONFIG_INTEL_IOMMU_DEFAULT_ON` decides activation, and the base leaves that unset, so the base already follows the BIOS (design D12) — all three gone, the reasoning kept in the comment that survives with `IRQ_REMAP`
+- [x] 2.15 Record the audited kernel version in the fragment header as the single reference for the D10 gate
+- [x] 2.16 Add `CONFIG_CPU_FREQ=y` as an explicit pin — `x86_64_defconfig` does not contain it; it is enabled only transitively by `X86_ACPI_CPUFREQ select CPU_FREQ`, so "the base has it" is an inference, and the cpufreq service depends on it
+- [x] 2.17 Mark `CONFIG_PREEMPT_NONE=y` as an override of the base's explicit `CONFIG_PREEMPT_VOLUNTARY=y`, or leave the base choice alone — the throughput benefit for training is unmeasured. Left the base choice alone: the override is gone and a comment records why, instead of marking an unmeasured benefit as a decision
+- [x] 2.18 Note in the fragment header that `CONFIG_MAGIC_SYSRQ=y` is already set by `x86_64_defconfig` — a pin, not the addition it was believed to be
+- [x] 2.19 Delete `# CONFIG_PCI_P2PDMA is not set` (absent from the base, so the line is a no-op); keep `# CONFIG_DRM_NOUVEAU is not set` only with a comment that it is a defensive pin against a future base
 
 ## 3. Generator
 
@@ -59,8 +59,8 @@ Scope note: every task below is completable without the target machine. Hardware
 
 ## 5. Untrack the generated config
 
-- [ ] 5.1 `git rm --cached kernel/.config` — `.gitignore` alone does not untrack a tracked file
-- [ ] 5.2 Anchor ignore rules for generated kernel artifacts
+- [x] 5.1 `git rm --cached kernel/.config` — `.gitignore` alone does not untrack a tracked file. Done as `git rm kernel/.config` with the 2.1 move: the file's content lives in the tracked fragment now, and the path is free for the generator's output
+- [x] 5.2 Anchor ignore rules for generated kernel artifacts — `/kernel/.config` is anchored in `.gitignore` (the old `.config.old` rule stands beside it), with the reason in a comment: the tracked content is the fragment, the generated file is not
 
 ## 6. NCCL runtime
 
