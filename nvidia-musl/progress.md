@@ -240,3 +240,31 @@ Next (no GPU needed): `tools/dlopen-harness.sh` + 2.2-lite run on (build) →
 
 Next: 2.3 on (gpu) — `nvidia-smi` + `cuInit` with the kernel module loaded (expect real devices
 instead of rc=100/rc=9), then the installer (`install.sh`/manifest/uninstall) for the lite recipe.
+
+2026-11-14 (2.3 run on (gpu) — LADDER STEP 2 PASSES on stock musl):
+- (gpu) host = `user@192.168.0.86`, **5× RTX 4060 Ti (Ada)**, loaded modules
+  **580.159.03 (Open Kernel Module)**, `/dev/nvidia*` 0666. Ran
+  `tools/run-gpu23.sh` in the 2.2-lite bwrap env — no root, no host changes.
+  Report: `report/08-gpu-smoke.md`; recipe: `recipes/nvidia-smi.md`.
+- **PASS:** host-matched 580.159.03 userspace (its own installed
+  `nvidia-smi`/`libnvidia-ml`/`libcuda`, PR-sanitized) → `nvidia-smi` prints
+  the full 5-GPU table; `nvmlInit_v2` rc=0; `cuInit` rc=0. Stock musl — the
+  patched libc (2.0) stays off the CUDA path, as report/07 predicted.
+- Mismatch pass is a positive result: pinned 580.196.07 `nvidia-smi` against
+  the 159 modules returns NVML's own `Driver/library version mismatch`
+  (exit 18), and pinned `libcuda` **SIGSEGVs** in its mismatch path where
+  glibc returns 803 — a real musl-vs-glibc difference in vendor code, not
+  chased (mismatch is unsupported by design). Lesson kept: the driver
+  enforces version equality to the digit; the pinned `.run` pairs only with
+  modules built from the same `.run` — ladder step 1 on the Alpine image
+  remains the open rung.
+- Fact for `gpu-stack`/D1: this host runs the **open** module at 580 (Ada);
+  D1's closed-`kernel/` was justified for Maxwell–Volta. Module flavor in the
+  final image must follow the (still unnamed) target GPU's architecture.
+- Operator go-ahead for (gpu) use: «продолжай» 14.11 after the reachability
+  audit; work confined to `~/lite` + bwrap, host processes untouched.
+
+Next: ladder step 3 — `deviceQuery` (cuda-samples) under the same lite env,
+then the PyTorch rung; and the installer trio (`install.sh`/manifest/
+`uninstall.sh`) packaging `recipes/nvidia-smi.md`. 2.0 (patched musl) stays
+«on demand» — only the GL/Vulkan path (D3) can summon it.
