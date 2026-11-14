@@ -268,3 +268,20 @@ Next: ladder step 3 — `deviceQuery` (cuda-samples) under the same lite env,
 then the PyTorch rung; and the installer trio (`install.sh`/manifest/
 `uninstall.sh`) packaging `recipes/nvidia-smi.md`. 2.0 (patched musl) stays
 «on demand» — only the GL/Vulkan path (D3) can summon it.
+
+2026-11-14 (2.4 run — LADDER STEP 3 PASSES NATIVELY):
+- `tools/devicequery.c` (musl-native, dlopen-based, no toolkit) against the
+  sanitized host libcuda: `cuInit` 0, driver version 13000, 5× RTX 4060 Ti
+  CC 8.9 15947 MiB, and **`cuMemAlloc_v2` 1 MiB → rc=0** on the primary
+  context — first real device memory from a musl-native process.
+  Report: `report/09-devicequery.md`.
+- Deviation recorded: TASK orders the glibc-jail proof before the native one;
+  native passed first, jail (report/04 plan) stays written-but-unexecuted —
+  its remaining value is as the PyTorch rung's vehicle, not as a fallback
+  for steps 2–3.
+- Not claimed: kernel launches / compute under musl. Step 4 (PyTorch) is
+  where that gets tested.
+
+Next: installer trio packaging `recipes/nvidia-smi.md`; then step 4 —
+PyTorch with CUDA (jail first, per report/04; native wheel is a stretch
+that needs a musl-built torch).
