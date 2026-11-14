@@ -118,6 +118,7 @@ sh scripts/build/tests/test-all.sh layout              # the build-rootfs file-l
 sh scripts/build/tests/test-all.sh base-lock [--lock L --map M [--coverage]]
 sh scripts/build/tests/test-all.sh services [--inventory I]
 sh scripts/build/tests/test-all.sh no-systemd --root <image root>
+sh scripts/build/tests/test-all.sh cycle-plan [--file F] [--explain]
 ```
 
 ### The checks

@@ -1,8 +1,9 @@
 #!/bin/sh
 # test-all.sh — the offline checks of the build, named for build-rootfs's
 # tests/test-all.sh. The build driver's trust checks, the base.lock account,
-# the service inventory, the no-systemd scan (with an image root), and the
-# build-rootfs file-layout checks — one result line per check.
+# the service inventory, the no-systemd scan (with an image root), the
+# cycle-plan check, and the build-rootfs file-layout checks — one result
+# line per check.
 #
 #   tests/test-all.sh                     everything that runs offline
 #   tests/test-all.sh trust               the build-orchestration trust checks
@@ -10,6 +11,7 @@
 #   tests/test-all.sh base-lock [--lock L --map M [--coverage]]
 #   tests/test-all.sh services [--inventory I]
 #   tests/test-all.sh no-systemd --root <image root>
+#   tests/test-all.sh cycle-plan [--file F] [--explain]
 #
 # Polyglot: sh execs the Python payload; python reads the exec line as a string.
 '''exec' python3 "$0" "$@" # '''
@@ -18,8 +20,9 @@
 The build driver's own trust path is imported from
 `scripts/build/build-rootfs.sh` (loaded as the module `build`, which is also
 how the inlined checks' `import book` resolves — the book reader is inlined
-into that file), and the base.lock, service, and no-systemd checkers live in
-this file now that the build-rootfs layout gives the tree one test entry each.
+into that file), and the base.lock, service, no-systemd, and cycle-plan
+checkers live in this file now that the build-rootfs layout gives the tree
+one test entry each.
 """
 
 # >>> docs
@@ -34,6 +37,7 @@ this file now that the build-rootfs layout gives the tree one test entry each.
 # sh scripts/build/tests/test-all.sh base-lock [--lock L --map M [--coverage]]
 # sh scripts/build/tests/test-all.sh services [--inventory I]
 # sh scripts/build/tests/test-all.sh no-systemd --root <image root>
+# sh scripts/build/tests/test-all.sh cycle-plan [--file F] [--explain]
 # ```
 #
 # ### The checks
@@ -673,6 +677,69 @@ and why each is the spec's."""
 REQUIRED = ("runlevel", "requires", "establishes", "failure", "owner")
 
 
+# --- cycle-plan: is the plan checkable? ---------------------------------
+
+CYCLE_HOSTS = ("(build)", "(gpu)", "(target)")
+CYCLE_COMMANDS = re.compile(r"^(sh|bash|python3|nvidia-smi)(\s|$)")
+
+
+def check_cycle_plan(text, known):
+    """Return the plan's defects; empty means every cycle carries what a cycle owes."""
+    sections = [s for s in re.split(r"(?m)^## ", text) if s.startswith("Cycle ")]
+    if not sections:
+        return ["no cycles — a plan with no cycles passes nothing"]
+    findings = []
+    for section in sections:
+        name = section.splitlines()[0].strip()
+        lines = section.splitlines()
+        host = next((l for l in lines if l.startswith("Host:")), None)
+        if host is None or not any(h in host for h in CYCLE_HOSTS):
+            findings.append(
+                f"cycle {name!r}: no Host: line naming one of {', '.join(CYCLE_HOSTS)}")
+        exit_line = next((l for l in lines if l.startswith("Exit:")), None)
+        if exit_line is None:
+            findings.append(f"cycle {name!r}: no Exit: line")
+        elif not any(CYCLE_COMMANDS.match(s) for s in re.findall(r"`([^`]+)`", exit_line)):
+            findings.append(
+                f"cycle {name!r}: the Exit: line carries no command in backticks "
+                "(a shell invocation or nvidia-smi)")
+        owns = next((l for l in lines if l.startswith("Owns:")), None)
+        if owns is None:
+            findings.append(f"cycle {name!r}: no Owns: line")
+        elif not any(s.rstrip("/") in known for s in re.findall(r"`([^`]+)`", owns)):
+            findings.append(f"cycle {name!r}: Owns: names no open change or workstream")
+        if "nvidia-smi" in section and "(gpu)" not in section:
+            findings.append(f"cycle {name!r}: runs nvidia-smi and is not a (gpu) cycle")
+    return findings
+
+
+def main_cycle_plan(argv):
+    """The cycle plan is checkable: every cycle carries an exit command in backticks, a host class, and an owning change."""
+    ap = argparse.ArgumentParser(prog="tests/test-all.sh cycle-plan")
+    ap.add_argument("--file", default=str(ROOT / "docs" / "DEVELOPMENT-CYCLES.md"))
+    ap.add_argument("--explain", action="store_true",
+                    help="print what the check requires and stop")
+    a = ap.parse_args(argv)
+    if a.explain:
+        print("the cycle plan is checkable: every `## Cycle` section carries")
+        print("- a Host: line naming one of (build), (gpu), (target)")
+        print("- an Exit: line with the failing command in backticks "
+              "(a shell invocation or nvidia-smi)")
+        print("- an Owns: line naming an open change or workstream")
+        print("a cycle that runs nvidia-smi must be a (gpu) cycle; "
+              "a plan with no cycles fails.")
+        return 0
+    changes = ROOT / "openspec" / "changes"
+    known = {d.name for d in changes.iterdir() if d.is_dir() and d.name != "archive"}
+    known |= {d.name for d in ROOT.iterdir() if d.is_dir() and (d / "TASK.md").is_file()}
+    fails = check_cycle_plan(pathlib.Path(a.file).read_text(), known)
+    for f in fails:
+        print(f"cycle-plan: {f}")
+    print(f"cycle-plan: {'FAIL ' + str(len(fails)) if fails else 'ok'} "
+          f"({a.file})")
+    return 1 if fails else 0
+
+
 def fail_services(msg, fails):
     print(f"FAIL {msg}", file=sys.stderr)
     fails.append(msg)
@@ -858,6 +925,8 @@ def main(argv):
         return main_services(argv[1:])
     if sub == "no-systemd":
         return main_no_systemd(argv[1:])
+    if sub == "cycle-plan":
+        return main_cycle_plan(argv[1:])
     if sub == "trust":
         return run_trust()
     if sub == "layout":
@@ -866,10 +935,11 @@ def main(argv):
         rc = run_trust()
         rc |= main_base_lock([])
         rc |= main_services([])
+        rc |= main_cycle_plan([])
         rc |= run_layout()
         return 1 if rc else 0
-    print(f"unknown subcommand: {sub} (all|trust|layout|base-lock|services|no-systemd)",
-          file=sys.stderr)
+    print(f"unknown subcommand: {sub} (all|trust|layout|base-lock|services|no-systemd"
+          f"|cycle-plan)", file=sys.stderr)
     return 2
 
 

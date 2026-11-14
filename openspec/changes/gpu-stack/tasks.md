@@ -36,6 +36,14 @@ Scope note: nothing here runs on the **target**. Markers mean the classes in `ta
       `nvidia-musl/report/03-study-git-bruh.md` §6. Whether the installer would
       install them by default on a given image is 1.2/2.4's question, not this one;
       an exception list in the check remains unavailable
+- [ ] 1.6 Record what this stack's packages, service files and `base.lock` entries
+      become under each outcome of the musl gate (`nvidia-musl/`, the cycle 4
+      result), handed here by `development-cycle-plan` 5.7 (design D5): musl
+      carries the vendor stack — the entries stand, re-verified against the musl
+      root; or the glibc-jail fallback — every vendor blob lives under the jail's
+      glibc rootfs, the jail's contents are `base.lock` entries, and the service
+      files name the jail's paths. This task is the stack's half of a decision
+      that is not the stack's to make alone
 
 ## 2. Component inventory and `base.lock` entries
 
