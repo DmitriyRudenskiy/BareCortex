@@ -109,7 +109,7 @@ cat docs/INSTALL_GUIDE.md
 ```
 BareCortex/
 ├── docs/           # Documentation and guides
-├── kernel/         # Kernel config and patches
+├── kernel/         # Kernel config fragments, the config generator, and patches
 ├── openrc/         # OpenRC init scripts and configs
 ├── graphics/       # Xorg and headless display configs
 ├── ai-stack/       # CUDA, cuDNN, framework setup scripts
