@@ -311,3 +311,29 @@ that needs a musl-built torch).
 Next: step 4 — PyTorch with CUDA. Jail route per report/04 (official wheels
 are glibc); native route needs a musl-built torch (stretch). Also still
 open: rung 1 on a real Alpine image, and the GL/Vulkan path (D3, 2.0).
+
+2026-11-15 (musl-nvidia sandbox — PR #6531 loader patches proven on 580.196.07):
+- Built private patched musl in bwrap (Alpine edge minirootfs, no root):
+  musl 1.2.6 + PR #6531 patches 090 (IRELATIVE/ifunc) + 091 (TLS prealloc),
+  `CFLAGS=-DLIBC_NVIDIA_BUILD`, `--disable-static`, `--syslibdir=<prefix>/lib`.
+- Result: **both loader barriers resolved on stock 580.196.07 payload**:
+  - `libnvidia-tls` (initial-exec TLS, .tbss 56 B align 8, DF_STATIC_TLS):
+    stock musl FAIL → musl-nvidia **LOADER_OK** (late-static, noff=56 ≤ 256);
+  - `libnvidia-glcore` (1× R_X86_64_IRELATIVE, hard-NEEDED libnvidia-tls):
+    **LOADER_OK** with gcompat + a test stub for `dladdr1`;
+  - regression: `libcuda` under patched loader still `cuInit rc=100` (no GPU).
+- Findings: gcompat still mandatory (patched loader doesn't remove it);
+  **new gcompat gap `dladdr1`** (glcore) — GL set needs gcompat patch or shim
+  symbol; post-load glcore constructor throws std::system_error headless
+  (runtime, not loader).
+- Footguns recorded: musl `make install` stomps system ldso via default
+  syslibdir=/lib; configure writes config.mak not Makefile; without the
+  LIBC_NVIDIA_BUILD flag both patches silently compile to no-ops.
+- Implication: GL/D3 path is technically viable on patched musl; headless
+  path stays stock-musl + lite installer (2.0 confirmed off critical path).
+- Report: `report/10-musl-nvidia-sandbox.md`. Patches kept in
+  `tools/musl-patches/`.
+
+Next: step 4 — PyTorch with CUDA (jail route per report/04; native wheel needs
+musl-built torch). Still open: rung 1 on a real Alpine image (our 580.196.07
+payload on Chimera), GL/Vulkan D3 (needs musl-nvidia + gcompat dladdr1 + shim).
