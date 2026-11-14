@@ -70,3 +70,6 @@ checkpoints/
 # graph is this workspace (no external crates).
 /utils/target/
 .build-lock
+
+# OpenViking runtime state (vectordb, per-user resource store) — not content
+data/
