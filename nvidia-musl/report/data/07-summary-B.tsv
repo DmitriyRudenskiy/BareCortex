@@ -1,0 +1,10 @@
+file	trace	loader	abi	call	log
+libcuda.so.580.196.07	OK	LOADER_OK	1/1	cuInit rc=100	/home/user/lite/outB/dlopen.libcuda.so.580.196.07.log
+libnvidia-glsi.so.580.196.07	OK	LOADER_OK	-	-	/home/user/lite/outB/dlopen.libnvidia-glsi.so.580.196.07.log
+libnvidia-ml.so.580.196.07	OK	LOADER_OK	2/2	nvmlInit_v2 rc=9	/home/user/lite/outB/dlopen.libnvidia-ml.so.580.196.07.log
+libnvidia-opencl.so.580.196.07	OK	LOADER_OK	-	-	/home/user/lite/outB/dlopen.libnvidia-opencl.so.580.196.07.log
+libnvidia-ptxjitcompiler.so.580.196.07	OK	LOADER_OK	-	-	/home/user/lite/outB/dlopen.libnvidia-ptxjitcompiler.so.580.196.07.log
+libnvidia-tls.so.580.196.07	OK	LOADER_FAIL	-	-	/home/user/lite/outB/dlopen.libnvidia-tls.so.580.196.07.log
+nvidia-modprobe	OK	LOADER_OK	-	-	/home/user/lite/outB/dlopen.nvidia-modprobe.log
+nvidia-persistenced	OK	LOADER_OK	-	-	/home/user/lite/outB/dlopen.nvidia-persistenced.log
+nvidia-smi	OK	LOADER_OK	-	-	/home/user/lite/outB/dlopen.nvidia-smi.log

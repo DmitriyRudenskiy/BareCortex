@@ -130,3 +130,35 @@ IRELATIVE-релокация — `libnvidia-glcore.so.580.196.07`, и она в 
 `libcudart*` из набора в `.run` нет — CUDA Toolkit это отдельный артефакт и отдельный
 аудит. 32-битные файлы просканированы (и попали в «всё дерево»), но вне области: образ по
 правилу `amd64-only-userspace` их не содержит.
+
+## Дозамер 14.11 — пункты 5–7 охран оператора (для 2.2-lite)
+
+`tools/elf-audit.py` расширен: счётчик `R_X86_64_TLSDESC` (тип 36; aarch64 — 137) и бакет
+weak-undefined символов (`.dynsym`, `STB_WEAK` + `SHN_UNDEF`, только FUNC/OBJECT/IFUNC).
+Прогон по всему дереву 580.196.07 (`--all-elf`, 107 ELF, `musl`-независимая статика):
+
+| метрика | всё дерево | headless-набор (9 файлов ступени 1) |
+|---|---|---|
+| `R_X86_64_TLSDESC` | **0** | **0** |
+| IRELATIVE | 1 (`libnvidia-glcore`) | 0 |
+| файлов с `DF_STATIC_TLS` | 11 | 1 (`libnvidia-tls`, от `libcuda` не зависит) |
+| `NEEDS_PATCHED_MUSL` | 11 | 1 |
+
+Значит gnu2-TLS-диалекта (который musl не парсит вовсе) в драйвере нет — барьер 091 это
+исключительно `initial-exec`, и в headless-наборе он встречается ровно один раз, вне
+зависимостей `libcuda`. Проверено вживую в отчёте 07: `_nv005tls: initial-exec TLS resolves to
+dynamic definition` — единственный непроходивший файл ступени 1.
+
+**Weak-бакет headless-набора** (musl резолвит слабые UND в NULL молча, поэтому это риск
+рантайма, а не загрузки): `__cxa_finalize` — `libcuda`, `libnvidia-ml`, `libnvidia-tls`,
+`libnvidia-opencl`, `libnvidia-ptxjitcompiler`, `libnvidia-glsi`;
+`pthread_getaffinity_np`/`pthread_setaffinity_np` — `libnvidia-ml`, `nvidia-smi`.
+Все три имени проверены `dlsym` под musl 1.2.6-r6 + gcompat 1.1.0-r4 (отчёт 07): резолвятся,
+NULL не остаётся ни одного.
+
+**Кандидаты статических рекурсивных мьютексов** (та же эвристика, что `check-mutex.py` в PR, но
+по `.data` и `.data.rel.ro`): в headless-наборе — `nvidia-smi` (1, kind=1) и
+`libnvidia-glsi.so` (10, kind=1, шаг 96 байт). Оба импортируют `pthread_mutex_lock`, поэтому
+шим для них не бесполезен; пометки лежат в `.data.rel.ro` (после RELRO — read-only), так что
+возможен ложный сигнал. `check-mutex.py` из PR (только `.data`) эти файлы не помечает: наша
+проверка шире, расхождение в сторону избыточности.

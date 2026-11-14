@@ -202,3 +202,41 @@ Next (no GPU needed): Phase 1.5 (ZLUDA, opt, ≤1 session), then D1/D2/D3 checkp
 
 Next (no GPU needed): `tools/dlopen-harness.sh` + 2.2-lite run on (build) →
 `report/07-load-forensics-headless.md`, which decides whether step 2.0 happens at all.
+
+2026-11-14 (operator ruling + 2.2-lite run — gate GREEN):
+- Operator approved D2 (private layout, system musl untouched, no private ldso in the lite path)
+  and the Phase 2 re-sequence `2.2-lite → 2.3 → 2.0 «on demand»`, with 8 mandatory harness
+  guardrails. Recorded in `report/06`.
+- Built the lite environment on (build) without root: Alpine edge minirootfs 3.25.0_alpha20260805
+  (`musl-1.2.6-r6` + `gcompat-1.1.0-r4`, the exact versions report/03 measured) in `bwrap
+  --unshare-user --uid 0`; new `tools/lite-env-setup.sh`, `tools/harness.c`,
+  `tools/dlopen-harness.sh`; `tools/elf-audit.py` extended with TLSDESC + weak-UND buckets.
+- **Result: step 1 of the ladder loads and runs on stock musl.** 8/9 headless files LOADER_OK;
+  `cuInit` → rc=100 (CUDA_ERROR_NO_DEVICE), `nvmlInit_v2` → rc=9 (NVML_ERROR_DRIVER_NOT_LOADED),
+  i.e. «loader OK, device absent» = PASS. Only `libnvidia-tls` fails (initial-exec TLS — the 091
+  barrier reproduced live), and `libcuda` does not depend on it. **Step 2.0 leaves the CUDA path.**
+- Correction to reports 03/05: **gcompat is not activated by `DT_NEEDED libc.so.6`** — musl maps
+  `libc.so.6/libm.so.6/libdl.so.2/libpthread.so.0/librt.so.1/libc.so` to *itself*, so without
+  activation 8/9 die on `gnu_get_libc_version`/`dlvsym`/`__strdup`/`__strtok_r`/`__isnan`.
+  Ablation on libcuda: nothing → FAIL; `--add-needed libnvcompat.so.0` alone → OK; removes +
+  `libc.so.6→libc.so` without the shim → FAIL; full PR recipe → OK. So the one mandatory
+  operation is `--add-needed libnvcompat.so.0` (it pulls `libgcompat.so.0`), and binaries need
+  nothing at all — their `PT_INTERP` is gcompat's stub, which re-execs ld-musl with
+  `--preload /lib/libgcompat.so.0` (seen in strace).
+- Guardrails 4–7: TLSDESC = 0 tree-wide (107 ELF); weak UND bucket (`__cxa_finalize`,
+  `pthread_getaffinity_np`, `pthread_setaffinity_np`) — all resolve, none stay NULL;
+  `__popcountdi2` consumers (`libcudadebugger`, `libnvidia-rtcore`) are not in the headless NEEDED
+  closure, so no `libgcc_s.so.1` needed there; repo `gcompat-1.1.0-r4` sufficed (no rebuild from
+  git `0660063…`). Mutex heuristic in the headless set: `nvidia-smi` (1) and `libnvidia-glsi` (10)
+  in `.data.rel.ro` — Chimera's `check-mutex.py` (.data only) misses both; plausible false
+  positives, settled on (gpu), shim stays in the recipe either way.
+- New installer constraint: `nvidia-smi` looks up NVML by absolute paths
+  (`/usr/lib64/libnvidia-ml.so.1`, `/usr/lib/libnvidia-ml.so.1`, `/usr/lib{64,}/nvidia/…`) and
+  ignores `LD_LIBRARY_PATH`, and the extracted payload has no SONAME symlinks — so the install
+  step must create `/usr/lib/libnvidia-ml.so.1` + `libcuda.so.1` symlinks; `/opt` alone is not
+  enough. `libnvcompat.so.0` must sit in the default search path.
+- PR #6531 head moved to `7b121686e15c` (13.11.2026); TASK's `c2653298` is stale. Shim sources
+  (`libnvcompat.c`, `libnvcompat.map`, `check-mutex.py`) fetched from the new head.
+
+Next: 2.3 on (gpu) — `nvidia-smi` + `cuInit` with the kernel module loaded (expect real devices
+instead of rc=100/rc=9), then the installer (`install.sh`/manifest/uninstall) for the lite recipe.

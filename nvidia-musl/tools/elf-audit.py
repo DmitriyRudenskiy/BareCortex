@@ -45,6 +45,27 @@ DF_STATIC_TLS = 0x10  # the DT_FLAGS spelling of the same fact (<elf.h>)
 IRELATIVE = {"EM_X86_64": 37, "EM_AARCH64": 1032}
 TPOFF64 = {"EM_X86_64": 38, "EM_AARCH64": 268}
 DTPMOD64 = {"EM_X86_64": 12, "EM_AARCH64": 266}
+# R_X86_64_TLSDESC / R_AARCH64_TLSDESC: the gnu2 TLS dialect. musl has no TLSDESC
+# parser at all, so a binary using it fails at load with a plain "Relocating:"
+# Type not supported. Cheap to rule out; the operator asked for it on record.
+TLSDESC = {"EM_X86_64": 36, "EM_AARCH64": 137}
+
+
+def weak_undef(elf):
+    """Weak undefined symbols: musl resolves these to NULL and does NOT complain,
+    so a missing one is a runtime crash on first call, not a dlopen failure.
+    Listed per file so the runtime probe can check the driver guards it."""
+    out = []
+    sec = elf.get_section_by_name(".dynsym")
+    if sec is None:
+        return out
+    for sym in sec.iter_symbols():
+        info = sym.entry["st_info"]
+        if (info["type"] in ("STT_FUNC", "STT_GNU_IFUNC", "STT_OBJECT")
+                and info["bind"] == "STB_WEAK"
+                and sym.entry["st_shndx"] == "SHN_UNDEF"):
+            out.append(sym.name)
+    return sorted(out)
 GLIBC_RE = re.compile(r"^GLIBC_(\d+)(?:\.(\d+))?$")
 DEFAULT_PATTERNS = ("libnvidia-*.so*", "libcuda.so*", "libcudart*", "nvidia-smi")
 ZERO16 = b"\x00" * 16
@@ -85,8 +106,9 @@ def dynamic_info(elf):
 
 
 def reloc_census(elf, machine):
-    counts = {"irelative": 0, "tpoff64": 0, "dtpmod64": 0, "total": 0}
+    counts = {"irelative": 0, "tpoff64": 0, "dtpmod64": 0, "tlsdesc": 0, "total": 0}
     irel, tp, dm = IRELATIVE.get(machine), TPOFF64.get(machine), DTPMOD64.get(machine)
+    td = TLSDESC.get(machine)
     for sec in elf.iter_sections():
         # Any relocation section: the one IRELATIVE in libnvidia-glcore.580 lives
         # in .rela.plt, which a .rela.dyn/.rel.dyn name filter walks past.
@@ -105,6 +127,8 @@ def reloc_census(elf, machine):
                 counts["tpoff64"] += 1
             elif t == dm:
                 counts["dtpmod64"] += 1
+            elif td and t == td:
+                counts["tlsdesc"] += 1
     return counts
 
 
@@ -204,7 +228,8 @@ def audit_file(path):
         r["glibc_max"] = glibc_max(reqs)
         r["needs_libstdcxx"] = "libstdc++.so.6" in r["needed"]
         r["mutex_candidates"] = mutex_candidates(elf)
-    if r["irelative"] or r["ifunc_syms"] or r["static_tls"]:
+        r["weak_undef"] = weak_undef(elf)
+    if r["irelative"] or r["ifunc_syms"] or r["static_tls"] or r["tlsdesc"]:
         r["verdict"] = "NEEDS_PATCHED_MUSL"
     else:
         r["verdict"] = "GCOMPAT_CANDIDATE"
@@ -311,8 +336,8 @@ def main():
             json.dump(results, f, indent=1, ensure_ascii=False)
     if a.csv:
         cols = ["path", "verdict", "soname", "needed", "irelative", "ifunc_syms",
-                "static_tls", "tpoff64", "dtpmod64", "glibc_max",
-                "needs_libstdcxx", "mutex_candidates"]
+                "static_tls", "tpoff64", "dtpmod64", "tlsdesc", "weak_undef",
+                "glibc_max", "needs_libstdcxx", "mutex_candidates"]
         with open(a.csv, "w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=cols)
             w.writeheader()
@@ -322,13 +347,16 @@ def main():
                             "needed": " ".join(r["needed"]),
                             "irelative": r["irelative"], "ifunc_syms": r["ifunc_syms"],
                             "static_tls": r["static_tls"], "tpoff64": r["tpoff64"],
-                            "dtpmod64": r["dtpmod64"], "glibc_max": r["glibc_max"] or "",
+                            "dtpmod64": r["dtpmod64"], "tlsdesc": r["tlsdesc"],
+                            "weak_undef": len(r["weak_undef"]),
+                            "glibc_max": r["glibc_max"] or "",
                             "needs_libstdcxx": r["needs_libstdcxx"],
                             "mutex_candidates": len(r["mutex_candidates"])})
     for r in results:
         print(f"{r['verdict']:<20} {os.path.basename(r['path']):<32} "
               f"IREL={r['irelative']:<5} ifunc={r['ifunc_syms']:<4} "
-              f"TLS={int(r['static_tls'])} stdc++={int(r['needs_libstdcxx'])} "
+              f"TLS={int(r['static_tls'])} TLSDESC={r['tlsdesc']} "
+              f"weak={len(r['weak_undef']):<4} stdc++={int(r['needs_libstdcxx'])} "
               f"glibc={r['glibc_max'] or '-'} mutex={len(r['mutex_candidates'])}")
     needs = [r for r in results if r["verdict"] == "NEEDS_PATCHED_MUSL"]
     gmax = max((r["glibc_max"] for r in results if r["glibc_max"]),
