@@ -103,12 +103,28 @@ owning change stays in that change.
 
 ## 4. Cycle 3 — busybox and musl as a measured candidate
 
-- [ ] 4.1 (build) Re-run `artifacts/handoff-vm/alpine-probe/probe.sh` if the Alpine index
+- [x] 4.1 (build) Re-run `artifacts/handoff-vm/alpine-probe/probe.sh` if the Alpine index
       moved since the pinned minirootfs sha256, and let it rewrite the numbers
       rather than editing `docs/ALPINE-AS-BASE.md` by hand (`alpine-as-base` 3.3)
-- [ ] 4.2 (build) Decide where a candidate root's package pins live, and write the decision
+      — the condition was checked 2026-11-14 and is not met: the published sha256
+      of `alpine-minirootfs-3.24.4-x86_64.tar.gz` is byte-for-byte the pinned value
+      (`cdaa38cb…923012`, `alpine-as-base` 0.2), so the index has not moved and no
+      re-run is owed; the document's numbers stand. The same check closed
+      `alpine-as-base` 3.3, which states the condition
+- [x] 4.2 (build) Decide where a candidate root's package pins live, and write the decision
       into `base.lock` as entries with source, version and checksum — no
       `apk.lock`, no second list, per `openspec/project.md` and this change's spec
+      — decided and written: 8 `binary-distribution` entries (minirootfs + the
+      7-package OpenRC closure), each with url, version, md5 computed from the
+      fetched artifact (honest here because the artifact was fetched, unlike the
+      book's packages), sha256 published and verified equal, licence from each
+      apk's `.PKGINFO`, doc `docs/ALPINE-AS-BASE.md`, and `installed_files` the
+      probe's own manifest format (minirootfs file list added to the probe
+      evidence). `test-all.sh base-lock` green: packages=97,
+      binary-distribution=8, missing=0. Surviving a re-derive is
+      `build-orchestration` 2.6 — the handoff this task writes, because
+      `derive-base-lock` rewrites the whole file and the section header in
+      `base.lock` says so
 - [ ] 4.3 Boot the candidate root under QEMU on `(build)` with OpenRC as PID 1 and
       run all three invariants against it, recording the ELF count so a scan of
       nothing cannot be read as a pass. This is cycle 2's proof as much as cycle
@@ -162,8 +178,8 @@ owning change stays in that change.
       (515 + 171 = 686). Two honest notes in the cycle file: the rebuild ran on
       the laptop because `(build)` is unreachable (the scan reads twenty bytes per
       file, no host dependency), and its byte totals sit 59 B under the
-      `docs/ALPINE-AS-BASE.md` figures — the delta is in the base tarball and
-      belongs to 4.1's probe re-run, not a hand edit
+      `docs/ALPINE-AS-BASE.md` figures — measurement-method difference, not drift
+      (the sha256 is byte-for-byte the pinned value; see 4.1)
 
 ## 7. What would make this change worth archiving
 

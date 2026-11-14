@@ -962,3 +962,107 @@ description = 'Kbd Backspace/Delete Fix Patch'
 package = 'Kbd'
 pages = ['chapter08/kbd.html']
 
+
+# --- Alpine candidate root (cycle 3): hand-written, NOT derived. ---
+#
+# `derive-base-lock` does not emit these entries yet — it rewrites the whole
+# file from the book, and this section is its collateral damage until the
+# carry-over task in `build-orchestration` lands. That task is the reason
+# these lines live here anyway: the spec (`development-cycles`) forbids a
+# second package list, and pins that live only in prose are pins nobody
+# fetches.
+#
+# Checksums: Alpine publishes sha256, not MD5. The sha256 below is published
+# and was verified equal to computed on 2026-11-14; the md5 was computed from
+# the fetched artifact, which is honest here because the artifact was fetched
+# (unlike the book's packages, whose md5 only the book's table can authorise).
+# `doc` is the document the installation follows; `installed_files` is the
+# file set each artifact writes, in the probe's own manifest format.
+
+[[package]]
+name = 'alpine-minirootfs'
+version = '3.24.4'
+url = 'https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86_64/alpine-minirootfs-3.24.4-x86_64.tar.gz'
+md5 = '46e6869053b21f386f5c7621286f19fc'
+sha256 = 'cdaa38cb8de3537967ee5b6c9b6cd00cc962da2b018e6eea48696bb274923012'
+class = "binary-distribution"
+licence = 'mixed (per-package; see lib/apk/db/installed inside the artifact)'
+doc = 'docs/ALPINE-AS-BASE.md'
+installed_files = 'artifacts/handoff-vm/alpine-probe/evidence/filelist-minirootfs.txt'
+
+[[package]]
+name = 'musl (apk)'
+version = '1.2.6-r3'
+url = 'https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/musl-1.2.6-r3.apk'
+md5 = '26083e906fcfff810735fca369d4cd4f'
+sha256 = 'e142255d0fa397f14318996bc10378093dcc069dc3dd1b6818c8f28a789c21da'
+class = "binary-distribution"
+licence = 'MIT'
+doc = 'docs/ALPINE-AS-BASE.md'
+installed_files = 'artifacts/handoff-vm/alpine-probe/evidence/manifest-musl-1.2.6-r3.txt'
+
+[[package]]
+name = 'busybox (apk)'
+version = '1.37.0-r31'
+url = 'https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/busybox-1.37.0-r31.apk'
+md5 = '288929c5e3cb23e01b76a2584113e72a'
+sha256 = '0e626fa97cf937fda7bba4ed4dde8e2f2dbb5083ac34e02180cec0c4eba9351b'
+class = "binary-distribution"
+licence = 'GPL-2.0-only'
+doc = 'docs/ALPINE-AS-BASE.md'
+installed_files = 'artifacts/handoff-vm/alpine-probe/evidence/manifest-busybox-1.37.0-r31.txt'
+
+[[package]]
+name = 'busybox-binsh (apk)'
+version = '1.37.0-r31'
+url = 'https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/busybox-binsh-1.37.0-r31.apk'
+md5 = '12ce95ad6df877fd9e8cf5a75cbd6b48'
+sha256 = '93f803ae5db6b729c0f66f4afba6e907ccc17d7d5f8b8c3d25bdb4636de2c48a'
+class = "binary-distribution"
+licence = 'GPL-2.0-only'
+doc = 'docs/ALPINE-AS-BASE.md'
+installed_files = 'artifacts/handoff-vm/alpine-probe/evidence/manifest-busybox-binsh-1.37.0-r31.txt'
+
+[[package]]
+name = 'busybox-ifupdown (apk)'
+version = '1.37.0-r31'
+url = 'https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/busybox-ifupdown-1.37.0-r31.apk'
+md5 = 'b00e8d4bece87af772d6051e0cc16d3d'
+sha256 = 'a6f29c4b0ab96939eaf86f6832f05a54a1c4c4b86e5c6a00d9e419df5ab4a8f6'
+class = "binary-distribution"
+licence = 'GPL-2.0-only'
+doc = 'docs/ALPINE-AS-BASE.md'
+installed_files = 'artifacts/handoff-vm/alpine-probe/evidence/manifest-busybox-ifupdown-1.37.0-r31.txt'
+
+[[package]]
+name = 'libcap2 (apk)'
+version = '2.78-r0'
+url = 'https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcap2-2.78-r0.apk'
+md5 = '47a34ac9aea64f370d6c402728d24679'
+sha256 = '42886a7b4bcde26347c712925c8dc7db202b6029ef9b8c7ee81577ab7bdd8fad'
+class = "binary-distribution"
+licence = 'BSD-3-Clause OR GPL-2.0-only'
+doc = 'docs/ALPINE-AS-BASE.md'
+installed_files = 'artifacts/handoff-vm/alpine-probe/evidence/manifest-libcap2-2.78-r0.txt'
+
+[[package]]
+name = 'openrc (apk)'
+version = '0.63.2-r0'
+url = 'https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/openrc-0.63.2-r0.apk'
+md5 = '8e5b7bfe088541d57cfffa7e395edc43'
+sha256 = 'cda5779b160ddbdf1d1b9cc9514b7b72f0a18453792ff7c0a6eb6e28d5bc2225'
+class = "binary-distribution"
+licence = 'BSD-2-Clause'
+doc = 'docs/ALPINE-AS-BASE.md'
+installed_files = 'artifacts/handoff-vm/alpine-probe/evidence/manifest-openrc-0.63.2-r0.txt'
+
+[[package]]
+name = 'openrc-user (apk)'
+version = '0.63.2-r0'
+url = 'https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/openrc-user-0.63.2-r0.apk'
+md5 = 'afad86ca20f7c810c48539a5663e9f04'
+sha256 = 'c350ab9e3de14d5eb33e609bca2f1c4c4d45c9cf3d1ee7a152800e76c26e3863'
+class = "binary-distribution"
+licence = 'BSD-2-Clause'
+doc = 'docs/ALPINE-AS-BASE.md'
+installed_files = 'artifacts/handoff-vm/alpine-probe/evidence/manifest-openrc-user-0.63.2-r0.txt'

@@ -71,10 +71,15 @@ the alternative, and this change records that it is unmeasured.
 - [x] 3.2 `artifacts/handoff-vm/alpine-probe/README.md`: how to rerun, what each
       evidence file settles, and the rule that a moved sha256 means rerun rather
       than edit
-- [ ] 3.3 When Alpine's `v3.24` index moves, rerun `probe.sh` and let it rewrite
+- [x] 3.3 When Alpine's `v3.24` index moves, rerun `probe.sh` and let it rewrite
       the numbers. **Do not adjust `docs/ALPINE-AS-BASE.md` by hand** — a table
       that no longer matches its script is the unsourced-number defect wearing a
-      citation
+      citation — condition checked 2026-11-14, not met: the published sha256 of
+      `alpine-minirootfs-3.24.4-x86_64.tar.gz` is byte-for-byte the 0.2 pin
+      (`cdaa38cb…923012`), so the index has not moved, nothing is rewritten, and
+      the document's numbers stand. A laptop re-measurement of the same tarball
+      differs from the `du -sb` figures by a constant 59 B — measurement method,
+      not drift; recorded in `docs/DEVELOPMENT-CYCLES.md`
 
 ## 4. Hand the one useful finding to the change that can use it
 

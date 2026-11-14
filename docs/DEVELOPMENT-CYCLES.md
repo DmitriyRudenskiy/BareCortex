@@ -133,8 +133,12 @@ the laptop because `(build)` is unreachable (cycle 2); the scan reads twenty
 bytes per file and carries no host dependency. Its byte totals sit 59 B under
 the `docs/ALPINE-AS-BASE.md` figures (8 431 400 against 8 431 459 before the
 closure, 9 859 570 against 9 859 629 after) while the path count matches
-exactly (515 + 171 = 686) — the delta is in the base tarball, and settling it
-is task 4.1's probe re-run, not a hand edit of the document.
+exactly (515 + 171 = 686). The delta is not drift: the tarball carries the
+pinned sha256 byte for byte, and the delta is the same 59 B before and after
+the closure — one measurement-method difference between the probe's GNU
+`du -sb` on the VM and an apparent-size sum on the laptop, not a changed
+input. The `ALPINE-AS-BASE.md` figures stand, and the invariant does not rest
+on byte totals.
 
 A zero census is a failed invocation, not a pass: `elf=0` from
 `test-arch.sh` and `binaries=0` from `test-all.sh no-systemd` both exit 0
