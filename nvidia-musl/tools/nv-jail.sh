@@ -11,6 +11,7 @@
 set -eu
 
 JAIL=${JAIL:-$HOME/nv-jail}
+mkdir -p "$JAIL/tmp" # pip scratch on disk, not in RAM (host is at 46/47GB)
 FLOOR_MB=${FLOOR_MB:-2048}
 CMD=${1:?usage: setup|torch|run}; shift || true
 
@@ -27,7 +28,7 @@ floor_guard() {
 UB_DIR=https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release
 HOSTLIB=/usr/lib/x86_64-linux-gnu
 sb() { # the jail: host driver bound in (no modules inside), nvidia nodes per-node
-	bwrap --bind "$JAIL" / --proc /proc --dev /dev --tmpfs /tmp \
+	bwrap --bind "$JAIL" / --proc /proc --dev /dev --dev-bind "$JAIL/tmp" /tmp \
 		--ro-bind /sys /sys --unshare-user --uid 0 --die-with-parent \
 		--ro-bind /etc/resolv.conf /etc/resolv.conf \
 		--ro-bind "$HOSTLIB"/libcuda.so.580.159.03 "$HOSTLIB"/libcuda.so.1 \
