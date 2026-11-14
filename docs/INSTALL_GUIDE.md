@@ -3,6 +3,17 @@
 > ⚠️ **This is not a traditional Linux installer.**
 > BareCortex is built from source using the LFS methodology.
 > Expect 20-60 hours for a full build depending on your hardware.
+>
+> **What the build actually is.** This guide is the manual, book-following
+> procedure for a person at a keyboard. The build in this repository is the
+> phase sequence in [phases.toml](../phases.toml), driven by
+> [`scripts/build/build-rootfs.sh`](../scripts/build/build-rootfs.sh), with the
+> package list derived from the pinned book into
+> [base.lock](../base.lock) and every phase's result recorded under
+> [`build-evidence/`](../build-evidence/). The base system is built — eleven
+> phase records, the last one `first-boot` — while the server, GPU, and trim
+> layers are not phases yet: they are open changes under
+> [openspec/changes/](../openspec/changes/).
 
 ## Prerequisites
 

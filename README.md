@@ -62,6 +62,21 @@ uv-managed venv               → Framework isolation (instead of Docker)
 Xorg (optional/headless)      → Display server
 ```
 
+## 🏗 The Build
+
+The build is the phase sequence in [phases.toml](phases.toml), driven by
+`scripts/build/build-rootfs.sh`: one command per phase, network denied after a
+verified fetch, and each phase writing its record to
+`build-evidence/<phase>/record.json` once its exit criteria pass. State is
+resumable — a stopped run restarts at the failed phase, with the disk rolled
+back to the last passed checkpoint. The package list is derived from the pinned
+book into [base.lock](base.lock), not typed into the repository.
+
+What it has built: all eleven base-system phases, with records (last:
+`first-boot`, 2026-11-13). What it has not: the BLFS server tools, the GPU
+stack, and the trim pass are not phases yet — `phases.toml` has no rows for
+them, and they are open changes under [openspec/changes/](openspec/changes/).
+
 ## 📖 Documentation
 
 - [Philosophy & Design Decisions](docs/PHILOSOPHY.md)
