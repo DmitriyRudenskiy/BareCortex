@@ -107,8 +107,13 @@ open, because chapters 8–10 are still building.
       section of the same name in `docs/PHILOSOPHY.md` between the systemd and
       Wayland sections. Neither says "fails the build", because the check is not
       yet wired into a phase; it is a command you run, and the text says so
-- [ ] 3.4 When the Gentoo autobuild moves, rerun `probe.sh` and let it rewrite the
-      numbers. **Do not adjust `docs/GENTOO-AS-BASE.md` by hand**
+- [x] 3.4 When the Gentoo autobuild moves, rerun `probe.sh` and let it rewrite the
+      numbers. **Do not adjust `docs/GENTOO-AS-BASE.md` by hand** — condition
+      checked 2026-11-14, not met: the pinned autobuild directory
+      `20261108T170107Z` still serves the tarball, and published == computed ==
+      pinned (`433f0f43…bcc0228`) byte for byte, so nothing is rewritten and the
+      document's numbers stand. Same condition and same answer as
+      `alpine-as-base` 3.3
 
 ## 4. Hand off what other changes own
 

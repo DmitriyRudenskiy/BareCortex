@@ -16,8 +16,11 @@ The two operator answers the gate depends on: **(a)** answered 2026-11-14 —
 driver branch **580**, so userspace and modules come from
 `NVIDIA-Linux-x86_64-580.196.07.run` (x86_64 sha256
 `0aab0518db53cf73c412dc7f32bbc850ca95e839d8923d0de4bff42c1c9169ce`), closed
-`kernel/`, recorded as a ruling in `nvidia-musl/progress.md`; the GPU model is
-still unnamed, which `nvidia-musl/TASK.md` still needs. **(b)** still open —
+`kernel/`, recorded as a ruling in `nvidia-musl/progress.md`; the GPU model
+was measured 2026-11-14 over ssh on the host `gpu-stack` 0.2 names — **5×
+GeForce RTX 4060 Ti (Ada), driver 580.159.03 loaded** — and Ada is Turing+
+and up, so the GSP-firmware step `nvidia-musl/TASK.md` needs applies to it.
+**(b)** still open —
 whether to stand up an Alpine VM on `(build)` for the static work. Neither
 blocks cycle 1, the cycle-2 hand-off, or cycle 4's `(build)` half, which is
 done.
@@ -57,10 +60,15 @@ May not decide: the phase table or the book — `phases.toml` and the pinned
 edition stay the source of every command.
 
 Why it is a cycle: the pipeline is driven over
-`ssh -J user@192.168.0.86 -p 2222 bct@127.0.0.1`, the guest closes the
-connection, and neither `~/.ssh/barecortex_vm_ed25519` nor
-`~/.config/barecortex/vm.env` exists on the laptop — the build cannot be
-resumed today.
+`ssh -J user@192.168.0.86 -p 2222 bct@127.0.0.1`, and neither
+`~/.ssh/barecortex_vm_ed25519` nor `~/.config/barecortex/vm.env` exists on
+the laptop — the build cannot be resumed from here. Corrected 2026-11-14 in
+the other direction too: the host answers ssh, the guest VM runs with
+`lfs.qcow2` attached, and from the host the guest's sshd is reached at
+`127.0.0.1:2222` — the connection dies on a **changed guest host key**, not
+on a dead guest. The requirement stands as written — no host-side keychain,
+drive from the build root — and a live guest is exactly what makes that
+usable once the drive does not depend on one laptop's keychain.
 
 ## Cycle 3 — busybox and musl as a measured candidate
 
@@ -100,8 +108,11 @@ ladder steps invoke the stop rule and the glibc-jail fallback, as
 `nvidia-musl/TASK.md` states it.
 
 Host: (build) for the audit half — done, reports 02–05 under
-`nvidia-musl/report/`, 580.196.07 pinned; (gpu) for the ladder, and the
-machine is still unnamed. The unnamed machine is the gate.
+`nvidia-musl/report/`, 580.196.07 pinned; (gpu) for the ladder — the machine
+is named: `user@192.168.0.86`, 5× RTX 4060 Ti, driver 580.159.03 loaded,
+confirmed reachable 2026-11-14 (`gpu-stack` 0.2 named it). The gate is no
+longer a missing machine; it is the ladder's outcome, and the ladder runs on
+that host.
 
 Owns: `nvidia-musl`
 
