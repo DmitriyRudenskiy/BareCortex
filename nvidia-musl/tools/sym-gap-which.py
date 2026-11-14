@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Exactly which glibc-isms gcompat 1.1.0 supplies to the headless CUDA set."""
-import os, subprocess, pathlib
+import os, subprocess, sys, pathlib
 
 ROOT = pathlib.Path(os.environ.get("NV580", pathlib.Path.home() / ".cache/nv580"))
 TREE = next((ROOT / "ex").glob("NVIDIA-Linux-*"))
 SYM = ROOT / "symgap"
+MUSL_SO = SYM / "lib/ld-musl-x86_64.so.1"
+GCOMPAT_SO = SYM / "lib/libgcompat.so.0"
+for req, apk in ((MUSL_SO, "musl-1.2.6-r6.apk"), (GCOMPAT_SO, "gcompat-1.1.0-r4.apk")):
+    if not req.exists():
+        sys.exit(f"нет провайдера {req} — без него замер врёт.\n"
+                 f"  cd {SYM} && curl -O https://dl-cdn.alpinelinux.org/alpine/v3.25/main/x86_64/{apk}"
+                 f" && tar -xf {apk}")
 LFS64 = set("""aio_cancel aio_error aio_fsync aio_read aio_return aio_suspend aio_write
 alphasort creat fallocate fgetpos fopen freopen fseeko fsetpos fstat fstatat fstatfs
 fstatvfs ftello ftruncate ftw getdents getrlimit glob globfree lio_listio lockf lseek
@@ -29,8 +36,8 @@ def is_elf(p):
         return False
 
 files = [p for p in TREE.iterdir() if p.is_file() and is_elf(p)]
-musl = provided(SYM / "x-musl-1.2.6-r6/lib/ld-musl-x86_64.so.1")
-gc = provided(SYM / "x-gcompat-1.1.0-r4/lib/libgcompat.so.0")
+musl = provided(MUSL_SO)
+gc = provided(GCOMPAT_SO)
 prov = set(musl)
 for f in files:
     prov |= provided(f)

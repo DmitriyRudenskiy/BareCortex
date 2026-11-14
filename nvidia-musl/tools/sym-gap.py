@@ -9,11 +9,18 @@ Two things a symbol-table-only census gets wrong, and both were measured the har
    (ldso/dynlink.c: get_lfs64, present in Alpine musl 1.2.5-r13 and 1.2.6-r6), so
    open64/__xstat64/... never appear in any symbol table and must not be counted.
 """
-import os, subprocess, pathlib, collections, re
+import os, subprocess, sys, pathlib, collections, re
 
 ROOT = pathlib.Path(os.environ.get("NV580", pathlib.Path.home() / ".cache/nv580"))
 TREE = next((ROOT / "ex").glob("NVIDIA-Linux-*"))
 SYM = ROOT / "symgap"
+MUSL_SO = SYM / "lib/ld-musl-x86_64.so.1"
+GCOMPAT_SO = SYM / "lib/libgcompat.so.0"
+for req, apk in ((MUSL_SO, "musl-1.2.6-r6.apk"), (GCOMPAT_SO, "gcompat-1.1.0-r4.apk")):
+    if not req.exists():
+        sys.exit(f"нет провайдера {req} — без него замер врёт.\n"
+                 f"  cd {SYM} && curl -O https://dl-cdn.alpinelinux.org/alpine/v3.25/main/x86_64/{apk}"
+                 f" && tar -xf {apk}")
 
 # ldso/dynlink.c get_lfs64() base list (musl master, 2024-06).
 LFS64 = set("""aio_cancel aio_error aio_fsync aio_read aio_return aio_suspend aio_write
@@ -41,8 +48,8 @@ def is_elf(p):
         return False
 
 files = sorted(p for p in TREE.iterdir() if p.is_file() and is_elf(p))
-musl = provided(SYM / "x-musl-1.2.6-r6/lib/ld-musl-x86_64.so.1")
-gcompat = provided(SYM / "x-gcompat-1.1.0-r4/lib/libgcompat.so.0")
+musl = provided(MUSL_SO)
+gcompat = provided(GCOMPAT_SO)
 prov = (musl | gcompat) if os.environ.get("USE_GCOMPAT", "1") == "1" else set(musl)
 for f in files:
     prov |= provided(f)
