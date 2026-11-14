@@ -175,3 +175,30 @@ Open (operator):
   level (GLIBC_2.26 max, `dladdr1` ×2), so D1 stays a kernel-branch question, not a libc one.
 
 Next (no GPU needed): Phase 1.5 (ZLUDA, opt, ≤1 session), then D1/D2/D3 checkpoint + Phase 2 REA.
+
+2026-11-14 (Phase 1 CLOSED — checkpoint written):
+- Done: `report/06-checkpoint-decisions.md`. Phase 1 (1.1–1.4) closed; 1.5 ZLUDA skipped with a
+  reason on record (reimplementation of the CUDA API for AMD, not a loader; the only transferable
+  mechanic — a drop-in `libcuda.so` — is useless to us because we install NVIDIA's real one).
+- D1 stands as the operator ruled (580.196.07, closed `kernel/`, native libstdc++, `!pie`, install
+  from `-no-compat32.run`). New evidence that does not move it: 620 has the same tree-wide max
+  `GLIBC_2.26` and the same symbol gap, so the branch choice is a kernel-branch question only.
+- D2 proposed: private layout under `/opt/nvidia-musl-exp/` only (never replace system musl —
+  search path via `/etc/ld-musl-<arch>.path`, musl `ldso/dynlink.c:1141-1143`). Both Chimera
+  barriers are confined to the GL path — 1 IRELATIVE in the whole tree (`libnvidia-glcore`), and
+  none of the 5 `DF_STATIC_TLS` libs loads on the headless path (`libcuda` does not need
+  `libnvidia-tls`) — while the step-1 file set has **0** unresolved GLOBAL against stock musl
+  1.2.6-r6 + gcompat 1.1.0-r4.
+- Therefore: re-sequence Phase 2 to **2.2-lite (dlopen-harness against stock musl, no GPU) → 2.3
+  (gpu, ladder step 1) → 2.0 (private patched musl, together with D3)**. If the harness relocates
+  cleanly, the whole custom-libc build leaves the critical path; if not, we lose one harness run.
+- Not-doing list (from report 05): no vendored sgerrand glibc, no `patchelf` of `PT_INTERP`
+  (gcompat ships the `ld-linux-x86-64.so.2` stub + `libc.so.6`), no hand-written EGL/Vulkan json —
+  install NVIDIA's own jsons from the payload with absolute `library_path`.
+- D3 confirmed deferrable: Alpine 3.25 has no libglvnd, mesa without `-Dglvnd`, no egl-wayland;
+  CUDA/nvidia-smi need none of it. When we get there: port libglvnd + egl-wayland from Chimera
+  cports, and don't build glue older than the driver (payload ships egl-wayland 1.1.20 / egl-gbm
+  1.1.3; 620 adds egl-wayland2 1.0.2 + `09_nvidia_wayland2.json`).
+
+Next (no GPU needed): `tools/dlopen-harness.sh` + 2.2-lite run on (build) →
+`report/07-load-forensics-headless.md`, which decides whether step 2.0 happens at all.
