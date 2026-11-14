@@ -47,7 +47,7 @@ The claim, stated so that it can be checked: **no systemd as init or service
 manager, and no `logind`.** Not "no systemd source is compiled" — the pinned
 edition builds udev from `systemd-259.1.tar.xz`, with `-D link-udev-shared=false`
 exactly so that udev does not resolve `libsystemd-shared`. The command behind the
-claim is `scripts/build/check-no-systemd.py --root <image>`, and what PID 1 is
+claim is `scripts/build/tests/test-all.sh no-systemd --root <image>`, and what PID 1 is
 lives in [the init layer](INIT-LAYER.md). A claim of this kind that no command
 verifies is a sentence waiting for the first package that links it anyway.
 
@@ -58,7 +58,7 @@ is `ELFCLASS64` for `EM_X86_64`, and there is no `lib32` or `libx32` directory.
 32-bit support is not a feature that costs nothing to keep — it is a second copy
 of every library, a second kernel ABI surface, and a loader that has to know
 which one a binary wants. The command behind the claim is
-`scripts/build/check-amd64-only.py --root <image>`, which reads `EI_CLASS` and
+`scripts/build/tests/test-arch.sh --root <image>`, which reads `EI_CLASS` and
 `e_machine` out of every ELF header it finds and refuses to run at all without
 an image root.
 

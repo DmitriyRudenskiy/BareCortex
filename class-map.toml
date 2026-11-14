@@ -6,7 +6,7 @@
 # vocabulary (ADR 0002 is why the class exists, not who maintains the row).
 #
 # Hand-authored on purpose. `base.lock` is derived and gets overwritten by
-# `scripts/build/derive-base-lock.py`; a hand-written section inside it would be
+# `scripts/build/build-rootfs.sh derive-base-lock`; a hand-written section inside it would be
 # that script's collateral damage, which is why the classes live here.
 #
 # A check reads this file and fails naming this path when it is absent,

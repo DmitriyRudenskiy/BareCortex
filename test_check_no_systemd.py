@@ -15,8 +15,9 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).parent
-SPEC = importlib.util.spec_from_file_location(
-    "scan", HERE / "scripts/build/check-no-systemd.py")
+from importlib.machinery import SourceFileLoader
+SPEC = importlib.util.spec_from_loader(
+    "scan", SourceFileLoader("scan", str(HERE / "scripts/build/tests/test-all.sh")))
 scan = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(scan)
 
@@ -76,11 +77,11 @@ def main():
         check("an nsswitch.conf naming systemd was missed",
               any("nsswitch.conf" in str(f) for f, _ in hits))
 
-    r = subprocess.run([sys.executable, str(HERE / "scripts/build/check-no-systemd.py")],
+    r = subprocess.run([sys.executable, str(HERE / "scripts/build/tests/test-all.sh"), "no-systemd"],
                        capture_output=True, text=True)
     check("scanning with no --root passed",
           r.returncode != 0 and "no --root" in r.stderr)
-    r = subprocess.run([sys.executable, str(HERE / "scripts/build/check-no-systemd.py"),
+    r = subprocess.run([sys.executable, str(HERE / "scripts/build/tests/test-all.sh"), "no-systemd",
                         "--root", str(HERE / "openrc")], capture_output=True, text=True)
     check("a tree of no ELF files was not reported as binaries=0",
           r.returncode == 0 and "binaries=0" in r.stdout)

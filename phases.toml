@@ -4,7 +4,7 @@
 # those pages are typed in, what has to hold before it starts, what is evaluated
 # before it may be called passed, and when the disk is frozen.
 #
-# The pages are named by chapter, not retyped: `scripts/build/build.py` takes
+# The pages are named by chapter, not retyped: `scripts/build/build-rootfs.sh` takes
 # them from the pinned edition's own index, in its order, so this file cannot
 # drift from the book's table of contents. Where a phase is part of a chapter,
 # `only`/`skip` say which.
@@ -15,7 +15,7 @@
 #   host-lfs    the disposable host, as user lfs with the chapter 4 environment
 #   chroot-root inside $LFS, via the chapter 7 invocation with its exact `env -i`
 #
-# Checkpoints are external qcow2 snapshots of the LFS disk (`vm-host.sh snapshot
+# Checkpoints are external qcow2 snapshots of the LFS disk (`scripts/build/run-qemu.sh snapshot
 # <phase>`): the phase's files are frozen in the parent and the build continues
 # on a copy, so a later phase that ruins the system costs a rollback and not a
 # rebuild. `none` marks a phase whose failure cannot damage what came before.
@@ -45,10 +45,10 @@ chapter = "03"
 only = ["packages", "patches"]
 context = "host-root"
 unpack = false
-entry = ["base.lock is current for the pinned edition and check-base-lock.py passes."]
+entry = ["base.lock is current for the pinned edition and test-all.sh base-lock passes."]
 exit = ["Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.",
          "Nothing was fetched that base.lock does not name."]
-# `run sources` is `build.py fetch`, which checks every file's MD5 against the
+# `run sources` is `build-rootfs.sh run sources`, which checks every file's MD5 against the
 # book's own table; that check is this phase's exit criterion, so it is evaluated
 # there and recorded here rather than restated as a shell test.
 verify = []
@@ -184,4 +184,12 @@ entry = ["The bootable phase passed and a checkpoint exists to roll back to."]
 exit = ["The LFS disk boots to a login prompt with the host's disk detached.",
          "Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it."]
 verify = []
+# Evaluated on the booted system over the serial console: the phase's exit
+# criteria describe the machine started, and the machine has no sshd and no
+# other way in. `@KERNEL@` is filled from base.lock at run time.
+boot_verify = [
+  'test "$(uname -r)" = "@KERNEL@" && uname -r',
+  'c=$(ps -o comm= -p 1); echo "pid 1 is $c"; echo "$c" | grep -Eiq "openrc|^init$"',
+  'cat /etc/lfs-release',
+]
 checkpoint = "none"

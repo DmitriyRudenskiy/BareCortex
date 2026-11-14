@@ -60,7 +60,7 @@
 
 ## Факты окружения (проверено 12.11.2026)
 
-- Этот Mac: NVIDIA GPU нет, QEMU не seeded (пайплайн `scripts/build/vm-host.sh` из
+- Этот Mac: NVIDIA GPU нет, QEMU не seeded (пайплайн `scripts/build/run-qemu.sh` из
   LFS-проекта существует, но для этого задания не поднят), Docker-демон остановлен.
   Сеть работает.
 - Специфика pyelftools (уже учтена в скрипте): `elf.header.e_machine` — строка;

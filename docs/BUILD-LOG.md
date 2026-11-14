@@ -1384,3 +1384,286 @@ The phase's exit criteria, evaluated after the pages ran:
 - `FAILED 1` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
 
 Checkpoint: `after`
+
+## bootable — FAILED
+
+2026-11-13T07:55:01 → 2026-11-13T08:00:34, context `chroot-root`, 3 page(s) of chapter 10.
+
+Book pages: `chapter10/fstab.html`, `chapter10/kernel.html`, `chapter10/grub.html`
+
+Exit criteria this phase claims to meet:
+
+- fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.
+- The kernel on the disk is the version base.lock names.
+
+Failures: `block 1 rc 1`, `block 2 never reported (the page stopped early)`, `block 3 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `sudo grep -q UUID /mnt/lfs/etc/fstab`
+- `ok` `ls /mnt/lfs/boot/vmlinuz-* > /dev/null`
+- `FAILED 1` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
+
+Checkpoint: `after`
+
+## bootable — FAILED
+
+2026-11-13T08:22:46 → 2026-11-13T08:22:49, context `chroot-root`, 3 page(s) of chapter 10.
+
+Book pages: `chapter10/fstab.html`, `chapter10/kernel.html`, `chapter10/grub.html`
+
+Exit criteria this phase claims to meet:
+
+- fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.
+- The kernel on the disk is the version base.lock names.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `sudo grep -q UUID /mnt/lfs/etc/fstab`
+- `ok` `ls /mnt/lfs/boot/vmlinuz-* > /dev/null`
+- `ok` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
+
+Checkpoint: `after`
+
+## bootable — FAILED
+
+2026-11-13T08:24:29 → 2026-11-13T08:24:32, context `chroot-root`, 1 page(s) of chapter 10.
+
+Book pages: `chapter10/fstab.html`
+
+Exit criteria this phase claims to meet:
+
+- fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.
+- The kernel on the disk is the version base.lock names.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `sudo grep -q UUID /mnt/lfs/etc/fstab`
+- `ok` `ls /mnt/lfs/boot/vmlinuz-* > /dev/null`
+- `ok` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
+
+Checkpoint: `after`
+
+## bootable — passed
+
+2026-11-13T08:24:44 → 2026-11-13T08:24:47, context `chroot-root`, 1 page(s) of chapter 10.
+
+Book pages: `chapter10/fstab.html`
+
+Exit criteria this phase claims to meet:
+
+- fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.
+- The kernel on the disk is the version base.lock names.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo grep -q UUID /mnt/lfs/etc/fstab`
+- `ok` `ls /mnt/lfs/boot/vmlinuz-* > /dev/null`
+- `ok` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
+
+Checkpoint: `after`
+
+## first-boot — FAILED
+
+2026-11-13T21:00:34 → 2026-11-13T21:01:07, context `lfs-boot`, 2 page(s) of chapter 11.
+
+Book pages: `chapter11/theend.html`, `chapter11/reboot.html`
+
+Exit criteria this phase claims to meet:
+
+- The LFS disk boots to a login prompt with the host's disk detached.
+- Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `the LFS disk boots to a login prompt and root logs in`
+
+Checkpoint: `none`
+
+## first-boot — FAILED
+
+2026-11-13T21:11:42 → 2026-11-13T21:12:09, context `lfs-boot`, 2 page(s) of chapter 11.
+
+Book pages: `chapter11/theend.html`, `chapter11/reboot.html`
+
+Exit criteria this phase claims to meet:
+
+- The LFS disk boots to a login prompt with the host's disk detached.
+- Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `the LFS disk boots to a login prompt and root logs in`
+
+Checkpoint: `none`
+
+## first-boot — FAILED
+
+2026-11-13T21:14:44 → 2026-11-13T21:15:10, context `lfs-boot`, 2 page(s) of chapter 11.
+
+Book pages: `chapter11/theend.html`, `chapter11/reboot.html`
+
+Exit criteria this phase claims to meet:
+
+- The LFS disk boots to a login prompt with the host's disk detached.
+- Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `the LFS disk boots to a login prompt and root logs in`
+
+Checkpoint: `none`
+
+## bootable — FAILED
+
+2026-11-13T21:29:05 → 2026-11-13T21:34:14, context `chroot-root`, 2 page(s) of chapter 10.
+
+Book pages: `chapter10/fstab.html`, `chapter10/kernel.html`
+
+Exit criteria this phase claims to meet:
+
+- fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.
+- The kernel on the disk is the version base.lock names.
+
+Failures: `block 6 rc 1`, `block 7 never reported (the page stopped early)`, `block 8 never reported (the page stopped early)`, `block 9 never reported (the page stopped early)`, `block 10 never reported (the page stopped early)`
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo grep -q UUID /mnt/lfs/etc/fstab`
+- `ok` `ls /mnt/lfs/boot/vmlinuz-* > /dev/null`
+- `ok` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
+
+Checkpoint: `after`
+
+## bootable — passed
+
+2026-11-13T21:37:16 → 2026-11-13T21:42:23, context `chroot-root`, 3 page(s) of chapter 10.
+
+Book pages: `chapter10/fstab.html`, `chapter10/kernel.html`, `chapter10/grub.html`
+
+Exit criteria this phase claims to meet:
+
+- fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.
+- The kernel on the disk is the version base.lock names.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo grep -q UUID /mnt/lfs/etc/fstab`
+- `ok` `ls /mnt/lfs/boot/vmlinuz-* > /dev/null`
+- `ok` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
+
+Checkpoint: `after`
+
+## first-boot — FAILED
+
+2026-11-13T21:43:07 → 2026-11-13T22:03:27, context `lfs-boot`, 2 page(s) of chapter 11.
+
+Book pages: `chapter11/theend.html`, `chapter11/reboot.html`
+
+Exit criteria this phase claims to meet:
+
+- The LFS disk boots to a login prompt with the host's disk detached.
+- Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `the LFS disk boots to a login prompt and root logs in`
+
+Checkpoint: `none`
+
+## bootable — passed
+
+2026-11-13T22:16:11 → 2026-11-13T22:21:23, context `chroot-root`, 3 page(s) of chapter 10.
+
+Book pages: `chapter10/fstab.html`, `chapter10/kernel.html`, `chapter10/grub.html`
+
+Exit criteria this phase claims to meet:
+
+- fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.
+- The kernel on the disk is the version base.lock names.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `sudo grep -q UUID /mnt/lfs/etc/fstab`
+- `ok` `ls /mnt/lfs/boot/vmlinuz-* > /dev/null`
+- `ok` `sudo dd if=/dev/vdc bs=512 count=1 status=none | strings | grep -qi grub`
+
+Checkpoint: `after`
+
+## first-boot — FAILED
+
+2026-11-13T22:21:51 → 2026-11-13T22:23:37, context `lfs-boot`, 2 page(s) of chapter 11.
+
+Book pages: `chapter11/theend.html`, `chapter11/reboot.html`
+
+Exit criteria this phase claims to meet:
+
+- The LFS disk boots to a login prompt with the host's disk detached.
+- Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `the LFS disk boots to a login prompt and root logs in`
+
+Checkpoint: `none`
+
+## first-boot — FAILED
+
+2026-11-13T22:26:08 → 2026-11-13T22:27:53, context `lfs-boot`, 2 page(s) of chapter 11.
+
+Book pages: `chapter11/theend.html`, `chapter11/reboot.html`
+
+Exit criteria this phase claims to meet:
+
+- The LFS disk boots to a login prompt with the host's disk detached.
+- Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `FAILED 1` `the LFS disk boots to a login prompt and root logs in`
+
+Checkpoint: `none`
+
+## first-boot — passed
+
+2026-11-13T23:56:28 → 2026-11-13T23:57:28, context `lfs-boot`, 2 page(s) of chapter 11.
+
+Book pages: `chapter11/theend.html`, `chapter11/reboot.html`
+
+Exit criteria this phase claims to meet:
+
+- The LFS disk boots to a login prompt with the host's disk detached.
+- Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it.
+
+Failures: none
+
+The phase's exit criteria, evaluated after the pages ran:
+
+- `ok` `the LFS disk boots to a login prompt and root logs in`
+- `ok` `test "$(uname -r)" = "6.18.10" && uname -r`
+- `ok` `c=$(ps -o comm= -p 1); echo "pid 1 is $c"; echo "$c" | grep -Eiq "openrc|^init$"`
+- `ok` `cat /etc/lfs-release`
+
+Checkpoint: `none`

@@ -12,7 +12,7 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).parent
-CHECK = HERE / "scripts/build/check-services.py"
+CHECK = HERE / "scripts/build/tests/test-all.sh"
 
 GUIDE = """\
 ```bash
@@ -41,7 +41,7 @@ def run(tmp, inventory):
     (pathlib.Path(tmp) / "INSTALL_GUIDE.md").write_text(GUIDE)
     (pathlib.Path(tmp) / "init.d").mkdir(exist_ok=True)
     (pathlib.Path(tmp) / "init.d" / "gpu-fancontrol").write_text("#!/sbin/openrc-run\n")
-    r = subprocess.run([sys.executable, str(CHECK), "--inventory", str(path)],
+    r = subprocess.run([sys.executable, str(CHECK), "services", "--inventory", str(path)],
                        capture_output=True, text=True, cwd=tmp)
     return r.returncode, r.stdout + r.stderr
 
@@ -56,7 +56,7 @@ def main():
                 prep(tmp)
                 path = pathlib.Path(tmp) / "services.toml"
                 path.write_text(inventory.format(tmp=tmp))
-                r = subprocess.run([sys.executable, str(CHECK), "--inventory", str(path)],
+                r = subprocess.run([sys.executable, str(CHECK), "services", "--inventory", str(path)],
                                    capture_output=True, text=True, cwd=tmp)
                 code, out = r.returncode, r.stdout + r.stderr
             if code == 0:
@@ -65,7 +65,7 @@ def main():
                 fails.append(f"{label} failed without naming {expect!r}:\n{out}")
 
     # The repository as it stands is the check's real subject.
-    r = subprocess.run([sys.executable, str(CHECK)], capture_output=True, text=True, cwd=HERE)
+    r = subprocess.run([sys.executable, str(CHECK), "services"], capture_output=True, text=True, cwd=HERE)
     if r.returncode != 0:
         fails.append(f"the repository as it stands was rejected:\n{r.stdout}{r.stderr}")
 

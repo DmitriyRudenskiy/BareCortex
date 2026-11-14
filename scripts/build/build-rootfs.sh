@@ -1,18 +1,26 @@
-#!/usr/bin/env python3
-"""build.py — run the pinned book against the disposable host, and keep receipts.
+#!/bin/sh
+# build-rootfs.sh — the rootfs build driver, named for gbionescu/build-rootfs, whose
+# build-rootfs.sh plays this role. The payload is Python, exec'd by this header:
+# sh reads line 3 as `exec python3 <this file> <args>`, python reads it as a string.
+'''exec' python3 "$0" "$@" # '''
 
-  build.py pages <phase>              the pages a phase runs, from the book's index
-  build.py run <phase> [--page P]     run a phase (or one page of it) in the guest
-  build.py fetch                       download and verify base.lock's sources
-  build.py status                      the phase records, as written
-  build.py log <phase>                append the phase to docs/BUILD-LOG.md
+"""build-rootfs.sh — run the pinned book against the disposable host, and keep receipts.
 
-Every command executed comes from `book.py` — that is, from a page of the pinned
-edition — except where `build-overrides.toml` says otherwise, and each such
-exception is written into the log with the reason the override gives. The device
-placeholders the book leaves as `<xxx>` are filled from one place, `devices` in
-that file, so the machine this build runs on is a fact in one file and not in
-eight pages of shell.
+  build-rootfs.sh pages <phase>              the pages a phase runs, from the book's index
+  build-rootfs.sh run <phase> [--page P]     run a phase (or one page of it) in the guest
+  build-rootfs.sh fetch                      download and verify base.lock's sources
+  build-rootfs.sh resume                     the next phase that has not passed
+  build-rootfs.sh status                     the phase records, as written
+  build-rootfs.sh guest <cmd>                run a command in the build guest
+  build-rootfs.sh derive-base-lock <url>     re-derive base.lock from an edition (stdout)
+  build-rootfs.sh derive-test-expectations   re-derive test-expectations.toml in place
+
+Every command executed comes from a page of the pinned edition — the book reader is
+the `book` section inlined below, which is why this file and not a package holds it —
+except where `build-overrides.toml` says otherwise, and each such exception is written
+into the log with the reason the override gives. The device placeholders the book
+leaves as `<xxx>` are filled from one place, `devices` in that file, so the machine
+this build runs on is a fact in one file and not in eight pages of shell.
 
 Evidence lands in `build-evidence/<phase>/`: one log per page containing each
 block's introducing sentence, its text, and its exit code, plus `record.json`.
@@ -20,7 +28,245 @@ A phase is `passed` only when every block's exit code was evaluated; a nonzero
 code is a failure unless the page's own text expected it.
 """
 
+
 import argparse
+import base64
+import datetime
+import hashlib
+import html
+import json
+import os
+import pathlib
+import posixpath
+import re
+import shlex
+import subprocess
+import sys
+import threading
+import time
+import tomllib
+import urllib.request
+
+# --- book: the pinned edition, as an executable source of instructions ------
+# (book.py, inlined; the section's original module docstring follows as-is)
+
+"""The pinned book, as an executable source of instructions.
+
+`base.lock` records what to download and which pages build it. This reads those
+pages and returns the commands they contain, in the order a builder would type
+them, with the sentence that introduces each block. Nothing here retypes a
+command: the book is the recipe, and this is the kitchen.
+
+The block markup is `<pre class="userinput"><kbd class="command">…</kbd></pre>`.
+Every command a page tells the builder to run appears in one, including the
+`patch -Np1` lines, so a package's recipe is its blocks in document order.
+
+Two things the pages do not contain, and the book states once for the whole
+build in `partintro/generalinstructions.html`: the unpack, and the `cd` into the
+directory the unpack created. `wrapper()` is that synopsis, made executable.
+"""
+
+BASE = "https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0"
+CACHE = pathlib.Path(__file__).resolve().parent.parent.parent / ".book-cache"
+
+PRE_RE = re.compile(r'<pre class="userinput">(.*?)</pre>', re.S)
+# The sentence that introduces a block, and only that sentence: a paragraph that
+# ends here, with nothing but whitespace and closing tags between it and the
+# commands. The first version of this let `<p>.*?</p>` run across the document,
+# and a `<p>` in the navigation footer then swallowed the block that followed it —
+# silently, because the block count still looked plausible.
+BLOCK_RE = re.compile(r'<pre class="userinput">(.*?)</pre>', re.S)
+INTRO_RE = re.compile(r'<p>((?:(?!</p>).)*?)</p>((?:\s|</?[a-zA-Z][^>]*>)*)$', re.S)
+TAG_RE = re.compile(r"<[^>]*>")
+
+
+def page(url_path):
+    """A page of the pinned edition, cached — the build refetches nothing twice.
+
+    The cache is valid for exactly one edition, and the file names say nothing
+    about which: `chapter05/binutils-pass1.html` exists in every edition of the
+    book. So the first fetch records the base URL the cache was filled from, and
+    any later build against a different base fails instead of quietly mixing two
+    books' commands into one build. Pointing the build at a new edition is a
+    deliberate act: delete the cache.
+    """
+    out = CACHE / (url_path.replace("/", "+") + ".html")
+    marker = CACHE / "BASE"
+    if marker.is_file() and marker.read_text().strip() != BASE:
+        raise SystemExit(
+            f"book cache was filled from {marker.read_text().strip()!r}, this build asks "
+            f"{BASE!r}; run: rm -rf {CACHE} — the cache holds one edition's pages")
+    if not out.is_file():
+        out.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(BASE + "\n")
+        with urllib.request.urlopen(f"{BASE}/{url_path}", timeout=60) as r:
+            out.write_text(r.read().decode("utf-8", "replace"))
+    return out.read_text()
+
+
+def text(url_path):
+    """A page as the words on it, for reading the prose that carries a rule."""
+    return " ".join(html.unescape(TAG_RE.sub(" ", page(url_path))).split())
+
+
+def _clean(s):
+    return "\n".join(l.rstrip() for l in html.unescape(TAG_RE.sub("", s)).splitlines()
+                     if l.strip())
+
+
+def commands(url_path):
+    """[(introducing sentence, command text)] in document order.
+
+    The sentence is kept because it is the evidence: `Compile the package:` next
+    to `make` is what makes a log readable by someone who did not type it, and
+    the sentences that say a test is known to fail sit in the same place.
+    """
+    p = page(url_path)
+    out = []
+    for m in BLOCK_RE.finditer(p):
+        cmd = _clean(m.group(1))
+        if not cmd:
+            continue
+        intro = INTRO_RE.search(p[max(0, m.start() - 4000):m.start()])
+        why = " ".join(html.unescape(TAG_RE.sub(" ", intro.group(1))).split()) if intro else ""
+        # The nav footer's <p> can precede the first block; that is not an intro.
+        if "Prev" in why and "Next" in why:
+            why = ""
+        out.append((why, cmd))
+    return out
+
+
+def notes(url_path):
+    """The page's stated expectations — known test failures, verification steps.
+
+    Chapter 4's `About the Test Suites` says a failed test is a fact to record,
+    and each package page names its own known failures. Those sentences are what
+    a phase record compares a nonzero exit against, so a suite that was expected
+    to fail one test does not read as a broken build.
+    """
+    p = page(url_path)
+    body = p[p.find('<div class="sect'):] if '<div class="sect' in p else p
+    out = []
+    for m in re.finditer(r'<div class="(note|warning|important|tip)"[^>]*>(.*?)</div>\s*</div>',
+                         body, re.S):
+        t = " ".join(html.unescape(TAG_RE.sub(" ", m.group(2))).split())
+        if len(t) > 20:
+            out.append(f"{m.group(1)}: {t}")
+    for m in re.finditer(r"<p>(.*?)</p>", body, re.S):
+        t = " ".join(html.unescape(TAG_RE.sub(" ", m.group(1))).split())
+        if re.search(r"known to fail|fails?\b|not\b.*test|test.*fail", t, re.I) and len(t) > 30:
+            out.append(t)
+    return out
+
+
+# The book's synopsis, made executable. `tar -xvf` and nothing else: the same
+# page warns that `cp -R` destroys timestamps and the build, and the directory
+# to enter is discovered from what the extraction created rather than guessed
+# from the archive name, because for several packages they differ.
+WRAPPER_PRE = """set -e
+cd $BCT_SRCDIR
+# The book's general instructions keep a log per package; $LOG is that directory,
+# defaulted here rather than inherited, because the page runs in `env -i` and
+# nothing outside the build sets it. A redirect and not a pipe: the page script
+# runs with -e, and a pipeline would report tee's exit code instead of tar's.
+LOG="${{LOG:-$BCT_SRCDIR/logs}}"
+mkdir -p "$LOG"
+# A page that fails leaves its extracted tree behind: the script dies at the
+# failing command and the cleanup at the end never runs. Building again on that
+# tree would happen in a half-configured source directory, which is not the book's
+# environment, and the diff below would find no new directory. So the stale tree
+# goes first; the log of the run that failed stays where it is.
+candidate={archive}
+candidate=${{candidate%.tar.*}}
+candidate=${{candidate%.zip}}
+candidate=${{candidate%.tar}}
+test "$candidate" = {archive} && candidate=""
+before=$(ls -A)
+if test -n "$candidate" && test -d "$candidate"; then
+  echo "STALE: $candidate is left from a run that failed; unpacking fresh"
+  rm -rf "$candidate"
+  before=$(printf '%s\\n' $before | grep -vx "$candidate" | tr '\\n' ' ')
+fi
+case {archive} in
+  *.zip) unzip -q {archive} ;;
+  *) tar -xvf {archive} > "$LOG/{archive}.unpack.log" ;;
+esac
+newdir=$(comm -13 <(echo "$before" | tr ' ' '\\n' | sort) <(ls -A | sort) | head -1)
+if test -z "$newdir"; then
+  # The stale tree above is found by the name the archive was downloaded under,
+  # and for Tcl those two disagree: tcl8.6.17-src.tar.gz extracts to tcl8.6.17,
+  # so the tree a failed attempt left behind was neither noticed nor removed, the
+  # extraction overwrote into it, and the diff saw nothing new. Ask the archive
+  # what it holds, throw the half-built tree away, extract again — the book's
+  # environment is a fresh one, not the one a dead run left behind.
+  newdir=$(tar -tf {archive} 2>/dev/null | head -1 | cut -d/ -f1)
+  if test -n "$newdir" && test -d "$newdir"; then
+    echo "STALE: $newdir is left from a run that failed; unpacking fresh"
+    rm -rf "$newdir"
+    tar -xvf {archive} >> "$LOG/{archive}.unpack.log"
+  else
+    newdir=""
+  fi
+fi
+test -n "$newdir" || {{ echo "UNPACK PRODUCED NO DIRECTORY: {archive} (expected $candidate)"; exit 1; }}
+echo "UNPACKED: $newdir"
+cd "$newdir"
+"""
+
+WRAPPER_POST = """# The runner's own name, not $SRCDIR: the book uses SRCDIR as a scratch
+# variable of its own (Tcl's second block ends with `unset SRCDIR`, which is what
+# made the cleanup below die on an unbound variable after every block of Tcl had
+# passed), and Vim's top-level configure stub does `cd "${SRCDIR:-src}"`, so a
+# shared name means either the package wins or the page does.
+cd "${BCT_SRCDIR:-.}"
+echo "CLEANUP: $newdir"
+rm -rf "$newdir"
+"""
+
+
+def wrapper(archive):
+    return WRAPPER_PRE.format(archive=html.unescape(archive)) if archive else ""
+
+
+def wrapper_post():
+    return WRAPPER_POST
+
+
+NEXT_RE = re.compile(r'class="next">\s*<a[^>]*href="([^"]+)"', re.S)
+
+
+def sequence(chapter):
+    """Every page of a chapter, in the order the book links them.
+
+    Not the index: the 13.0-openrc edition's chapter 8 has a page for
+    Libpipeline-1.5.8 — `kbd.html`'s Next link is `libpipeline.html`, and man-db's
+    `configure` stops with `Package requirements (libpipeline >= 1.5.0) were not
+    met` without it — and `index.html` does not list it. Anything that asks the
+    book what a chapter contains has to follow the book's own links, or it builds
+    a system missing a library and finds out pages later.
+    """
+    import posixpath
+    ch = f"chapter{chapter}"
+    out, cur, seen = [], f"{ch}/introduction.html", set()
+    while cur and cur not in seen:
+        seen.add(cur)
+        try:
+            m = NEXT_RE.search(page(cur))
+        except OSError:
+            break  # a page that will not load is a gap to report, not a crash here
+        if not m:
+            break
+        cur = posixpath.normpath(posixpath.join(posixpath.dirname(cur), m.group(1)))
+        if not cur.startswith(ch + "/"):
+            break
+        out.append(cur)
+    return out
+
+# --- orchestrator: one phase at a time, with receipts ----------------------
+
+
+import argparse
+import base64
 import datetime
 import hashlib
 import json
@@ -35,8 +281,9 @@ import threading
 import time
 import tomllib
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import book  # noqa: E402
+# book.py is inlined as the section below (the build-rootfs layout is one
+# build script, not a package); this alias keeps every `book.` call as written.
+book = sys.modules[__name__]
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 EVIDENCE = ROOT / "build-evidence"
@@ -413,7 +660,7 @@ def archive_for(pg):
     into the GCC tree, Python's and Tcl's and SQLite's pages unpack documentation
     beside the source, the udev page has three tarballs — and on those the page
     that cites a file does not say which one it builds. Returning the first match
-    would be correct today only because of the order `derive-base-lock.py` wrote
+    would be correct today only because of the order `build-rootfs.sh derive-base-lock` wrote
     the file in, so it is refused instead: name the archive in
     `build-overrides.toml`, where the choice is written down with a reason.
     """
@@ -475,7 +722,7 @@ def test_expectations():
     path = ROOT / "test-expectations.toml"
     if not path.is_file():
         raise SystemExit("test-expectations.toml is missing; run "
-                         "scripts/build/derive-test-expectations.py")
+                         "scripts/build/build-rootfs.sh derive-test-expectations")
     return {r["id"]: r for r in load_toml(path).get("page", [])}
 
 # Which blocks of a page run its suite is the book's fact, not this file's: it
@@ -590,7 +837,7 @@ def guard_present(pages):
     rc, out = guest_run(f"ls {LFS}/sources 2>/dev/null")
     have = set(out.split())
     return [f"{pg}: {a} is named by base.lock but is not in $LFS/sources — "
-            f"run: build.py run sources"
+            f"run: build-rootfs.sh run sources"
             for pg in pages for a in sorted(need[pg] - have)]
 
 
@@ -662,7 +909,7 @@ def expected_failures(pg, out):
     """The blocks whose failure the book predicts, read from the derived table.
 
     `test-expectations.toml` is re-read from the pinned edition by
-    derive-test-expectations.py: it knows which block of a page runs that page's
+    build-rootfs.sh derive-test-expectations: it knows which block of a page runs that page's
     suite — `make test` and `make check` and the ones wrapped in `su tester -c`
     alike, which no regex of mine matched without going on a guessing spree — and
     it knows whether the page says anything at all about failures. Both halves
@@ -732,7 +979,7 @@ def pid_cmdline(pid):
 def acquire_lock(what):
     """Refuse to start a second build against the same build root.
 
-    Two `build.py run` invocations share one $LFS, one qcow2 and one snapshot
+    Two `build-rootfs.sh run` invocations share one $LFS, one qcow2 and one snapshot
     chain: the second one's checkpoint would freeze the first one's half-written
     files and call it a passed phase. The lock is a file holding the owner's pid,
     created with O_EXCL so two simultaneous starters cannot both believe they won.
@@ -808,7 +1055,7 @@ def write_record(logdir, rec):
     The record is written once, after the phase's pages ran and its criteria were
     evaluated, and it is moved into place rather than opened: a run that dies
     while writing leaves the previous run's record whole instead of truncated.
-    That is what makes `build.py status` readable after a crash, and what lets a
+    That is what makes `build-rootfs.sh status` readable after a crash, and what lets a
     resume decide where to continue from.
 
     Every record carries the identity of what it was built against — the bytes of
@@ -837,7 +1084,7 @@ def run_phase(name):
         # A typo in --page used to run no pages and report the phase FAILED,
         # which reads like the build broke rather than like the name did.
         raise SystemExit(f"--page {only_page!r} matches no page of phase {name!r}; "
-                         f"run: build.py pages {name}")
+                         f"run: build-rootfs.sh pages {name}")
     missing = (guard_sources([pg for pg, _ in todo])
                + guard_test_policy([pg for pg, _ in todo])
                + guard_present([pg for pg, _ in todo])
@@ -957,18 +1204,163 @@ def verify(ph, logdir):
     rule the base.lock check applies to an empty class map: a gate that checks
     nothing has not been passed.
     """
-    if "verify" not in ph:
+    if "verify" not in ph and not ph.get("boot_verify"):
         print("  no verify commands: the phase has no criteria to evaluate", flush=True)
         return []
-    if not ph["verify"]:
-        return []
     checks = []
-    for cmd in ph["verify"]:
+    for cmd in ph.get("verify", []):
         rc, out = guest_run(wrap(cmd, "host-root"))
         checks.append({"check": cmd, "rc": rc, "out": out.strip()[:200]})
         print(f"  [{'ok' if rc == 0 else 'FAIL'}] {cmd}", flush=True)
+    checks += boot_checks(ph, logdir)
     (logdir / "criteria.log").write_text(
         "\n\n".join(f"$ {c['check']}\nrc {c['rc']}\n{c['out']}" for c in checks) + "\n")
+    return checks
+
+
+# --- the first boot -----------------------------------------------------------
+#
+# The last phase's system has not been built until it starts. `vm.sh boot-lfs`
+# attaches the LFS disk to a qemu with nothing else attached to it — no builder's
+# disk, no chroot, no sshd, because a system that boots only while its builder is
+# still plugged in has not been shown to boot — and puts the serial console on a
+# unix socket. That socket is the whole channel: the installed system has no
+# network service of any kind running, so the driver below is what answers the
+# `login:` prompt the exit criterion asks about, and the transcript it collects is
+# what the phase's evidence is.
+
+BOOT_DRIVER = r"""
+import base64, json, re, socket, sys, time
+
+# The payloads travel base64, because they travel as the text of a Python
+# program: JSON's backslash-quoted quotes are also Python's escape for the
+# same character, so a `"` the book's criterion contains would be un-escaped
+# by the interpreter before json ever saw it. Base64 has neither quotes nor
+# backslashes, which is to say, nothing for any layer to re-interpret.
+CMDS = json.loads(base64.b64decode("@@CMDS@@").decode())
+PW = json.loads(base64.b64decode("@@PW@@").decode())
+SOCK = '@@SOCK@@'
+BOOT_TIMEOUT = @@BOOT_TIMEOUT@@
+
+try:
+    s = socket.socket(socket.AF_UNIX)
+    s.settimeout(60)
+    s.connect(SOCK)
+except OSError as e:
+    print("@@BCTRESULT " + json.dumps({"error": f"no console socket: {e}"}))
+    sys.exit(1)
+
+seen, buf = [], [""]
+
+
+def expect(pat, want, timeout=BOOT_TIMEOUT):
+    # Wait for a pattern on the console; answer (match, everything before it).
+    end = time.time() + timeout
+    while True:
+        m = re.search(pat, buf[0], re.S)
+        if m:
+            before, buf[0] = buf[0][:m.start()], buf[0][m.end():]
+            seen.append(before + m.group(0))
+            return m, before
+        if time.time() > end:
+            seen.append(buf[0])
+            return None, buf[0]
+        try:
+            s.settimeout(5)
+            d = s.recv(65536)
+        except socket.timeout:
+            continue
+        except OSError:
+            d = b""
+        if not d:
+            time.sleep(0.5)
+            continue
+        buf[0] += d.decode("utf-8", "replace")
+
+
+def send(line):
+    s.sendall((line + "\n").encode())
+
+
+def dump(extra):
+    print("@@BCTRESULT " + json.dumps({**extra, "transcript": "".join(seen)[-40000:]}))
+
+
+if expect(r"login:", "login prompt")[0] is None:
+    dump({"error": "the disk never reached a login prompt"})
+    sys.exit(1)
+send("root")
+# A root without a password on a secure tty gets no prompt at all — login hands
+# over the shell directly — so the prompt is optional, and the secret goes only
+# to a machine that asks for it.
+if expect(r"(?i)password:", "password prompt", 10)[0] is not None:
+    send(PW)
+send("echo @@BCTREADY $$")
+if expect(r"@@BCTREADY \d+", "a root shell", 60)[0] is None:
+    dump({"error": "no shell after the password: the secret was refused, or root may not "
+                    "log in on a serial line — see the transcript"})
+    sys.exit(1)
+checks = []
+for i, c in enumerate(CMDS):
+    send(c)
+    send(f"echo @@BCTRC{i} $?")
+    m, out = expect(rf"@@BCTRC{i} (\d+)", c, 300)
+    if m is None:
+        dump({"checks": checks, "error": f"the booted system never answered: {c}"})
+        sys.exit(1)
+    checks.append({"check": c, "rc": int(m.group(1)), "out": out.strip()[:400]})
+send("poweroff")
+time.sleep(3)
+dump({"checks": checks})
+"""
+
+
+def boot_checks(ph, logdir):
+    """The criteria that can only be evaluated by starting the installed system.
+
+    `boot_verify` in phases.toml holds shell commands for the booted system, which
+    is a machine with no sshd and no login other than the one on the serial
+    console. `@KERNEL@` is filled from base.lock, because the criterion is “uname
+    answers the pinned kernel version” and a version typed twice is a version that
+    can disagree with itself.
+    """
+    if not ph.get("boot_verify"):
+        return []
+    lock = load_lock()
+    kernel = next((m.group(1) for p in lock["package"]
+                   if (m := re.search(r"linux-([0-9][0-9.]*?)[.]tar", p["url"]))), "?")
+    cmds = [c.replace("@KERNEL@", kernel) for c in ph["boot_verify"]]
+    pw = os.environ.get("BCT_ROOT_PW") or OVR.get("boot", {}).get("root_password", "")
+    print("  booting the LFS disk with nothing else attached", flush=True)
+    host("cd ~/barecortex-vm && ./vm.sh boot-lfs")
+    b64 = lambda s: base64.b64encode(json.dumps(s).encode()).decode()
+    driver = (BOOT_DRIVER.replace("@@CMDS@@", b64(cmds))
+              .replace("@@PW@@", b64(pw)).replace("@@SOCK@@", "/home/user/barecortex-vm/console.sock")
+              .replace("@@BOOT_TIMEOUT@@", str(ph.get("boot_timeout", 1200))))
+    r = host("python3 - <<'BCTPY'\n" + driver + "\nBCTPY\n")
+    # The booted system may be gone (it powered itself off) or still up
+    # (`poweroff` refused or missing). Either way the boot VM must be stopped
+    # before the build guest can have the port and the disk back.
+    host("cd ~/barecortex-vm && ./vm.sh stop")
+    # The build guest is off — `boot-lfs` stopped it, and the LFS disk cannot be
+    # attached twice. Bring it back whether or not the boot worked, or every later
+    # command in this session fails on a connection nobody stopped on purpose.
+    host("cd ~/barecortex-vm && ./vm.sh start && ./vm.sh wait")
+    line = next((l for l in reversed(r.stdout.splitlines())
+                 if l.startswith("@@BCTRESULT ")), "")
+    got = json.loads(line[len("@@BCTRESULT "):]) if line else {"error": r.stdout[-2000:] + r.stderr[-500:]}
+    (logdir / "boot.log").write_text(got.get("transcript", "") + "\n"
+                                     + ("\nERROR: " + got["error"] if got.get("error") else ""))
+    if got.get("error"):
+        print(f"  [FAIL] boot: {got['error']} (transcript: {logdir/'boot.log'})", flush=True)
+        return [{"check": "the LFS disk boots to a login prompt and root logs in",
+                 "rc": 1, "out": got["error"]}]
+    checks = [{"check": c["check"], "rc": c["rc"], "out": c.get("out", "")}
+              for c in got["checks"]]
+    checks.insert(0, {"check": "the LFS disk boots to a login prompt and root logs in",
+                      "rc": 0, "out": f"transcript in {logdir/'boot.log'}"})
+    for c in checks:
+        print(f"  [{'ok' if c['rc'] == 0 else 'FAIL'}] (booted) {c['check']}", flush=True)
     return checks
 
 
@@ -1063,7 +1455,7 @@ def write_log(rec, ph):
         LOGMD.write_text("# Build log\n\n"
                          "Every phase of the system build, recorded as it ran: what was executed,\n"
                          "where in the pinned book it comes from, what it returned, and what was\n"
-                         "frozen afterwards. Written by `scripts/build/build.py`; nothing here is\n"
+                         "frozen afterwards. Written by `scripts/build/build-rootfs.sh`; nothing here is\n"
                          "reconstructed afterwards from memory.\n")
     with LOGMD.open("a") as f:
         f.write(f"\n## {rec['phase']} — {'passed' if rec['passed'] else 'FAILED'}\n\n")
@@ -1182,9 +1574,492 @@ def status():
     return 0
 
 
+# --- derivations: base.lock and test-expectations.toml from the edition ----
+
+"""Derive base.lock from the pinned book edition. Nothing here is typed by hand.
+
+`base-system-and-init` D3 makes `base.lock` the source of truth for what the
+image contains, and `build-orchestration` 2.1 owns its contents: name, version,
+URL, checksum, provenance class, patch series, plus the book revision and page
+every line cites (2.5 rejects a citation-free line). The only way that stays
+true across a pin bump is if the file is generated from the edition it came
+from — retyping it once is how a lock file drifts from its book.
+
+So this script is the derivation. Point it at a rendering and a revision:
+
+    scripts/build/build-rootfs.sh derive-base-lock \
+        https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0 > base.lock
+
+and commit the diff (2.3). It reads three pages of the edition: the index for
+which chapter builds which package, chapter 3's package table for the download
+URL and the book's own MD5, and chapter 3's patch table for the patch series.
+
+Stdlib only, and no network beyond plain HTTP GETs of the edition.
+"""
+
+
+PKG_RE = re.compile(r"^(?P<name>[A-Za-z][A-Za-z0-9.:+_-]*)[- ](?P<version>\d[\w.]*)")
+# `+` in the class: `gcc-libstdc++.html` is a page of this edition, and a page
+# the derivation cannot see is a page it cannot account for.
+PAGE_RE = r'href="(chapter\d+/[A-Za-z0-9:._+-]+\.html)"'
+
+
+_PAGES = {}
+
+
+def get(url):
+    """A page of the pinned edition, once. The derivation looks at each page for
+    two things — what it downloads and what it patches — and refetching 160 pages
+    for the second look would double a two-minute command to four."""
+    if url not in _PAGES:
+        with urllib.request.urlopen(url, timeout=60) as r:
+            _PAGES[url] = r.read().decode("utf-8", "replace")
+    return _PAGES[url]
+
+
+def strip(s):
+    return html.unescape(re.sub(r"<[^>]*>", " ", s))
+
+
+def toc_pages(index_html, base):
+    """Every chapter page URL in the edition's index, plus the package pages."""
+    all_pages, pkgs = [], []
+    for href, title in re.findall(PAGE_RE + r'[^>]*>(.*?)</a>',
+                                  index_html, re.S):
+        title = " ".join(strip(title).split())
+        all_pages.append(href)
+        # `Udev from Systemd-259.1`, `Libstdc++ from GCC-15.2.0`: the book's own
+        # idiom for a page that builds another package's archive, and the only
+        # place that says so for libstdc++, whose page body says just `cd build`.
+        for candidate in (title, title.rsplit(" from ", 1)[-1]):
+            if (m := PKG_RE.match(candidate)):
+                pkgs.append((href.split("/")[0], href, m.group("name"), m.group("version")))
+                break
+    return sorted(set(all_pages)), pkgs
+
+
+TARBALL_RE = re.compile(r"[A-Za-z0-9._:+-]+\.(?:tar\.(?:xz|gz|bz2|zst)|tar|tgz|zip)")
+H2_RE = re.compile(r"<h2[^>]*>(.*?)</h2>", re.S)
+# The page's own heading, for the pages whose `<h2>`s are only the section
+# titles: chapter 8's Libpipeline page never says `Libpipeline-1.5.8` below
+# its own `<h1>`, so without this line the derivation files the package as a
+# download no page builds, and the page that does build it has no archive.
+H1_RE = re.compile(r"<h1[^>]*>(.*?)</h1>", re.S)
+CD_RE = re.compile(r"\bcd\s+([A-Za-z0-9._+/-]+)")
+TAIL_PKG_RE = re.compile(r"([A-Za-z][A-Za-z0-9.:+_-]*)-(\d[\w.]*)")
+
+
+def page_downloads(url):
+    """Archive file names this page attributes to itself, from its own text.
+
+    Three signals, all the page's own words, because an LFS package page names
+    the directory it builds and rarely the archive it unpacked:
+
+    1. the page's `<h2>` package title — `Udev from Systemd-259.1` builds
+       `systemd-259.1`, which is how the table's `Systemd` gets a page;
+    2. any archive file name written out in full, which is how a documentation
+       tarball and `libpipeline` land on the page that unpacks them;
+    3. every `cd <dir>`, which is how `linux-6.18.10` lands on the kernel page.
+
+    A prefix match is deliberate: `Python-3.14.3-docs-html` belongs to the page
+    that unpacks it, not to a page of its own. What matches nothing anywhere is
+    reported, not dropped — that is the derivation noticing the book changed.
+    """
+    page = get(url)
+    stems = set()
+    for h2 in H1_RE.findall(page) + H2_RE.findall(page):
+        title = " ".join(strip(h2).split())
+        m = TAIL_PKG_RE.search(title)
+        if m:
+            stems.add(f"{m.group(1)}-{m.group(2)}".lower())
+    for name in TARBALL_RE.findall(page):
+        stems.add(re.sub(r"\.(?:tar\.(?:xz|gz|bz2|zst)|tar|tgz|zip)$", "", name).lower())
+    # A path, because chapter 5 builds libstdc++ by `cd ../gcc-15.2.0/build` —
+    # the directory the page moves into is the package it builds, whatever the
+    # path to it is. `.` and `..` are a page going back out again.
+    stems.update(c.lower().rsplit("/", 1)[-1] for c in CD_RE.findall(page)
+                 if c not in (".", ".."))
+    return stems
+
+
+def package_table(page_html):
+    """The chapter 3 table: name, version, size, home, download URL, MD5."""
+    out = []
+    for dt, dd in re.findall(r"<dt>(.*?)</dt>\s*<dd>(.*?)</dd>", page_html, re.S):
+        head = " ".join(strip(dt).split()).rstrip(":")
+        m = re.match(r"^(.*?)\s*\(([^)]+)\)", head)
+        if not m:
+            continue
+        url = re.search(r"Download:\s*<a[^>]*href=\s*\"?([^\"> ]+)", dd)
+        md5 = re.search(r"MD5 sum:\s*<code[^>]*>\s*([0-9a-f]{32})", dd)
+        size = re.search(r"([\d,]+)\s*KB", head)
+        if not (url and md5):
+            continue
+        out.append({
+            "name": m.group(1).strip(), "version": m.group(2).strip(),
+            "url": url.group(1), "md5": md5.group(1),
+            "kb": int(size.group(1).replace(",", "")) if size else None,
+        })
+    return out
+
+
+def patch_table(page_html):
+    """Chapter 3.3. The term is a description; the file name is the URL's basename."""
+    out = []
+    for dt, dd in re.findall(r"<dt>(.*?)</dt>\s*<dd>(.*?)</dd>", page_html, re.S):
+        desc = " ".join(strip(dt).split()).rstrip(":").strip()
+        desc = re.sub(r"\s*-\s*[\d,.]+\s*K?B$", "", desc)
+        url = re.search(r"Download:\s*<a[^>]*href=\s*\"?([^\"> ]+)", dd)
+        md5 = re.search(r"MD5 sum:\s*<code[^>]*>\s*([0-9a-f]{32})", dd)
+        if url and url.group(1).endswith(".patch"):
+            out.append({"patch": url.group(1).rsplit("/", 1)[-1],
+                        "description": desc,
+                        "url": url.group(1),
+                        "md5": md5.group(1) if md5 else None})
+    return out
+
+
+def norm(s):
+    """Package identity across the book's own spellings of it."""
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def remote_of(url):
+    """Where the archive comes from, as the URL the book publishes says."""
+    if "//" not in url:
+        return url
+    scheme, rest = url.split("//", 1)
+    return f"{scheme}//{rest.split('/')[0]}"
+
+
+def revision_of(url, version):
+    """The upstream release identifier the download URL itself carries.
+
+    The book publishes a URL, a version and an MD5 — no revision. Where the URL
+    is a release download or a source archive its path names the upstream tag
+    (`/releases/download/v2.3.2/`, `/archive/POSIX-2.08t.tar.bz2`), and that is
+    the revision; where it does not, the version is the whole of the identifier
+    the URL offers. Recorded as derived from the URL, never invented: a commit
+    hash nobody checked would be worse than no field at all.
+    """
+    m = re.search(r"/(?:releases/download|archive)/([^/]+?)(?:\.tar\.[a-z0-9]+|\.zip|/|$)", url)
+    return m.group(1) if m else version
+
+
+# Downloads this edition lists but builds nowhere, as far as its own pages go.
+# Not a fudge to make the count reach zero: an archive no page names has no
+# recipe to cite, so it is not a source-built package of this base system, and
+# inventing a page for it would make the citation mean nothing. Recorded so the
+# file says the book is inconsistent instead of failing on it or dropping it.
+KNOWN_UNATTRIBUTED = {
+    "libpipeline-1.5.8.tar.gz":
+        "listed by chapter03/packages.html; no page of this edition names it",
+}
+
+
+def derive_base_lock(argv=None):
+    """Derive `base.lock` from a pinned edition, printed to stdout.
+
+    `base-system-and-init` D3 makes `base.lock` the source of truth for what the
+    image contains, and `build-orchestration` 2.1 owns its contents: name, version,
+    URL, checksum, provenance class, patch series, plus the book revision and page
+    every line cites (2.5 rejects a citation-free line). The only way that stays
+    true across a pin bump is if the file is generated from the edition it came
+    from — retyping it once is how a lock file drifts from its book. The derivation
+    reads three pages of the edition: the index for which chapter builds which
+    package, chapter 3's package table for the download URL and the book's own MD5,
+    and chapter 3's patch table for the patch series.
+    """
+    argv = sys.argv if argv is None else argv
+    if len(argv) != 2 or not argv[1]:
+        sys.exit("usage: build-rootfs.sh derive-base-lock <edition index URL> > base.lock")
+    base = argv[1].rstrip("/")
+    index = get(base + "/")
+    # The <title> is the book's name, not its edition; the edition string is in
+    # the page body as "Version 13.0-openrc", and that string is what a pin
+    # bump changes.
+    body = " ".join(strip(index).split())
+    edition = re.search(r"Version\s+([0-9][\w.\-]+)", body)
+    edition = f"LFS {edition.group(1)}" if edition else None
+    if not edition:
+        sys.exit(f"no edition string ('Version N') found at {base}/ — refusing to "
+                 f"write a lock file that does not name what it was derived from")
+
+    all_pages, pkgs = toc_pages(index, base)
+    # The index is not the table of contents. `book.sequence` follows the book's
+    # own Next links, and in this edition that finds one page the index never
+    # lists — chapter 8's Libpipeline — whose absence from `all_pages` is also an
+    # absence from the lock file's citations, so the page that builds it has no
+    # archive to unpack.
+    all_pages = sorted(set(all_pages) | {p for ch in {h.split("/")[0] for h in all_pages}
+                                         for p in book.sequence(ch[7:])})
+    # The index's own link text is the book's page → package mapping: `Acl-2.3.2`
+    # on chapter08/acl.html, `Udev from Systemd-259.1` on chapter08/udev.html.
+    # That is the primary attribution, and it is why no alias table is needed —
+    # the table's `Xz Utils` and the page's `Xz-5.8.2` meet at the tarball name.
+    where = {}
+    by_name = {}
+    for _chapter, page, name, version in pkgs:
+        where.setdefault(f"{name}-{version}".lower(), set()).add(page)
+        by_name.setdefault((norm(name), version), set()).add(page)
+
+    # Cite pages, not anchors: a page is what 2.5 asks for and what a human can
+    # open, and a guessed anchor would look checkable while not being so.
+    # Chapters 1-3 are skipped: chapter 3 is the download table, so it names
+    # every archive, and a citation all 89 carry cites nothing.
+    for page in all_pages:
+        if page.startswith(("chapter01/", "chapter02/", "chapter03/")):
+            continue
+        for stem in page_downloads(f"{base}/{page}"):
+            where.setdefault(stem, set()).add(page)
+
+    def pages_for(p):
+        tarball = p["url"].rsplit("/", 1)[-1]
+        stem = re.sub(r"\.(?:tar\.(?:xz|gz|bz2|zst)|tar|tgz|zip)$", "", tarball).lower()
+        hits = set()
+        for s, pages in where.items():
+            if stem == s or stem.startswith(s + "-") or s.startswith(stem + "-"):
+                hits |= pages
+        # Six packages — Expect, Flit-core, Libpipeline, Sqlite, Tcl, XML::Parser
+        # — are named by no page in this edition, as archive or as directory: its
+        # chapter 8 pages run ./configure without an unpack step. Their attribution
+        # is the book agreeing with itself that the table's `Sqlite` 3.51.1 and the
+        # page titled `Sqlite-3.51.1` are one package, name and version both.
+        hits |= by_name.get((norm(p["name"]), p["version"]), set())
+        return sorted(hits)
+
+    packages = package_table(get(f"{base}/chapter03/packages.html"))
+    patches = patch_table(get(f"{base}/chapter03/patches.html"))
+
+    # Which page applies which patch, read off the pages themselves: a patch is
+    # applied by `patch -Np1 -i ../<file>` inside the package's own page, so the
+    # patch series is not a guess from the patch's filename.
+    patch_pages = {}
+    for page in all_pages:
+        if page.startswith(("chapter01/", "chapter02/", "chapter03/")):
+            continue
+        html = get(f"{base}/{page}")
+        for p in patches:
+            if p["patch"] in html:
+                patch_pages.setdefault(p["patch"], set()).add(page)
+
+    print(f'# base.lock — derived, do not edit by hand.')
+    print(f'# Derived from: {edition}')
+    print(f'# Source:       {base}/chapter03/packages.html')
+    print(f'# Derivation:   scripts/build/build-rootfs.sh derive-base-lock')
+    print(f'# Checksums:    the MD5 column of that table — the book publishes MD5,')
+    print(f'#               not SHA-256, so this file carries MD5 and says so.')
+    print(f'# Remote:       the origin of the URL the book publishes for the archive.')
+    print(f'# Revision:     the release tag that URL carries, or the version where it')
+    print(f'#               carries none. The book publishes no revision field; this')
+    print(f'#               is read off the URL, not looked up behind it.')
+    print(f'# Format owner: base-system-and-init D3. Contents owner: build-orchestration 2.1.')
+    print(f'#')
+    print(f'# Provenance classes are rows of class-map.toml, not a sentence; every')
+    print(f'# entry names its class and the book pages that build it, because 2.5')
+    print(f'# rejects a line that carries no book revision and page.')
+    print()
+    print(f'[edition]')
+    print(f'name = {edition!r}')
+    print(f'url = {base + "/"!r}')
+    print(f'package_pages = {len(all_pages)}')
+    print(f'unattributed_downloads = {len(KNOWN_UNATTRIBUTED)}')
+    print()
+
+    missing = []
+    unattributed = []
+    entries = []
+    for p in sorted(packages, key=lambda x: (x["name"].lower(), x["version"])):
+        pages = pages_for(p)
+        tarball = p["url"].rsplit("/", 1)[-1]
+        if not pages and tarball in KNOWN_UNATTRIBUTED:
+            unattributed.append((p, KNOWN_UNATTRIBUTED[tarball]))
+            continue
+        if not pages:
+            # A package the download table lists and no chapter page names is not
+            # a contradiction to hide: it is a derivation that stopped matching.
+            pages = ["UNMATCHED"]
+            missing.append(p["name"])
+        entries.append((p, pages))
+
+    # A patch belongs to the package whose page applies it. Two patches of one
+    # edition can land on one page (Bzip2's two), which is why this is a list
+    # keyed by page and not a name match on the patch's own filename.
+    series = {}
+    for p in patches:
+        # The book names a patch `<package>-<version>-<what>.patch`, and that is
+        # the attribution: `glibc-fhs-1.patch` is applied from the glibc page,
+        # which also installs the time zone data, and page-sharing does not make
+        # it a patch of tzdata. Pages are the fallback for a patch named after
+        # nothing in the package list.
+        named = max((n for n, _ in ((e[0]["name"], 0) for e in entries)
+                     if p["patch"].startswith(norm(n))), key=len, default=None)
+        owners = [n for n, pages in entries if named is None and
+                  patch_pages.get(p["patch"], set()) & set(pages)]
+        for name in ([named] if named else owners[:1]):
+            series.setdefault(name, []).append(p["patch"])
+            p["package"] = name
+
+    for p, pages in entries:
+        print('[[package]]')
+        print(f'name = {p["name"]!r}')
+        print(f'version = {p["version"]!r}')
+        print(f'url = {p["url"]!r}')
+        print(f'remote = {remote_of(p["url"])!r}')
+        print(f'revision = {revision_of(p["url"], p["version"])!r}')
+        print(f'md5 = {p["md5"]!r}')
+        print('class = "source-built"')
+        print(f'pages = {pages!r}')
+        if p["name"] in series:
+            print(f'patches = {series[p["name"]]!r}')
+        print()
+
+    for p, reason in unattributed:
+        print('[[unattributed-download]]')
+        print(f'name = {p["name"]!r}')
+        print(f'version = {p["version"]!r}')
+        print(f'url = {p["url"]!r}')
+        print(f'remote = {remote_of(p["url"])!r}')
+        print(f'revision = {revision_of(p["url"], p["version"])!r}')
+        print(f'md5 = {p["md5"]!r}')
+        print(f'reason = {reason!r}')
+        print()
+
+    print('# --- patch series, chapter 3.3. Applied by the package named, on the page')
+    print('# --- named; the series is part of that version, per D3.')
+    for p in patches:
+        print('[[patch]]')
+        print(f'file = {p["patch"]!r}')
+        print(f'url = {p["url"]!r}')
+        print(f'remote = {remote_of(p["url"])!r}')
+        print(f'md5 = {p["md5"]!r}')
+        print(f'description = {p["description"]!r}')
+        print(f'package = {p.get("package", "UNATTRIBUTED")!r}')
+        print(f'pages = {sorted(patch_pages.get(p["patch"], []))!r}')
+        print()
+
+    if missing:
+        print(f'# UNMATCHED: {len(missing)} packages appear in the chapter 3 table with no')
+        print(f'# chapter page that builds them: {", ".join(sorted(missing))}')
+        print(f'# The build must treat this file as suspect until the derivation matches.')
+        sys.exit(3)
+
+
+"""Derive `test-expectations.toml` from the pinned edition's own pages.
+
+Task 3.3 of `build-orchestration` asks for the book's stated test-suite
+expectation, per package, as data. Hand-typing prose into a file is how that
+data rots: the edition is pinned, so the sentences are re-read from the pages
+the build actually runs, and a re-run after a version bump shows every sentence
+that moved.
+
+Two things are recorded per page that runs a suite, and the difference between
+them matters. `suite` is the command the book prints to run the tests, with its
+block number, because `build-rootfs.sh`'s policy guard needs to know which block of a
+page is the suite. `expect` is what the book says will happen — the sentences
+about known failures, quoted, with the page named — because a build that sees a
+red line has to be able to tell "the book predicted this" from "nobody
+predicted this", and it cannot do that from a memory of reading the book.
+
+Where the book prints a suite and says nothing about failures, `expect` is an
+empty list and `book_states_no_expectation` is true. That is a finding, not a
+gap: an unexpected failure there is a real failure.
+
+Run: scripts/build/build-rootfs.sh derive-test-expectations (from the repository
+root; it writes test-expectations.toml in place).
+"""
+
+
+# ROOT comes from the orchestrator section above (the repository root).
+OUT = ROOT / "test-expectations.toml"
+
+# The book's own words for "this is expected". Each is a sentence the build log
+# can be read against; none of them is a paraphrase.
+EXPECTANCE = re.compile(
+    r"(known to fail|expected to fail|are expected to|only 'FAIL' is an actual|"
+    r"is not expected to|will fail|fails? if it is run|should not)", re.I)
+
+# A command block that runs a test suite, in the book's own syntax.
+# `make check`, and whatever the book hangs off it: `LC_ALL=C make check`,
+# `make -k check`, `su tester -c "PATH=$PATH make check"`. Matched anywhere in a
+# command line, because the environment assignment comes first as often not.
+SUITE = re.compile(r"\bmake\b[^|#;]*\b(check|installcheck|test\w*|benchmark)\b")
+
+OPTIONAL = re.compile(r"[Tt]est(ing|s)\s+(?:of\s+)?(?:this\s+)?package\s+is\s+optional|"
+                      r"[Tt]esting\s+this\s+package\s+is\s+optional")
+
+
+def sentences(text):
+    """Sentences that state an expectation, normalised to one line each."""
+    out = []
+    flat = " ".join(text.split())
+    for part in re.split(r"(?<=[.!?])\s+(?=[A-Z'\"`])", flat):
+        if EXPECTANCE.search(part) and len(part) < 700:
+            # The book's cross-reference and code markup is already gone (book.text
+            # strips tags); a stray `..` from an elided path stays, it is the book's.
+            out.append(part.strip())
+    return out
+
+
+def derive_test_expectations():
+    rows = []
+    for phase, ph in phases().items():
+        for pg, title in pages_for(ph):
+            cmds = book.commands(pg)
+            text = book.text(pg)
+            suite = [(i, " ".join(c.split())) for i, (why, c) in enumerate(cmds, 1)
+                     if SUITE.search(c)]
+            if not suite:
+                continue
+            rows.append({
+                "page": pg, "title": title, "phase": phase,
+                "suite": suite,
+                "optional": bool(OPTIONAL.search(text)),
+                "expect": sentences(text),
+            })
+
+    lines = [
+        "# test-expectations.toml — what the pinned edition predicts about its own test",
+        "# suites, generated by scripts/build/build-rootfs.sh derive-test-expectations. Do not edit:",
+        "# the sentences are quoted from the pages named, and re-running the derivation",
+        "# after a version bump is what keeps them honest.",
+        f"# Pinned edition: {book.BASE}",
+        f"# Pages that print a test suite: {len(rows)}",
+        "",
+    ]
+    for r in rows:
+        lines.append("[[page]]")
+        lines.append(f'id = "{r["page"]}"')
+        lines.append(f'title = "{r["title"]}"')
+        lines.append(f'phase = "{r["phase"]}"')
+        lines.append(f'optional = {str(r["optional"]).lower()}')
+        lines.append(f'book_states_no_expectation = {str(not r["expect"]).lower()}')
+        lines.append("suite = [")
+        for i, c in r["suite"]:
+            lines.append(f'  {{ block = {i}, command = {_q(c)} }},')
+        lines.append("]")
+        lines.append("expect = [")
+        for s in r["expect"]:
+            lines.append(f"  {_q(s)},")
+        lines.append("]")
+        lines.append("")
+    OUT.write_text("\n".join(lines))
+    with_expect = sum(1 for r in rows if r["expect"])
+    print(f"{OUT.name}: {len(rows)} pages run a suite, "
+          f"{with_expect} of them state an expectation, "
+          f"{len(rows) - with_expect} print a suite and say nothing about failures")
+
+
+def _q(s):
+    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+# --- CLI ---------------------------------------------------------------------
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["pages", "run", "fetch", "resume", "status", "guest"])
+    ap.add_argument("cmd", choices=["pages", "run", "fetch", "resume", "status", "guest",
+                                "derive-base-lock", "derive-test-expectations"])
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--page")
     ap.add_argument("--skip-passed", action="store_true",
@@ -1218,6 +2093,12 @@ def _dispatch(a):
         rc, out = guest_run(a.arg)
         print(out)
         return rc
+    elif a.cmd == "derive-base-lock":
+        derive_base_lock([a.cmd, a.arg])
+        return 0
+    elif a.cmd == "derive-test-expectations":
+        derive_test_expectations()
+        return 0
     else:
         return status()
 

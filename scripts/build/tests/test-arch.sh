@@ -1,8 +1,11 @@
-#!/usr/bin/env python3
-"""check-amd64-only.py — is every ELF file in the image 64-bit x86_64?
+#!/bin/sh
+# test-arch.sh — the 64-bit-only ELF scan, named for build-rootfs's tests/test-arch.sh.
+# Polyglot: sh execs the Python payload; python reads line 3 as a string.
+'''exec' python3 "$0" "$@" # '''
+"""test-arch.sh — is every ELF file in the image 64-bit x86_64?
 
-  check-amd64-only.py --root /path/to/image/root
-  check-amd64-only.py --explain        the rules, in words
+  test-arch.sh --root /path/to/image/root
+  test-arch.sh --explain        the rules, in words
 
 `base-image`: the image SHALL carry no 32-bit code. Every ELF file under the
 image root SHALL be `ELFCLASS64` for the `EM_X86_64` machine, and the image SHALL
@@ -13,7 +16,7 @@ as nobody adds the old libraries.
 Two bytes answer the question, and both are at a fixed offset in the first
 twenty: `EI_CLASS` at byte 4 (`1` = 32-bit, `2` = 64-bit) and `e_machine` at
 bytes 18-19 (`62` = `EM_X86_64`). `readelf` is not consulted — it answers
-`check-no-systemd.py`'s question, which is which libraries a binary names, and
+`test-all.sh no-systemd`'s question, which is which libraries a binary names, and
 that question has no fixed offset. Here a 20-byte read per file is the whole
 scan, and the test needs no binutils to prove the classification.
 

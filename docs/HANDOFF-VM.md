@@ -70,5 +70,5 @@ phases.
 ## What is on it
 
 `/mnt/lfs` is the LFS tree and `/mnt/lfs/logs` holds one log per phase; the build
-orchestrator (`scripts/build/build.py`) drives it and `phases.toml` says what is
+orchestrator (`scripts/build/build-rootfs.sh`) drives it and `phases.toml` says what is
 due. `docs/BUILD-LOG.md` is the running record of what each phase did.

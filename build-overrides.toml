@@ -1,6 +1,6 @@
 # build-overrides.toml — where this build deviates from the book's text, and why.
 #
-# `scripts/build/build.py` runs the commands on the pinned edition's pages. This
+# `scripts/build/build-rootfs.sh` runs the commands on the pinned edition's pages. This
 # file is the only place a deviation is allowed, and it is read into the log: a
 # page that was not run verbatim says so, with the reason, in the same record as
 # the pages that were.
@@ -17,8 +17,8 @@
 # --- which tarball a page builds -------------------------------------------
 # Eight pages cite more than one source: GCC's page unpacks GMP, MPFR and MPC
 # into the GCC tree, Python's, Tcl's and SQLite's pages unpack documentation
-# beside the source, and the udev page has three tarballs. `build.py` refuses to
-# pick one — the order `derive-base-lock.py` wrote base.lock in is not a decision
+# beside the source, and the udev page has three tarballs. `build-rootfs.sh` refuses to
+# pick one — the order `build-rootfs.sh derive-base-lock` wrote base.lock in is not a decision
 # — so each is named here. The other tarballs are still unpacked; that is done by
 # the page's own printed commands, which run verbatim.
 [page."chapter05/gcc-pass1.html"]
@@ -77,7 +77,7 @@ archive = "systemd-259.1.tar.gz"   # udev ships inside the systemd tarball; udev
 [devices]
 # The book writes `/dev/<xxx>` and says "replace with the name of the LFS
 # partition". Here it is replaced from one place: the build guest's second
-# virtio disk, created by `vm-host.sh disk 60G`. At the first boot test the disk
+# virtio disk, created by `scripts/build/run-qemu.sh disk 60G`. At the first boot test the disk
 # is the only disk attached and becomes /dev/vda, which is why the fstab this
 # build writes addresses the root filesystem by UUID and not by a name that
 # belongs to whichever disk happens to be first.
@@ -194,14 +194,27 @@ next block. A rule for blocks containing `...` would be wrong: that next block i
 a real `sed` whose replacement text is literally `(...)`.
 """
 
+[page."chapter08/shadow.html".block_subst."10"]
+"passwd root" = "passwd -d root"
+
 [page."chapter08/shadow.html"]
-skip_blocks = [10]
 note = """`passwd root` reads the password from a terminal with echo off. There is
 no password for this script to supply and inventing one silently is not its
-decision to make, so the last block of the chapter is a human step: the book is
-asking whoever is at the keyboard to choose a secret. Everything the build itself
-needs — the toolchain, the test suites, the later chapters' chroot work — is
-installed by block 9.
+decision to make — until the chapter ends and the first-boot phase makes the
+decision for the whole build: its login test sends the secret this build chose
+for root, which is the empty one (`boot.root_password`'s default), and the
+machine it boots is a trusted LFS console, the book's own convention for the
+system it builds. So the block becomes `passwd -d root`, the unattended form of
+leaving the password empty: root has no secret, and the trust that implies is
+scoped the way the system already scopes it, by `/etc/securetty` — the file the
+theend page grows with the serial line, which is the only line this machine has.
+Left to run as written, the block is also a no-turn: with no terminal to read
+from, `passwd` gets end-of-file and changes nothing, and shadow keeps the `x`
+that `pwconv` copied from `/etc/passwd` — a hash nothing can answer, which is
+what the boot test hit as `Login incorrect`.
+
+Everything the build itself needs before this — the toolchain, the test suites,
+the later chapters' chroot work — is installed by block 9.
 """
 
 [page."chapter08/bash.html"]
@@ -357,7 +370,17 @@ done
 [ -z "$bad" ] || { echo "kernel configuration did not hold:$bad" >&2; exit 1; }
 scripts/config --state DRM_PANIC_SCREEN > /dev/null
 grep -E "^CONFIG_DRM_PANIC_SCREEN=" .config > /dev/null || { echo "CONFIG_DRM_PANIC_SCREEN not set" >&2; exit 1; }
-''' 
+'''
+
+[page."chapter10/kernel.html".block_subst."6"]
+"cp -iv" = "cp -fv"
+
+[page."chapter10/kernel.html".block_subst."7"]
+"cp -iv" = "cp -fv"
+
+[page."chapter10/kernel.html".block_subst."8"]
+"cp -iv" = "cp -fv"
+ 
 
 [page."chapter10/kernel.html"]
 skip_blocks = [5]
@@ -396,6 +419,14 @@ Last, the list is a requirement, so the block asks the resulting `.config` wheth
 each entry held, and says which one did not. `make olddefconfig` is allowed to
 refuse an option for a dependency the page did not mention; that is exactly the
 news worth failing on rather than discovering at boot.
+
+Blocks 6–8 copy the kernel image, System.map and .config into /boot with the
+book's `cp -iv`. The `-i` is the book asking a person to confirm overwriting an
+existing file, which a page has no keyboard to give. On a first run nothing
+exists and the flag is inert; on any rerun of this phase — the rollback that
+happened before the first-boot test is exactly that case — the prompt is the
+end of the page, because the answer would have to come from a pipe. `cp -fv`
+is the same copy that refuses no one.
 """
 
 # The book's own instruction for this page is “replace <xxx> with the name of the
@@ -404,11 +435,116 @@ news worth failing on rather than discovering at boot.
 # overrides above say so (“At the first boot test the disk is the only disk
 # attached and becomes /dev/vda”), and a root line naming a disk that is not
 # there, with fsck order 1, is a boot that stops. So the two device names become
-# `/dev/disk/by-uuid/…`, resolved by `blkid` when the page runs, which is the
+# `UUID=…`, resolved by `blkid` when the page runs, which is the
 # book's file with the book's instruction applied to a machine whose disk names
 # move. The heredoc loses its quotes so the shell can expand them; nothing else in
 # the file is special to the shell.
 [page."chapter10/fstab.html".block_subst."1"]
 'cat > /etc/fstab << "EOF"' = 'cat > /etc/fstab <<EOF'
-"/dev/vdc1     /            ext4    defaults            1     1" = "/dev/disk/by-uuid/$(blkid -s UUID -o value /dev/vdc1) / ext4 defaults 1 1"
-"/dev/vdc2     swap         swap     pri=1               0     0" = "/dev/disk/by-uuid/$(blkid -s UUID -o value /dev/vdc2) swap swap pri=1 0 0"
+"/dev/vdc1     /            ext4    defaults            1     1" = "UUID=$(blkid -s UUID -o value /dev/vdc1) / ext4 defaults 1 1"
+"/dev/vdc2     swap         swap     pri=1               0     0" = "UUID=$(blkid -s UUID -o value /dev/vdc2) swap swap pri=1 0 0"
+
+# The grub page's three blocks are: build a rescue ISO and burn it to a CD-RW,
+# install the boot loader on the disk the book's machine calls sda, and write a
+# grub.cfg for a GPT disk whose root is the second partition of that disk.
+[page."chapter10/grub.html"]
+skip_blocks = [1]
+note = """`grub-mkrescue --output=grub-img.iso && xorriso -as cdrecord -v dev=/dev/cdrw
+blank=as_needed grub-img.iso` is the page's alternative for a machine that boots
+from a CD: it builds a rescue image and writes it to a CD-RW drive. There is no
+`/dev/cdrw` in this build guest — the only optical device is the host's read-only
+`sr0` — and `xorriso` is not installed, so the block exits 127 and the page stops
+before the block that installs a boot loader at all.
+
+`grub-install /dev/sda` names the book's disk; this build's LFS disk is `/dev/vdc`
+while the build guest runs, which is the `LFS_DISK` the partitioning and fstab
+overrides already use. The chroot has only the `i386-pc` platform installed, so
+the default target is the BIOS one the MBR partition table wants.
+
+The grub.cfg block is the book's own “adjust this to your system”: `insmod
+part_gpt` becomes `part_msdos`, because the partitioning override wrote an MBR
+table “so SeaBIOS can boot it”; `set root=(hd0,2)` becomes `(hd0,1)`, because the
+LFS root is the first partition of the disk that is `hd0` at boot; and
+`root=/dev/sda2` becomes `root=PARTUUID=…`, resolved by `blkid` when the page
+runs, for the same reason the fstab override stopped naming disks at all — this
+disk is `vdc` during the build and `vda` when it boots alone, and a kernel
+command line naming the wrong one is a panic before init. It is a PARTUUID and
+not the filesystem UUID the book would use, because this kernel no longer reads
+the book's form: `block/early-lookup.c` resolves `PARTUUID=`, `PARTLABEL=`,
+`/dev/name` or `major:minor` — and nothing in 6.18 resolves a filesystem UUID,
+which the first boot test proved the expensive way (the panic listed the
+partition by its PARTUUID and gave up on the UUID the disk actually carries).
+A PARTUUID is as stable as this table needs to be: the partitioning override
+wrote it once, on a fresh disk, and nothing after it touches the table.
+The heredoc loses its quotes so the
+shell can expand it; nothing else in the file is special to the shell.
+
+`console=ttyS0,115200` is not the book's: the book's system is watched on a
+graphics console nobody in this build has. The first-boot phase talks to the
+machine over its serial line, and the line is a dead wire without both ends of
+it — the kernel's console and a getty on it, the latter added by the page that
+writes this system's release files, because that is the page of the phase that
+tests the boot, and it runs before the boot is tested.
+"""
+
+[page."chapter10/grub.html".block_subst."3"]
+'cat > /boot/grub/grub.cfg << "EOF"' = 'cat > /boot/grub/grub.cfg <<EOF'
+"insmod part_gpt" = "insmod part_msdos"
+"set root=(hd0,2)" = "set root=(hd0,1)"
+"root=/dev/sda2" = "root=PARTUUID=$(blkid -s PARTUUID -o value /dev/vdc1)"
+"root=PARTUUID=$(blkid -s PARTUUID -o value /dev/vdc1) ro" = "root=PARTUUID=$(blkid -s PARTUUID -o value /dev/vdc1) ro console=ttyS0,115200"
+
+[page."chapter10/grub.html".block_subst."2"]
+"/dev/sda" = "/dev/vdc"
+
+# Chapter 11 is the two pages a person finishes with: write the release files,
+# then leave the chroot and reboot. The phase that follows them is the boot, and
+# that is where the phase's evidence is.
+[page."chapter11/theend.html"]
+context = "chroot-root"
+post = """ln -sfv agetty /etc/init.d/agetty.ttyS0
+printf 'BAUD_RATE="115200"\nSERIAL_TERM_TYPE="vt100"\n' > /etc/conf.d/agetty.ttyS0
+rc-update add agetty.ttyS0 default
+grep -qx ttyS0 /etc/securetty 2>/dev/null || echo ttyS0 >> /etc/securetty"""
+note = """Three files written into the new system — /etc/lfs-release, /etc/lsb-release
+and /etc/os-release. The phase's own context is `lfs-boot`, which is the machine
+already started from the disk; these are written before the disk is started, in
+the chroot the book has been writing to all along, which is the same inode the
+booted system reads. Nothing about the block cares which side of the boot it is
+typed on; the phase's context is about the boot, and this page is not.
+
+The page also gets a serial getty, which the book does not install: the book's
+new system is watched on a graphics console, and this build has none, because
+the only channel into the machine the phase boots is the serial line the runner
+put there. Without a getty on `ttyS0` the kernel prints its boot and the line
+goes quiet; with one, it prints `login:` and the phase's exit criterion — the
+machine boots and root logs in — has something to be true of.
+
+The getty is only half of the serial login. `agetty` will offer root a shell
+without a password only on a tty it considers secure — one named in
+`/etc/securetty` — and the book's file names `tty1` through `tty6` and the
+console, not a serial line. On `ttyS0` it asks for the password root does not
+have and the line ends in `Login incorrect`, which is what the first attempt at
+the boot test showed after a fully successful boot. So the line joins the file
+beside the getty, with the same guard the getty's update needs: idempotent,
+because this page runs on a disk that may already be past it.
+"""
+
+[page."chapter11/reboot.html"]
+context = "host-root"
+skip_blocks = [1, 2, 3, 4]
+note = """`logout`, then the `umount`s that take the virtual filesystems and $LFS apart
+so the machine can be rebooted into the new system. This build has no chroot
+session to leave: every page runs in a `chroot` the runner starts and reaps by
+itself, and the filesystems the page unmounts are re-mounted by the runner before
+any phase that needs them. What the page is really asking for — the disk booted
+with the builder's disk gone — is the phase's exit criterion, and it is tested by
+booting, not by unmounting by hand.
+
+The page's context is the phase's only because the page has nothing left to run:
+with every block skipped the script is an empty shell, and an empty shell needs
+a context that the runner can actually start, which the phase's own `lfs-boot`
+is not, because the machine it names has no way in before it is booted.
+`host-root` runs the empty shell on the builder while the boot is still ahead of
+it; what the shell does there is nothing, and that is the point.
+"""

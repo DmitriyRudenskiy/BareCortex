@@ -1,7 +1,7 @@
 # base.lock — derived, do not edit by hand.
 # Derived from: LFS 13.0-openrc
 # Source:       https://www.linuxfromscratch.org/~zeckma/openrc/lfs/13.0/chapter03/packages.html
-# Derivation:   scripts/build/derive-base-lock.py
+# Derivation:   scripts/build/build-rootfs.sh derive-base-lock
 # Checksums:    the MD5 column of that table — the book publishes MD5,
 #               not SHA-256, so this file carries MD5 and says so.
 # Remote:       the origin of the URL the book publishes for the archive.

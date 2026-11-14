@@ -2,7 +2,7 @@
 #
 # Why a file and not a table in a document: `init-system` requires the inventory
 # to be "enforced by a command that fails when a service file has no entry", and
-# a command cannot read a paragraph. `scripts/build/check-services.py` reads this.
+# a command cannot read a paragraph. `scripts/build/tests/test-all.sh services` reads this.
 #
 # Why the runlevel lives here at all: an init script does not contain the
 # runlevel it runs at. `rc-update add <name> <runlevel>` is a separate act —

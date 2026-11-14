@@ -137,7 +137,7 @@ Nothing below is decided by this file. Each line names the owner and stops.
 
 | Blocked | Needs | Owner |
 |---|---|---|
-| All four binaries | ~~A build host to install onto~~ — a disposable one now exists (`scripts/build/vm-host.sh`), so what remains is the phase that installs them, not the machine | `build-orchestration` 0.1, 0.3 |
+| All four binaries | ~~A build host to install onto~~ — a disposable one now exists (`scripts/build/run-qemu.sh`), so what remains is the phase that installs them, not the machine | `build-orchestration` 0.1, 0.3 |
 | `bmc-health`, `bmc-fan`, `bmc-vram` | Fields verified 2026-11-11 (below). Remaining: a **rejected** fan write observed being reported, which needs a write, which needs root | `maintenance-and-updates` 6.3, 7.6; `gpu-stack` 7.4 |
 | `bmc-run` | Whether tmux is the session mechanism at all, and where the job record lives | `userspace-and-ml-stack` 0.7, 6.3 |
 | `bmc-fan` as a policy | Threshold source, interval, and the state the fans park in when the temperature read fails. Measurement bears on this: `fan.speed` reads **0 at idle** on real cards, so "0 %" is a normal reading and not a fire | `gpu-stack` 7.1–7.3 |
@@ -192,7 +192,7 @@ Not passing, because they need a machine:
 - [x] the `(gpu)` field verification in section 6 — performed 2026-11-11 against
       driver 580.159.03, where it corrected two assumptions the code had made
 
-The machine for the first three now exists: `scripts/build/vm-host.sh` starts a
+The machine for the first three now exists: `scripts/build/run-qemu.sh` starts a
 disposable KVM guest — Debian 13.7, 8 vCPU, 89 G free, passwordless root, its
 whole disk a qcow2 file — which is what `build-orchestration 0.3` and design D10
 turned on. Those three lines are blocked on the phases being written, not on

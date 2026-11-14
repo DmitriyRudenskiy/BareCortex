@@ -77,7 +77,7 @@ in the page that needs it:
 - `-D logind=false -D vconsole=false` — stops udev rules for components that are
   not installed.
 
-`scripts/build/check-no-systemd.py --root <image>` is the command behind the
+`scripts/build/tests/test-all.sh no-systemd --root <image>` is the command behind the
 claim: it reads the dynamic section of every ELF file in the image, plus
 `etc/pam.d/*` and `etc/nsswitch.conf`, and fails naming the file and the library
 for any runtime resolution of `libsystemd*`, `libelogind*`, `libnss_systemd*` or
@@ -139,7 +139,7 @@ does not start (`openrc-run(8)`), so the fan service cannot come up beside a
 missing persistence daemon and report a healthy boot.
 
 The same inventory as data, with each row's failure text and owner, is
-`openrc/services.toml`, which `scripts/build/check-services.py` enforces; this
+`openrc/services.toml`, which `scripts/build/tests/test-all.sh services` enforces; this
 section is the ordering and the consequence, which a check cannot read.
 
 One dependency reaches into the open question at the end of this file:

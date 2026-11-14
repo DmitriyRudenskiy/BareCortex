@@ -11,7 +11,7 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).parent
-CHECK = HERE / "scripts/build/check-base-lock.py"
+CHECK = HERE / "scripts/build/tests/test-all.sh"
 MAP = HERE / "class-map.toml"
 
 GOOD = """\
@@ -35,7 +35,7 @@ def run(lock_text):
     with tempfile.TemporaryDirectory() as tmp:
         lock = pathlib.Path(tmp) / "base.lock"
         lock.write_text(lock_text)
-        r = subprocess.run([sys.executable, str(CHECK), "--lock", str(lock),
+        r = subprocess.run([sys.executable, str(CHECK), "base-lock", "--lock", str(lock),
                             "--map", str(MAP)], capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
 

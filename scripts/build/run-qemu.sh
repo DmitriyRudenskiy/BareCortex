@@ -16,18 +16,18 @@
 # the physical host and `(build)` work happens here — the two classes
 # gpu-stack's scope note already separates.
 #
-#   ./vm-host.sh seed        build the cloud-init seed (new instance-id each run)
-#   ./vm-host.sh start       start the guest, forwarding 127.0.0.1:2222 -> :22
-#   ./vm-host.sh wait        wait until ssh answers
-#   ./vm-host.sh sh <cmd>    run a command as bct (password from .pw, askpass)
-#   ./vm-host.sh stop        kill the guest, waiting for the disk lock to free
-#   ./vm-host.sh grow 64G    stop, enlarge the qcow2, grow the guest filesystem
-#   ./vm-host.sh disk 60G    create the LFS disk (/dev/vdb in the guest)
-#   ./vm-host.sh snapshot t  freeze the LFS disk as checkpoint t, continue on a copy
-#   ./vm-host.sh rollback t  discard the current LFS disk, resume from checkpoint t
-#   ./vm-host.sh prune       delete checkpoints no image is built on (--do to actually do it)
-#   ./vm-host.sh boot-lfs    boot the LFS disk alone — the first-boot test
-#   ./vm-host.sh console     tail the boot console
+#   ./run-qemu.sh seed        build the cloud-init seed (new instance-id each run)
+#   ./run-qemu.sh start       start the guest, forwarding 127.0.0.1:2222 -> :22
+#   ./run-qemu.sh wait        wait until ssh answers
+#   ./run-qemu.sh sh <cmd>    run a command as bct (password from .pw, askpass)
+#   ./run-qemu.sh stop        kill the guest, waiting for the disk lock to free
+#   ./run-qemu.sh grow 64G    stop, enlarge the qcow2, grow the guest filesystem
+#   ./run-qemu.sh disk 60G    create the LFS disk (/dev/vdb in the guest)
+#   ./run-qemu.sh snapshot t  freeze the LFS disk as checkpoint t, continue on a copy
+#   ./run-qemu.sh rollback t  discard the current LFS disk, resume from checkpoint t
+#   ./run-qemu.sh prune       delete checkpoints no image is built on (--do to actually do it)
+#   ./run-qemu.sh boot-lfs    boot the LFS disk alone — the first-boot test
+#   ./run-qemu.sh console     tail the boot console
 #
 # From outside the physical host:  ssh -J <host> -p 2222 bct@127.0.0.1
 set -e
@@ -169,16 +169,27 @@ rollback() {
 
 # The first-boot test is the LFS disk with nothing else attached: a system that
 # boots only while its builder's disk is present is not bootable.
+#
+# The serial console is a socket and not the file `start` uses, because the test
+# has to type: the system under test prints `login:` and waits for a user, and a
+# console that can only be read can only watch it wait. A unix socket and not a
+# telnet one, because qemu's telnet backend negotiates and a driver that wants
+# bytes does not need a second protocol in the way. `logfile` still writes the
+# whole transcript where the read-only version wrote it, including whatever the
+# driver never waited long enough to see.
+CONSOCK=$VM/console.sock
+
 boot-lfs() {
   stop
+  rm -f $VM/console.log $CONSOCK
   $QEMU -daemonize -pidfile $VM/vm.pid -D $VM/qemu.log \
     -m ${BC_MEM:-8192} -smp ${BC_SMP:-8} -machine q35 -accel kvm -cpu host \
     -L $P/usr/share/qemu \
     -boot order=h -drive if=virtio,file=$VM/lfs.qcow2 \
     -netdev user,id=n0,hostfwd=tcp:127.0.0.1:${PORT}-:22 \
     -device virtio-net-pci,netdev=n0,romfile= \
-    -display none -serial file:$VM/console.log
-  echo "booting the LFS disk; console: $VM/console.log"
+    -display none -serial unix:$CONSOCK,server=on,wait=off,logfile=$VM/console.log
+  echo "booting the LFS disk; console: $CONSOCK, log: $VM/console.log"
 }
 
 stop() {

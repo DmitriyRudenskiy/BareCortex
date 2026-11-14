@@ -96,7 +96,7 @@ contradicts all three:
   does `usr/bin/supervise-daemon`, and OpenRC ships `usr/lib64/security/pam_openrc.so`,
   which links back into `librc.so.1`. Taking this base means taking PAM or
   relinking 65 binaries.
-- **systemd.** `scripts/build/check-no-systemd.py` fails the build when any binary
+- **systemd.** `scripts/build/tests/test-all.sh no-systemd` fails the build when any binary
   resolves a systemd library at runtime, and it reads `DT_NEEDED` rather than
   strings because udev is built from the systemd tarball on purpose. **12 binaries
   in this stage3 resolve `libsystemd-shared-260.so`** — `udevadm`, `systemd-hwdb`,
@@ -115,7 +115,7 @@ and 292 packages against Alpine's 8.4 MB and 16, with a compiler and a PAM story
 already in the way. The base stays LFS 13.0-openrc and `base.lock` does not change.
 
 What it leaves behind is one rule with a command behind it — the image carries no
-32-bit code, `scripts/build/check-amd64-only.py` fails when it does — and the
+32-bit code, `scripts/build/tests/test-arch.sh` fails when it does — and the
 measurement that shows the rule is free. The first real test of it was the NVIDIA
 driver, and it passes for the price of one flag: the 580.196.07 `.run` carries 35
 32-bit ELF files (392 MB, all under `32/`), and `nvidia-installer --help` names

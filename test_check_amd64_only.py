@@ -6,7 +6,7 @@ Exit 0 = the header classification, the multilib directory rule, the refusal to
 scan nothing, and the refusal to pass an unclassifiable object all behave. The
 check reads twenty bytes per file, so every case here is a crafted header: no
 built image and no binutils are needed to prove the decision. Proving the image
-itself passes is a separate thing — `check-amd64-only.py --root <stage3>` in
+itself passes is a separate thing — `scripts/build/tests/test-arch.sh --root <stage3>` in
 `openspec/changes/amd64-only-userspace/tasks.md` 2.3.
 """
 
@@ -18,8 +18,9 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).parent
-SPEC = importlib.util.spec_from_file_location(
-    "scan", HERE / "scripts/build/check-amd64-only.py")
+from importlib.machinery import SourceFileLoader
+SPEC = importlib.util.spec_from_loader(
+    "scan", SourceFileLoader("scan", str(HERE / "scripts/build/tests/test-arch.sh")))
 scan = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(scan)
 
@@ -75,7 +76,7 @@ def main():
         check("a lib32 directory was missed",
               any("lib32" in f and "multilib" in f for f in found))
 
-        r = subprocess.run([sys.executable, str(HERE / "scripts/build/check-amd64-only.py"),
+        r = subprocess.run([sys.executable, str(HERE / "scripts/build/tests/test-arch.sh"),
                             "--root", str(root)], capture_output=True, text=True)
         # elf=5: the count is files read, not files cleared — the offenders are
         # in it, which is what makes elf=0 on a real image root the alarm.
@@ -92,7 +93,7 @@ def main():
         check(f"a symlink to an ELF file was counted as another object ({elfs})",
               elfs == 1 and found == [])
 
-    r = subprocess.run([sys.executable, str(HERE / "scripts/build/check-amd64-only.py")],
+    r = subprocess.run([sys.executable, str(HERE / "scripts/build/tests/test-arch.sh")],
                        capture_output=True, text=True)
     check("scanning with no --root passed",
           r.returncode != 0 and "no --root" in r.stderr)
@@ -100,7 +101,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         empty = pathlib.Path(tmp)
         (empty / "readme.txt").write_text("no binaries here\n")
-        r = subprocess.run([sys.executable, str(HERE / "scripts/build/check-amd64-only.py"),
+        r = subprocess.run([sys.executable, str(HERE / "scripts/build/tests/test-arch.sh"),
                             "--root", str(empty)], capture_output=True, text=True)
         check("a tree of no ELF files was not reported as elf=0",
               r.returncode == 0 and "elf=0" in r.stdout)
