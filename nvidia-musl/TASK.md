@@ -108,6 +108,18 @@ GSP-прошивки. Карта порта на Alpine: сборка модул
 bwrap + свежий glibc-rootfs (Ubuntu 24.04/Debian 13 base или распакованный CUDA-образ),
 бинды `/dev/nvidia*`, `/proc/driver/nvidia`, `/sys`; альтернатива из гиста — Flatpak
 GL-расширения (для графики). Артефакт: пошаговый план fallback (подход **A**).
+→ ВЫПОЛНЕНО: `report/04-study-void-gist.md`. Гист = README + один патч void-packages
+(`nvidia-dkms-standalone-580.126.18`, та же ветка 580). Его тезис подтверждён и снят на
+нашу версию: ядровые модули от libc не зависят, а `nvidia-modprobe` собирается из
+апстрим-исходников — все семь файлов 580.196.07 проходят `gcc -fsyntax-only` против
+заголовков musl 1.2.6-r6 из Alpine 3.25 (замер). Карта порта: DKMS → **akms 0.3.0-r0**
+(`AKMBUILD` c `built_modules modname modver` + своя `build()`, потому что дефолтный
+`akms-build` не передаёт `KERNEL_UNAME`/`SYSSRC`); пути udev/modprobe.d/modules-load.d
+совпадают с Void (eudev 3.2.14-r8); tegra-bpmp патч нужен и нам (в 580.196.07 include
+`<soc/tegra/bpmp.h>` по-прежнему без `#if`); `nvidia-peermem` не берём; `nvidia-persistenced`
+собрать нечем (tar.gz 404, в `.run` только init-скрипты) → бинарник + gcompat.
+Flatpak-альтернатива на Alpine 3.25 закрыта: пакета flatpak нет (есть в 3.22/community и
+edge/community) → jail на bwrap 0.13.1-r0, пошаговый план (8 шагов) в отчёте §5.
 
 **1.4. MuslMan.** https://github.com/apiwo/MuslMan — построчный разбор `muslman`: bwrap-флаги
 (сборка без сети), извлечение `.run`, раскладка `/opt/muslman`, patchelf interpreter/rpath,

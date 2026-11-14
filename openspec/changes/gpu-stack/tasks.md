@@ -40,6 +40,12 @@ Scope note: nothing here runs on the **target**. Markers mean the classes in `ta
 ## 2. Component inventory and `base.lock` entries
 
 - [ ] 2.1 Write the component table: kernel module, userspace driver, CUDA Toolkit, cuDNN, NCCL, `nvidia-persistenced` — source URL, licence, provenance class, install document
+      Measured 2026-11-14, and it changes one row in advance: for 580.196.07 there is **no
+      `nvidia-persistenced` source tarball** (`nvidia-persistenced-580.196.07.tar.gz` → 404,
+      and the `.run` ships `nvidia-persistenced-init.tar.bz2` containing only `install.sh` and
+      systemd/upstart/sysv templates), so that component can only be `binary-distribution`.
+      `nvidia-modprobe`, by contrast, has a source tag and its seven files compile against musl
+      headers — `source-built` is available for it. Table and commands: `nvidia-musl/report/04-study-void-gist.md` §3
 - [x] 2.2 Added to `class-map.toml`: `source-built` requires `name`, `version`, `url`, `md5`, `pages`; `binary-distribution` requires those plus `licence`, `doc`, `installed_files` — the file set a vendor installer writes outside the build's view, without which an image build cannot tell installed files from unaccounted ones; `binary-authenticated-fetch` requires `name`, `version`, `md5`, `licence`, `doc`, `supplied_dir`, `supplied_name`, the last two being what an operator is told to place and name. Each row names `gpu-stack` as its owner. `scripts/build/check-base-lock.py` is the "whatever reads it": it reads the rows and their `requires` from the map, so the count is nowhere written down, and it prints `class: binary-distribution owner=gpu-stack entries=0` — the class exists, its fields are known, and nothing satisfies it yet, which is the red state and is visible in the line
 
 - [ ] 2.3 Add `base.lock` entries for each binary component, with artifact name and checksum

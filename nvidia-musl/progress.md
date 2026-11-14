@@ -88,12 +88,41 @@ Open (operator):
 - Alpine facts for later tasks: no `libglvnd` anywhere (APKINDEX 3.22 main+community, 3.25
   main; aports master 404 for both main/ and community/), mesa built without `-Dglvnd`, no
   `egl-wayland`; `gcompat 1.1.0-r4` source has neither `dladdr1` nor `_IO_2_1_stdout_`;
-  `akms 0.3.0-r1`, `linux-firmware-nvidia`, musl 1.2.6-r6 (3.25) / 1.2.5-r13 (3.22).
+  `akms 0.3.0-r0`, `linux-firmware-nvidia`, musl 1.2.6-r6 (3.25) / 1.2.5-r13 (3.22).
 - Bonus for `gpu-stack` 1.5 and Приложение А: `NVIDIA-Linux-x86_64-580.196.07-no-compat32.run`
   exists — sha256 `2189c47f…`, 72 ELF instead of 107, no `32/`. Prefer it over the installer
   flag: the 32-bit code never reaches the image.
 - Method note: my first reply this session called LFS64 the biggest blocker. It is not —
   that was the symbol-table-only reading. The loader resolves them; do not build a shim.
 
-Next (no GPU needed): Phase 1.3 (Void gist → akms/udev/modprobe map + jail plan),
-1.4 (MuslMan verdict), 1.5 (ZLUDA, opt).
+2026-11-14 (Phase 1.3 closed):
+- Done: `report/04-study-void-gist.md` (гист sineemore, 580.126.18, Void musl).
+- Its thesis — «kernel modules are libc-independent already, userspace nvidia libraries can
+  live in glibc Flatpak/chroot/container» — is approach A, and it holds for our version:
+  all seven source files of nvidia-modprobe 580.196.07 pass `gcc -fsyntax-only` against
+  Alpine 3.25's musl 1.2.6-r6 headers. That matters because the shipped binary needs
+  `__strdup`, which glibc defines (`T __strdup` + `W strdup`, same address) and musl does
+  not (only `T strdup`), while the upstream sources call plain `strdup`.
+- Port map: DKMS → akms 0.3.0-r0 (`AKMBUILD` with `built_modules modname modver`, and a
+  custom `build()` — akms-build's default `make -C $kernel_srcdir M=$builddir modules`
+  passes neither KERNEL_UNAME nor SYSSRC); udev/modprobe.d/modules-load.d paths match Void
+  (eudev 3.2.14-r8 reads /usr/lib/udev/rules.d); tegra-bpmp patch still needed (580.196.07
+  keeps `#include <soc/tegra/bpmp.h>` unguarded at nv-clk.c:30 and Alpine ships no
+  soc/tegra headers); skip nvidia-peermem; nvidia-persistenced has no source (tar.gz 404,
+  the .run's -init.tar.bz2 is only init scripts) → binary + gcompat.
+- Alpine 3.25 repo facts, corrected: single `main` repo of 6052 packages (community is gone
+  in 3.25 — its directory is empty, 3.22 still has it), `akms 0.3.0-r0` (not r1 as I first
+  wrote), `linux-headers 7.2.1-r0` at /usr/src/linux-headers-$ver, `bubblewrap 0.13.1-r0`,
+  `eudev 3.2.14-r8`, `linux-firmware-nvidia 20261019-r0`. **No flatpak in 3.25** (1.16.1-r0
+  in v3.22/community, 1.18.4-r0 in edge/community) → the gist's Flatpak GL route is closed
+  on our base; the jail is bwrap. Method note: my earlier index file was main-only, so
+  package-absence claims were re-checked against directory listings and aports, not that file.
+- Critique recorded: the gist's udev rule sets MODE=0666 on every nvidia node — our image
+  uses 0660 + group video; `NV_EXCLUDE_BUILD_MODULES=''` builds everything in the tree.
+- Fallback plan (approach A) written as 8 steps: debootstrap/ubuntu-base rootfs in /opt/nv-jail,
+  driver installed *inside* with `--no-kernel-modules`, per-node /dev binds, nvidia-smi +
+  deviceQuery inside, an `nv-jail` wrapper without network by default, persistenced outside
+  (musl side) with its socket bound in, group video instead of 0666, and the rootfs must pass
+  the amd64-only image check (hence -no-compat32.run).
+
+Next (no GPU needed): Phase 1.4 (MuslMan — разбор `muslman`, вердикт), 1.5 (ZLUDA, opt).
