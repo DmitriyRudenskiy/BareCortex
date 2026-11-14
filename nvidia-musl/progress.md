@@ -285,3 +285,19 @@ then the PyTorch rung; and the installer trio (`install.sh`/manifest/
 Next: installer trio packaging `recipes/nvidia-smi.md`; then step 4 —
 PyTorch with CUDA (jail first, per report/04; native wheel is a stretch
 that needs a musl-built torch).
+
+2026-11-14 (installer trio closed — TASK acceptance items shipped):
+- `tools/install.sh` + `tools/uninstall.sh` + `manifest.tsv`: sanitize into
+  `--prefix`, system-visible symlinks in `--syslib` with backup, every path
+  recorded; uninstall reverses the manifest and restores backups. Tested on
+  (gpu) end to end: install (12 manifest entries, 3 backups taken) →
+  `nvidia-smi` table + `devicequery` `cuMemAlloc` rc=0 from the installed
+  prefix → uninstall → system links restored, prefix removed.
+- Ladder status now: **1** modules-from-`.run` — open (pre-installed open
+  580.159.03 on (gpu); the Alpine image still owes this rung); **2**
+  nvidia-smi native — PASS; **3** CUDA cuInit+deviceQuery+alloc — PASS
+  natively (jail unexecuted, deviation on record); **4** PyTorch — pending.
+
+Next: step 4 — PyTorch with CUDA. Jail route per report/04 (official wheels
+are glibc); native route needs a musl-built torch (stretch). Also still
+open: rung 1 on a real Alpine image, and the GL/Vulkan path (D3, 2.0).

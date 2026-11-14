@@ -68,4 +68,10 @@ them in the package manifest instead.
 
 ## Full automation
 
-`tools/run-gpu23.sh` (stages host userspace, sanitizes, runs both passes).
+`tools/install.sh` / `tools/uninstall.sh` — the recipe as a manifested
+installer: sanitizes into `--prefix` (default `/opt/nvidia-musl-exp`),
+creates the system-visible symlinks in `--syslib` (backing up whatever was
+there), records every path in `manifest.tsv`; uninstall reverses the
+manifest and restores backups. Tested on (gpu) 14.11: install → `nvidia-smi`
+table + `cuMemAlloc` rc=0 from the prefix → uninstall → system links
+restored, prefix removed. `tools/run-gpu23.sh` is the raw two-pass probe.
