@@ -1,0 +1,39 @@
+# /etc/conf.d/nccl — the single source of NCCL environment for BareCortex
+# training. Every consumer resolves NCCL_* from here; nothing else.
+#
+# Scope: single node. There is no cluster here, and anything that exists
+# only for multi-node operation (InfiniBand, remote ifname) does not belong
+# in this file — its absence is a statement, not a missing setting.
+#
+# Sourcing rules (design D8):
+# - This file assigns without exporting, per conf.d convention. A
+#   non-exported assignment never reaches the training process, so every
+#   consumer wraps the source:
+#
+#       set -a
+#       . /etc/conf.d/nccl
+#       set +a
+#
+#   Keep the three lines adjacent: anything assigned between them is
+#   exported, and only that.
+# - OpenRC auto-sources conf.d/<name> only for the service named <name>.
+#   There is no service called "nccl", so nothing is sourced here
+#   implicitly and every consumer sources the file explicitly. The cpufreq
+#   service, by contrast, is named after its conf.d file and needs no
+#   source line.
+# - An OpenRC service is not a login shell: /etc/profile.d never reaches
+#   it, which is why the init script sources this file itself instead of
+#   relying on the profile.d shim.
+#
+# Tuning ledger (6.9): one row per variable below, naming the measurement
+# that justifies it and the baseline it beat. A variable with no row is
+# removed. A default is not a finding — NCCL's own default is the baseline,
+# and a line restating it reads like a decision while changing nothing:
+#
+#   # NCCL_DEBUG=WARN  # no-op: WARN is already the default; no measurement
+#
+# (No variables currently: nothing on this node has been measured against a
+# baseline. The network variables this file used to carry in its consumers —
+# NCCL_SOCKET_IFNAME, NCCL_IB_DISABLE, NCCL_SHM_DISABLE, NCCL_NET_GDR_LEVEL,
+# NCCL_P2P_LEVEL — were guesses about hardware not yet checked on this
+# machine, and a guess with no row is removed.)

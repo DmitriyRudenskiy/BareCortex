@@ -41,7 +41,13 @@ start_pre() {
 
     # Set GPU visibility
     export CUDA_VISIBLE_DEVICES="${GPU_IDS}"
-    export NCCL_DEBUG=INFO
+
+    # NCCL environment from the single source (D8). An OpenRC service is not
+    # a login shell, so /etc/profile.d never reaches here; set -a exports
+    # what the conf.d file assigns.
+    set -a
+    [ -r /etc/conf.d/nccl ] && . /etc/conf.d/nccl
+    set +a
 
     einfo "Starting training with GPUs: ${GPU_IDS}"
     einfo "Script: ${TRAINING_SCRIPT}"

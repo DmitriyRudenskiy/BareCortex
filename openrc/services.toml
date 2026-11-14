@@ -77,3 +77,21 @@ for this is `supervise-daemon`, which the pinned edition installs with OpenRC
 Owned by userspace-and-ml-stack group 6; found by base-system-and-init 4.4.
 """
 owner = "userspace-and-ml-stack — group 6 owns the training service's behaviour"
+
+[[service]]
+name = "cpufreq"
+runlevel = "default"
+requires = ["localmount"]
+establishes = """
+The governor write on each CPU: the count is of writes that succeeded
+(echo's exit status), and start() fails with eend 1 when zero of the
+found scaling_governor files accepted the write — which is also the
+answer when CONFIG_CPU_FREQ is off or no driver probed.
+"""
+failure = """
+eend 1 with "no cpufreq scaling_governor found" when nothing is writable to
+begin with, and with "governor write rejected on all N CPUs" when the
+governor is refused. A partial success reports ok/total via einfo and
+still ends 0, so a rejected CPU is visible in the boot log.
+"""
+owner = "honest-scope-and-config-generation group 7 — the D4 decision puts the governor in the init system"

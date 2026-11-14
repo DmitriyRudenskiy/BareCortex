@@ -1,0 +1,46 @@
+#!/sbin/openrc-run
+# Pin every CPU's frequency governor at boot (design D4).
+#
+# The base kernel config sets CONFIG_CPU_FREQ_DEFAULT_GOV_USERSPACE, under
+# which nothing drives the clocks: the box idles at the minimum until
+# something writes a governor. This service is that something. The governor
+# lives in the init system, not the kernel config, because CONFIG_CPU_FREQ
+# must stay on for CPU_THERMAL (the CPU frequency cooling device) on a
+# chassis shared with several GPUs.
+
+name="CPUFreq Governor"
+description="Pin CPU frequency governors to the configured value"
+
+depend() {
+    after localmount
+}
+
+start() {
+    ebegin "Setting cpufreq governor to ${GOVERNOR:-performance}"
+    ok=0
+    total=0
+    for gov_path in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor; do
+        [ -e "$gov_path" ] || continue
+        total=$((total + 1))
+        # Count only a write that succeeded: an unchecked echo lets a
+        # rejected governor (busy, read-only, or unsupported) inflate the
+        # count, and -w would test permission bits, not the write.
+        if echo "${GOVERNOR:-performance}" > "$gov_path" 2>/dev/null; then
+            ok=$((ok + 1))
+        fi
+    done
+    if [ "$total" -eq 0 ]; then
+        eerror "no cpufreq scaling_governor found — CONFIG_CPU_FREQ off or no driver probed"
+        eend 1
+        return 1
+    fi
+    if [ "$ok" -eq 0 ]; then
+        eerror "governor write rejected on all ${total} CPUs"
+        eend 1
+        return 1
+    fi
+    # The count goes through einfo: eend's message argument belongs to the
+    # failure line and a success message printed there is not seen.
+    einfo "governor ${GOVERNOR:-performance} set on ${ok} of ${total} CPUs"
+    eend 0
+}

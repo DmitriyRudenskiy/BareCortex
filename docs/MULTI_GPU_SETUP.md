@@ -49,17 +49,13 @@ observe in this output, not to assume from a variable set in a config file.
 
 ## NCCL Configuration
 
-For optimal multi-GPU communication, set these environment variables:
-
-```bash
-# In your training script or /etc/profile.d/nccl.sh
-export NCCL_DEBUG=INFO
-export NCCL_SOCKET_IFNAME=eth0          # Your network interface
-export NCCL_IB_DISABLE=1                # Disable InfiniBand if not available
-export NCCL_P2P_LEVEL=NVL               # NVLink only — a no-op on this PCIe box
-export NCCL_ALGO=Ring                   # Ring algorithm (or Tree)
-export NCCL_PROTO=Simple                # Protocol
-```
+NCCL environment has one source: `/etc/conf.d/nccl` (installed by
+`ai-stack/cuda/setup_cuda.sh`). Login shells get it from the one-line
+`/etc/profile.d/nccl.sh` shim; the training service and the deploy script
+source the conf.d file directly, because an OpenRC service is not a login
+shell. Add a variable there only with a ledger row naming the measurement
+that justifies it and the baseline it beat — a default is not a finding,
+and a variable with no row is removed.
 
 ## PyTorch Multi-GPU
 

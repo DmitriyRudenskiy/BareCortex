@@ -1,0 +1,11 @@
+# Configuration for the cpufreq service (openrc/init.d/cpufreq).
+#
+# Why this exists: the base config sets CONFIG_CPU_FREQ_DEFAULT_GOV_USERSPACE,
+# and under the userspace governor nothing drives the clocks at boot — the
+# box idles low until a governor is written. Pinning it here (design D4)
+# keeps CONFIG_CPU_FREQ on, which CPU_THERMAL needs, while giving the box
+# predictable clocks.
+#
+# OpenRC auto-sources this file because the service is named "cpufreq";
+# no consumer writes a source line for it.
+GOVERNOR="performance"

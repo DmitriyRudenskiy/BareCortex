@@ -124,9 +124,10 @@ that nothing talks to.
 git clone https://github.com/DmitriyRudenskiy/BareCortex.git /opt/barecortex
 cd /opt/barecortex
 
-# Install kernel config — generated from kernel/fragments/ by
-# kernel/scripts/generate_config.sh (honest-scope-and-config-generation
-# group 3), written to kernel/.config
+# Generate the kernel config from kernel/fragments/ (requires the
+# per-machine target.fragment — see "Collecting the target fragment"
+# above) and install it
+sh kernel/scripts/generate_config.sh /usr/src/linux
 cp kernel/.config /usr/src/linux/.config
 
 # Install OpenRC services
@@ -139,6 +140,7 @@ cp graphics/xorg.conf.d/* /etc/X11/xorg.conf.d/
 # Enable services
 rc-update add nvidia-persistenced default
 rc-update add gpu-fancontrol default
+rc-update add cpufreq default
 rc-update add sshd default
 ```
 

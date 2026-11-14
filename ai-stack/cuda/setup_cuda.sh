@@ -40,15 +40,29 @@ export LIBRARY_PATH="${CUDA_HOME}/lib64:${LIBRARY_PATH}"
 # CUDA compiler flags (optional)
 # export NVCC_PREPEND_FLAGS="-O3"
 
-# NCCL configuration (for multi-GPU training)
-export NCCL_DEBUG=WARN
-# export NCCL_SOCKET_IFNAME=eth0
-# export NCCL_IB_DISABLE=1
-# export NCCL_P2P_LEVEL=NVL
+# No NCCL variables here (D8): the single source is /etc/conf.d/nccl, and
+# the /etc/profile.d/nccl.sh shim below sources it. A variable exported from
+# two places is a variable that can disagree.
 EOF
 
 chmod 644 ${PROFILE_SCRIPT}
 echo "[OK] Created ${PROFILE_SCRIPT}"
+
+# NCCL environment: the conf.d file is the single source; the profile.d
+# file is a one-line shim so login shells and services resolve the same
+# values (D8). Nothing else is written — no NCCL variables in cuda.sh.
+REPO_NCCL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../openrc/conf.d" && pwd)/nccl"
+if [ -f "${REPO_NCCL}" ]; then
+    install -m 644 "${REPO_NCCL}" /etc/conf.d/nccl
+    echo "[OK] Installed /etc/conf.d/nccl"
+else
+    echo "[WARN] openrc/conf.d/nccl not found next to this script — /etc/conf.d/nccl not installed"
+fi
+cat > /etc/profile.d/nccl.sh << 'EOF'
+set -a; [ -r /etc/conf.d/nccl ] && . /etc/conf.d/nccl; set +a
+EOF
+chmod 644 /etc/profile.d/nccl.sh
+echo "[OK] Created /etc/profile.d/nccl.sh (shim for /etc/conf.d/nccl)"
 
 # Create ldconfig entry for CUDA
 echo "${CUDA_INSTALL_DIR}/lib64" > /etc/ld.so.conf.d/cuda.conf

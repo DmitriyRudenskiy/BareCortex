@@ -16,5 +16,6 @@ LOG_DIR="/var/log/ai-training"
 
 # Additional environment variables
 # export CUDA_VISIBLE_DEVICES="0,1"
-# export NCCL_SOCKET_IFNAME="eth0"
 # export OMP_NUM_THREADS=16
+# NCCL environment does not live here: it is sourced from /etc/conf.d/nccl
+# (see openrc/conf.d/nccl) so every consumer resolves the same values.

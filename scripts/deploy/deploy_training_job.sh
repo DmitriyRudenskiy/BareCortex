@@ -52,9 +52,12 @@ echo "[INFO] GPU IDs: ${GPU_IDS}"
 echo "[INFO] Python venv: ${VENV_DIR}"
 echo "[INFO] Log file: ${LOG_FILE}"
 
-# Set environment
+# Set environment (NCCL from the single source, D8 — keep the three lines
+# adjacent so only the file's assignments are exported)
 export CUDA_VISIBLE_DEVICES="${GPU_IDS}"
-export NCCL_DEBUG=INFO
+set -a
+[ -r /etc/conf.d/nccl ] && . /etc/conf.d/nccl
+set +a
 
 # Check GPU availability
 GPU_COUNT=$(nvidia-smi -L | wc -l)
