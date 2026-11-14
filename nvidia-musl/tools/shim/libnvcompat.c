@@ -5,6 +5,7 @@
 
 #include <pthread.h>
 #include <time.h>
+#include <dlfcn.h>
 
 /* RECURSIVE MUTEX INITIALIZERS
  *
@@ -75,4 +76,12 @@ int __nvcompat_mutex_timedlock(pthread_mutex_t *restrict m, const struct timespe
 int __nvcompat_mutex_trylock(pthread_mutex_t *m) {
     patch_mutex_kind(m);
     return pthread_mutex_trylock(m);
+}
+
+/* gcompat 1.1.0 lacks dladdr1 (glibc extension; referenced by
+ * libnvidia-glcore). Delegate to musl's dladdr; extra_info/flags ignored. */
+int dladdr1(const void *addr, Dl_info *info, void **extra_info, unsigned int flags) {
+    (void)extra_info;
+    (void)flags;
+    return dladdr(addr, info);
 }

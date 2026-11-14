@@ -356,3 +356,28 @@ Ladder: 1 open (Alpine image), 2 PASS, 3 PASS, **4 PASS**.
 Next candidates: rung 1 on a real Alpine image (our 580.196.07 payload on
 Chimera), GL/D3 (musl-nvidia + gcompat dladdr1 + shim), or pinned-driver jail
 variant (optional).
+
+2026-11-15 (GL closure on musl: LOADER_OK without external stubs):
+- Measured GL-closure gap (glcore/gpucomp/tls vs musl+gcompat+tree): 11 names
+  unresolved, 10 are LFS64 (loader-internal get_lfs64, not a gap); the one real
+  gap is dladdr1 (glcore). gnu_get_libc_version@GLIBC_2.2.5 resolves via musl
+  version fallback to gcompat's unversioned export — when gcompat is in the
+  graph.
+- Fix in our private layout (D2): dladdr1 added to tools/shim/libnvcompat.c
+  (4-line delegate to musl dladdr; real function, not a stub). Installer picks
+  it up automatically (same source), no installer change.
+- Rebuilt shim with musl gcc in bwrap; GL copies patched (add-needed + rename);
+  all three LOADER_OK under musl-nv ldso + gcompat + shim, no external stubs.
+- Finding: the shim is the gcompat anchor — a bare dladdr1 stub control failed
+  on gnu_get_libc_version because only the shim's NEEDED pulls full gcompat
+  into each lib's graph (confirms the --no-as-needed role, reports 06/07).
+- Finding (open for D3): std::system_error "No error information" SIGABRT in
+  static teardown after LOADER_OK (glcore/gpucomp; tls clean). PRE-EXISTING —
+  reproduces on unpatched glcore with full gcompat. Loader/relocation
+  unaffected; runtime GL question.
+- Report: `report/12-gl-closure-shim-dladdr1.md`.
+
+Ladder: 1 open (Alpine image), 2 PASS, 3 PASS, 4 PASS, **GL-closure loader
+PASS**.
+Next candidates: D3 runtime GL (context/rendering + exit-teardown), rung 1 on
+Chimera (needs window), or pinned-driver jail variant (optional).
