@@ -125,4 +125,53 @@ Open (operator):
   (musl side) with its socket bound in, group video instead of 0666, and the rootfs must pass
   the amd64-only image check (hence -no-compat32.run).
 
-Next (no GPU needed): Phase 1.4 (MuslMan — разбор `muslman`, вердикт), 1.5 (ZLUDA, opt).
+2026-11-14 (Phase 1.4 closed):
+- Done: `report/05-study-muslman.md` (apiwo/MuslMan, line-by-line + measured critique). Verdict:
+  **не годен** as a base; seven things borrowed.
+- Repo reality: created 2026-07-30, last push 2026-08-04, 4 commits, one author, 0 stars,
+  0 issues, no CI, no tests, 1239 lines (`muslman` + `lib/*.sh`).
+- Static blocker (C4): `userspace.sh:92-93` bakes `PT_INTERP=/glibc-compat/lib/ld-linux-x86-64.so.2`
+  and `RPATH=/glibc-compat/lib:…` — `/glibc-compat` is only the bwrap `--ro-bind` target
+  (line 102); `userspace_install` then copies to `/opt/muslman/nvidia` with no second patchelf
+  pass, and nothing in the repo ever creates `/glibc-compat` on the host (`${MUSLMAN_PREFIX:-…}`
+  cannot yield it — empty *and* unset both give `/opt/muslman`, checked in bash). So
+  `muslman status` → `nvidia-smi` fails at execve. Confirm on a live box with
+  `readelf -l /opt/muslman/nvidia/bin/nvidia-smi | grep interpreter`.
+- Their premise is measurably wrong (C1/C2). README: gcompat «doesn't cover nearly enough of the
+  glibc symbol surface». Re-measured on **620.70.06** (downloaded, sha256 = Приложение А pin
+  `29118e3a…afd4b1`, extracted): against musl 1.2.6-r6 + gcompat 1.1.0-r4 the whole 64-bit tree
+  is short only `dladdr1` (2 files) + `__popcountdi2` (2 files) — same as 580. And gcompat ships
+  `lib/ld-linux-x86-64.so.2` (22 728 B static-pie stub) + `libc.so.6 → libgcompat.so.0`; upstream
+  README: the stub «will run, redirecting it to use musl and automatically preloading the gcompat
+  library». So there is nothing to patchelf — their 2.8 MB vendored glibc duplicates a 700 KB
+  base package.
+- TASK's 2.35-vs-620 check: max symbol version required across the entire 64-bit tree of **both**
+  580.196.07 and 620.70.06 is **GLIBC_2.26** → vendored 2.35 suffices, no fresh-rootfs fallback
+  needed. Still EOL (last release 2.35-r1 2023-04-13, repo last push 2024-06-24) and MuslMan
+  verifies **no** checksum/signature anywhere; pinned for us:
+  `glibc-2.35-r1.apk` 2 826 689 B, sha256 `276f43ce9b2d5878422bca94ca94e882a7eb263abe171d233ac037201ffcaf06`.
+- Userspace allowlist takes 42 of 105 ELF files. Dropped and needed: `libnvidia-egl-xcb/-xlib`
+  (EGL/X11 platforms), `libnvidia-egl-wayland2.so.1.0.2` (new in 620), `libnvcuvid`, `libvdpau_nvidia`,
+  `libnvidia-opencl`, `libnvidia-ngx`, `libnvidia-gpucomp`, `libnvidia-nvvm70`, `libnvidia-vksc-core`,
+  `libglxserver_nvidia`, `libcudadebugger`, `nvidia-settings/powerd/xconfig`, and
+  `firmware/gsp_{ga10x,tu10x}.bin` (open module asks for GSP fw via `kernel-open/common/inc/nv-firmware.h`).
+- glvnd configs (C6): both payloads ship `10_nvidia.json`, `10_nvidia_wayland.json`,
+  `15_nvidia_gbm.json`, `20_nvidia_xcb.json`, `20_nvidia_xlib.json`, `nvidia_icd.json`,
+  `nvidia_icd_vksc.json`, `nvidia_layers.json` (+620: `09_nvidia_wayland2.json`). MuslMan writes
+  only two from templates → their hand-built egl-wayland is never advertised to glvnd, and neither
+  meson nor autotools of egl-wayland 1.1.18 installs that json (`dist_pkgdata_DATA` = XML only).
+  Our move: install NVIDIA's own JSONs from the payload, rewrite `library_path` to our prefix.
+  My first suspicion (their Vulkan ICD should point at `libnvidia-vulkan-producer.so`) was WRONG —
+  NVIDIA's own `nvidia_icd.json` says `libGLX_nvidia.so.0`; only `api_version` is stale (1.3.0 vs 1.4.312).
+- Also: they build egl-wayland 1.1.18 / egl-gbm 1.1.2 while the driver ships 1.1.20 / 1.1.3;
+  sandbox has no `--unshare-user` and binds the host `/dev`; `IGNORE_CC_MISMATCH=1` + always
+  `kernel-open` (Приложение А: 580 wants closed `kernel/`).
+- Borrowed (7): `detect_libc` (ld-musl glob + `ldd $(command -v sh)`), `/etc/ld-musl-<arch>.path`
+  (musl `ldso/dynlink.c:1141-1143`), manifest + `.muslman-backup` + `append_line_once`, two-phase
+  sandbox (net only for `apk add`, `--unshare-net` for every compile) with stamp files and download
+  sanity checks, advisory `doctor`, `@@PREFIX@@` templates, dinit unit via `/etc/dinit.d/boot.d`.
+- D-impact: D2 — MuslMan is approach A wearing a musl hat (it ships a glibc, it does not port the
+  userspace), so it is not evidence for full-musl. D1 — both branches are equally cheap at symbol
+  level (GLIBC_2.26 max, `dladdr1` ×2), so D1 stays a kernel-branch question, not a libc one.
+
+Next (no GPU needed): Phase 1.5 (ZLUDA, opt, ≤1 session), then D1/D2/D3 checkpoint + Phase 2 REA.
