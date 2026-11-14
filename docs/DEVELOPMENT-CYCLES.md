@@ -121,9 +121,27 @@ non-x86-64 ELF, and `elf=0` is a failed invocation, not a pass.
 
 Measured, not assumed: Gentoo's nomultilib stage3 is 1 487 ELF files and none
 is 32-bit, and the check agrees with the probe's census at 1 487
-(`docs/GENTOO-AS-BASE.md`). An Alpine x86_64 root has to be run against it
-too — the Alpine probe recorded that its 84 ELF files resolve, not that they
-are all 64-bit.
+(`docs/GENTOO-AS-BASE.md`). The Alpine candidate root passes it too, measured
+2026-11-14: `sh scripts/build/tests/test-arch.sh --root <candidate root>`
+reports `elf=84 findings=0` for a root rebuilt from the pinned minirootfs
+(`alpine-minirootfs-3.24.4-x86_64.tar.gz`, sha256
+`cdaa38cb8de3537967ee5b6c9b6cd00cc962da2b018e6eea48696bb274923012`, published
+and computed equal) plus the 7-package OpenRC closure — all 84 ELF files are
+`ELFCLASS64`/`EM_X86_64`, the census agreeing with the probe's 84
+(`artifacts/handoff-vm/alpine-probe/evidence/ldd.json`). The rebuild ran on
+the laptop because `(build)` is unreachable (cycle 2); the scan reads twenty
+bytes per file and carries no host dependency. Its byte totals sit 59 B under
+the `docs/ALPINE-AS-BASE.md` figures (8 431 400 against 8 431 459 before the
+closure, 9 859 570 against 9 859 629 after) while the path count matches
+exactly (515 + 171 = 686) — the delta is in the base tarball, and settling it
+is task 4.1's probe re-run, not a hand edit of the document.
+
+A zero census is a failed invocation, not a pass: `elf=0` from
+`test-arch.sh` and `binaries=0` from `test-all.sh no-systemd` both exit 0
+today — neither script guards against scanning nothing — so a recorded result
+carries the command and its non-zero count, and a zero count means the scan
+proved nothing. The Alpine record above is the shape of a valid entry:
+`elf=84`, not `rc=0` alone.
 
 ## The mapping — every open change to a cycle
 

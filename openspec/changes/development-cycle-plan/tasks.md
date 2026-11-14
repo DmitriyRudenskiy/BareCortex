@@ -74,8 +74,13 @@ owning change stays in that change.
       `sh scripts/build/tests/test-arch.sh --root <image>` — and record each
       command's counts in the cycle file. This closes `amd64-only-userspace` 2.4
       and is the first real run of all three on one root
-- [ ] 2.3 Record in the cycle file that `elf=0` or `binaries=0` is a failed
+- [x] 2.3 Record in the cycle file that `elf=0` or `binaries=0` is a failed
       invocation and not a pass, with the command that produced the non-zero count
+      — recorded in the invariant section, and it is a rule for the human record:
+      neither script guards the zero case today (`test-arch.sh` and the
+      `no-systemd` scan both exit 0 on an empty census), so a record carries the
+      command and its non-zero count. The Alpine run of 6.2 is the exemplar:
+      `sh scripts/build/tests/test-arch.sh --root <candidate root>` → `elf=84 findings=0`
 
 ## 3. Cycle 2 — the build driven from the build root
 
@@ -147,9 +152,18 @@ owning change stays in that change.
       already measured: Gentoo's nomultilib
       stage3 has 1 487 ELF files and none is 32-bit; the check agrees with the
       probe's census at 1 487
-- [ ] 6.2 Measure, do not assume, that an Alpine x86_64 root passes it — the
+- [x] 6.2 Measure, do not assume, that an Alpine x86_64 root passes it — the
       Alpine probe recorded that its 84 ELF files resolve, not that they are all
       `ELFCLASS64`, so the invariant has to be run against that root too `(build)`
+      — measured 2026-11-14, it passes: the candidate root rebuilt from the pinned
+      minirootfs (sha256 `cdaa38cb…923012`, published and computed equal) plus the
+      7-package OpenRC closure scans `elf=84 findings=0`, all 84 `ELFCLASS64`/
+      `EM_X86_64`, census agreeing with the probe's 84; path count matches exactly
+      (515 + 171 = 686). Two honest notes in the cycle file: the rebuild ran on
+      the laptop because `(build)` is unreachable (the scan reads twenty bytes per
+      file, no host dependency), and its byte totals sit 59 B under the
+      `docs/ALPINE-AS-BASE.md` figures — the delta is in the base tarball and
+      belongs to 4.1's probe re-run, not a hand edit
 
 ## 7. What would make this change worth archiving
 
