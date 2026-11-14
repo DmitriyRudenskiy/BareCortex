@@ -38,6 +38,11 @@ writes are provisional until 7.1 and 7.2 run, and the rows say so, the way
       stack, so the trim phase's position is the rule (after the last consumer,
       before the freeze) and not an index — and name the change that will add the
       phases making the rule resolvable
+- [ ] 0.6 Record the distro-seed numbers a verdict is arguing against if a distro
+      seed is ever on the table, handed here by `amd64-only-userspace` 4.2:
+      337 408 853 B of compiler and 354 996 KiB of `/usr/share` in a
+      1 038 605 377 B base — `docs/GENTOO-AS-BASE.md` §4, measured by the
+      committed probe, not quoted from a release note
 
 ## 1. Read the two sources this change cites, and record what they permit
 
@@ -122,6 +127,15 @@ writes are provisional until 7.1 and 7.2 run, and the rows say so, the way
       Prove it on the real data — `chapter08/tcl.html`, `chapter08/udev.html`, and
       `Python Documentation`'s two pages must all fail, and `chapter08/man-pages.html`
       must pass
+- [ ] 3.10 Know that a working ownership record already exists, handed here by
+      `alpine-as-base` 4.1 and `amd64-only-userspace` 4.2: Alpine keeps
+      `/lib/apk/db/installed`, which maps every installed path to the package
+      that owns it, and Gentoo's stage3 keeps `/var/db/pkg/*/CONTENTS` — both
+      are already read by committed probes (`artifacts/handoff-vm/alpine-probe/`,
+      evidence `apk-installed.minirootfs`). D2 must borrow the format or reject
+      it with that knowledge; it may not stay unaware of it, because "no one can
+      say which files a package owns" is a property of having no package
+      manager, not a law of nature
 
 ## 4. The scan: edges from the image, never by executing it
 

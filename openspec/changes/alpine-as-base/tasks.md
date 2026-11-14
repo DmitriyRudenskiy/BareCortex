@@ -78,8 +78,9 @@ the alternative, and this change records that it is unmeasured.
 
 ## 4. Hand the one useful finding to the change that can use it
 
-- [ ] 4.1 Tell `image-minimisation` that a working ownership record exists and
-      where to look: Alpine keeps `/lib/apk/db/installed`, which maps every
+- [x] 4.1 Tell `image-minimisation` that a working ownership record exists and
+      where to look — recorded as `openspec/changes/image-minimisation/tasks.md`
+      3.10: Alpine keeps `/lib/apk/db/installed`, which maps every
       installed path to the package that owns it, and the probe reads it
       (`evidence/apk-installed.minirootfs`). That change's D2 has to invent the
       equivalent for a tree built by a book with no package manager; it may
@@ -87,9 +88,14 @@ the alternative, and this change records that it is unmeasured.
       "no one can say which files a package owns" is currently asserted in that
       change's proposal as though it were a law of nature rather than a property
       of having no package manager
-- [ ] 4.2 Confirm with `base-system-and-init` that this change changes nothing it
+- [x] 4.2 Confirm with `base-system-and-init` that this change changes nothing it
       owns: the base book stays LFS 13.0-openrc, `base.lock` gains no entries,
-      and `docs/INIT-LAYER.md` is not edited by it
+      and `docs/INIT-LAYER.md` is not edited by it. Verified, not asserted: the
+      change's one work commit, `2c47a4f`, touches only its own artifacts
+      (probe, `docs/ALPINE-AS-BASE.md`, this change's files) — 21 files, no
+      `base.lock`, no `docs/INIT-LAYER.md`, nothing under
+      `openspec/changes/base-system-and-init/` — and the working tree is clean
+      for all three
 
 ## 5. What would make this change worth archiving
 

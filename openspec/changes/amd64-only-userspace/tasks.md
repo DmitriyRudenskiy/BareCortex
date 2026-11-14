@@ -119,16 +119,11 @@ open, because chapters 8–10 are still building.
       `openspec/changes/gpu-stack/tasks.md` 1.5, next to the task that reads the
       installer's options anyway. If a capability turns out to exist only as
       32-bit code, that reopens this change's requirement in `openspec/`
-- [ ] 4.2 Tell `image-minimisation` the two numbers it is arguing against if a
-      distro seed is ever on the table: 337 408 853 B of compiler and 354 996 KiB
-      of `/usr/share` in a 1 038 605 377 B base, and that `/var/db/pkg/*/CONTENTS`
-      is a second ownership record to compare against Alpine's
-      `/lib/apk/db/installed` (both are already read by a committed probe).
-      **Not done, on purpose:** that change is untracked and being written by
-      another agent in this worktree right now, and editing under it would be a
-      merge nobody asked for. The numbers are in `docs/GENTOO-AS-BASE.md` §4 and
-      above; the hand-off is one edit to that change's proposal once it is
-      committed
+- [x] 4.2 Tell `image-minimisation` the two numbers it is arguing against if a
+      distro seed is ever on the table — recorded as `openspec/changes/image-minimisation/tasks.md`
+      0.6 (the numbers) and 3.10 (the second ownership record); the change is
+      tracked and committed now, so the one edit the task was waiting for is in.
+      The numbers are in `docs/GENTOO-AS-BASE.md` §4
 - [x] 4.3 Confirm with `base-system-and-init` that this change touches nothing it
       owns: base stays LFS 13.0-openrc, `base.lock` gains no entries,
       `docs/INIT-LAYER.md` is not edited, and the new check is a second scan
