@@ -238,8 +238,18 @@ Next (no GPU needed): `tools/dlopen-harness.sh` + 2.2-lite run on (build) →
 - PR #6531 head moved to `7b121686e15c` (13.11.2026); TASK's `c2653298` is stale. Shim sources
   (`libnvcompat.c`, `libnvcompat.map`, `check-mutex.py`) fetched from the new head.
 
-Next: 2.3 on (gpu) — `nvidia-smi` + `cuInit` with the kernel module loaded (expect real devices
-instead of rc=100/rc=9), then the installer (`install.sh`/manifest/uninstall) for the lite recipe.
+Installer done the same day: `tools/nv-lite-install.sh` (install/verify/uninstall) +
+`tools/shim/{libnvcompat.c,libnvcompat.map}` (PR #6531 sources). Tested end-to-end in the same
+bwrap Alpine env: install → all five public SONAME names (libcuda.so.1, libnvidia-ml.so.1,
+libnvidia-ptxjitcompiler.so.1, libnvidia-opencl.so.1, libnvcompat.so.0) dlopen with ZERO env,
+`cuInit` rc=100, `nvmlInit_v2` rc=9, nvidia-smi reports "NVML found, no driver"; uninstall
+removes only its own symlinks. Three bugs caught by the run: Alpine ldconfig did not pick up
+/etc/ld.so.conf.d (dropped in favour of a /usr/lib/libnvcompat.so.0 symlink), gcc as-needed
+dropped NEEDED libgcompat.so.0 from the shim (fixed with --no-as-needed), and verify called
+nvidia-smi from PATH instead of the installed path. Report: `report/08-lite-installer.md`.
+
+Next: 2.3 on (gpu) — run the installer on the real Chimera box, load the kernel module,
+expect real devices instead of rc=100/rc=9.
 
 2026-11-14 (2.3 run on (gpu) — LADDER STEP 2 PASSES on stock musl):
 - (gpu) host = `user@192.168.0.86`, **5× RTX 4060 Ti (Ada)**, loaded modules
