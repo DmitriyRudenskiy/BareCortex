@@ -1,5 +1,13 @@
 # 🎮 Multi-GPU Setup Guide
 
+**Scope: single node.** Everything here runs on one machine with several
+GPUs. The multi-node components are not part of this system and are not
+verified: no cluster interconnect, no InfiniBand/RDMA configuration, no
+multi-machine `torch.distributed` launch, no shared filesystem. The DDP
+snippet below is single-node — `mp.spawn` over the local devices, world
+size equal to the local device count — and that is the only form this
+guide supports.
+
 ## Verifying GPU Detection
 
 After installing NVIDIA drivers, verify all GPUs are detected:

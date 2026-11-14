@@ -62,8 +62,16 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     done
 fi
 
+# Verify before reporting: a kill that left a process behind is not a
+# cleanup (D11) — success means no compute process still holds VRAM.
+STILL=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | sort -u)
+if [ -n "${STILL}" ]; then
+    echo "[ERROR] Still holding VRAM: $(echo ${STILL} | tr '\n' ' ')"
+    exit 1
+fi
+
 echo ""
-echo "[OK] VRAM cleanup complete."
+echo "[OK] VRAM cleanup complete: no compute process holds GPU memory."
 nvidia-smi
 
 # Superseded by utils/bmc-vram: dry run by default, targets named on the

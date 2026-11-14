@@ -140,14 +140,32 @@ initialisation delay, and it is not what keeps a fan spinning or a clock pinned.
 
 ## Performance Impact
 
+What this system removes, stated as presence rather than numbers:
+
 | Component | Traditional Distro | BareCortex |
 |---|---|---|
-| Init system | systemd (~50+ services) | OpenRC (~10 services) |
+| Init system | systemd | OpenRC |
 | Display server | Wayland compositor | None / Xorg headless |
 | Container runtime | Docker + containerd | Not present |
 | GPU access | Container passthrough | Direct PCIe |
-| RAM overhead | ~500-800 MB | ~80-120 MB |
-| Boot time | ~15-30s | ~5-8s |
+
+The quantitative claims — RAM at idle, boot time, service count — are
+measurements, not constants, and this document does not carry them. On the
+built system:
+
+```bash
+# how many services are actually up (the count a table would assert)
+rc-status | grep -c 'up'
+
+# RAM at idle, after the services above have settled
+free -m
+
+# boot time is not a dmesg string: timestamp kernel start and first shell
+# and subtract. `uptime -s` says when this boot started, not how long it
+# took, and there is no systemd-analyze here to measure the comparison
+# system with
+uptime -s
+```
 
 ## Naming
 

@@ -166,11 +166,12 @@ nvidia-smi
 # Check CUDA
 nvcc --version
 
-# Check multi-GPU communication
+# Check GPU count
 python -c "import torch; print(torch.cuda.device_count())"
 
-# Run NCCL test (if installed)
-/usr/local/cuda/samples/1_Utilities/deviceQuery/deviceQuery
+# Single-node NCCL check: allreduce across all visible GPUs
+# (exit 2 = not run here — no torch or fewer than two GPUs)
+sh /opt/barecortex/scripts/tests/nccl_p2p_test.sh
 ```
 
 ## Post-Installation

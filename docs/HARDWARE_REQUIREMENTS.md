@@ -21,7 +21,7 @@ For the **production** BareCortex system:
 | RAM | 16 GB | 64 GB+ (depends on model size) |
 | GPU | 1x NVIDIA (Maxwell+) | 2x+ NVIDIA (Ampere/Hopper/Blackwell) |
 | Disk | 50 GB SSD | 500 GB+ NVMe (datasets, checkpoints) |
-| Network | 1 Gbps | 10 Gbps+ (distributed training) |
+| Network | 1 Gbps | 10 Gbps+ (fast dataset and checkpoint transfer; there is no cluster to connect to) |
 
 ## Supported NVIDIA GPU Architectures
 

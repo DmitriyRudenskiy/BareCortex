@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Bare-metal AI compute OS built on LFS + OpenRC</b><br>
-  Optimized for multi-GPU NVIDIA neural network training<br>
+  Optimized for multi-GPU NVIDIA neural network training on a single node<br>
   No Docker. No Wayland. No bloat. Pure performance.
 </p>
 
