@@ -28,14 +28,19 @@ floor_guard() {
 UB_DIR=https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release
 HOSTLIB=/usr/lib/x86_64-linux-gnu
 sb() { # the jail: host driver bound in (no modules inside), nvidia nodes per-node
+	# driver libs and /dev nodes are bound only when present, so setup/torch
+	# work on a host without a GPU (negative control); run needs both.
+	B=""
+	if [ -e "$HOSTLIB"/libcuda.so.580.159.03 ]; then
+		B="$B --ro-bind $HOSTLIB/libcuda.so.580.159.03 $HOSTLIB/libcuda.so.1"; fi
+	if [ -e "$HOSTLIB"/libnvidia-ml.so.580.159.03 ]; then
+		B="$B --ro-bind $HOSTLIB/libnvidia-ml.so.580.159.03 $HOSTLIB/libnvidia-ml.so.1"; fi
+	for n in nvidiactl nvidia-uvm nvidia0 nvidia1 nvidia2 nvidia3 nvidia4; do
+		if [ -e "/dev/$n" ]; then B="$B --dev-bind /dev/$n /dev/$n"; fi; done
 	bwrap --bind "$JAIL" / --proc /proc --dev /dev --dev-bind "$JAIL/tmp" /tmp \
 		--ro-bind /sys /sys --unshare-user --uid 0 --die-with-parent \
 		--ro-bind /etc/resolv.conf /etc/resolv.conf \
-		--ro-bind "$HOSTLIB"/libcuda.so.580.159.03 "$HOSTLIB"/libcuda.so.1 \
-		--ro-bind "$HOSTLIB"/libnvidia-ml.so.580.159.03 "$HOSTLIB"/libnvidia-ml.so.1 \
-		--dev-bind /dev/nvidiactl /dev/nvidiactl \
-		--dev-bind /dev/nvidia-uvm /dev/nvidia-uvm \
-		$(for i in 0 1 2 3 4; do echo --dev-bind /dev/nvidia$i /dev/nvidia$i; done) \
+		$B \
 		"$@"
 }
 

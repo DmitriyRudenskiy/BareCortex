@@ -337,3 +337,22 @@ open: rung 1 on a real Alpine image, and the GL/Vulkan path (D3, 2.0).
 Next: step 4 — PyTorch with CUDA (jail route per report/04; native wheel needs
 musl-built torch). Still open: rung 1 on a real Alpine image (our 580.196.07
 payload on Chimera), GL/Vulkan D3 (needs musl-nvidia + gcompat dladdr1 + shim).
+
+2026-11-15 (step 4 — PyTorch with CUDA: PASS in glibc jail on (build)):
+- Correction: (build) 192.168.0.86 HAS 5x RTX 4060 Ti (since 09.11) with open
+  580.159.03 loaded — earlier "no GPU" assumption was stale; (gpu) 192.168.0.204
+  was offline (timeout) and not needed.
+- Executed the written-but-unexecuted `tools/nv-jail.sh` end to end on (build):
+  setup (ubuntu-base 24.04 + 25 .debs hand-extracted, python 3.12.3) →
+  torch (2.15.0+cu132 + CUDA-13 wheels, ~4GB, disk floor guard held) → run.
+- Positive run in the bwrap jail (host driver bound, no modules inside):
+  `devices: 5`, `gpu0: RTX 4060 Ti`, 1024x1024 CUDA matmul OK, caching
+  allocator live. Approach A (report/04) fully demonstrated on a musl host.
+- Tool fixes: conditional driver/dev binds (works on GPU-less hosts too) and a
+  broken quote in sb() caught by dash -n on first execution.
+- Report: `report/11-pytorch-jail.md`.
+
+Ladder: 1 open (Alpine image), 2 PASS, 3 PASS, **4 PASS**.
+Next candidates: rung 1 on a real Alpine image (our 580.196.07 payload on
+Chimera), GL/D3 (musl-nvidia + gcompat dladdr1 + shim), or pinned-driver jail
+variant (optional).
