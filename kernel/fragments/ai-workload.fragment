@@ -2,13 +2,17 @@
 # explicit pins where the base's value is an inference and not a line in
 # its config.
 #
-# Audited against: Linux v6.12 (6.12.116, 2026-11-08) — the single
-# reference for the D10 gate. A build on any other tree goes through
-# --allow-unaudited-kernel until the re-audit against the kernel the base
-# book ships lands (task 1.4).
+# Audited against: Linux v6.18 (6.18.10, git 955f86d73280, 2026-07-09) —
+# the
+# single reference for the D10 gate. A build on any other tree goes
+# through --allow-unaudited-kernel until the re-audit against the kernel
+# the base book ships lands (task 1.4).
 #
-# `# pin:` comments are marked against x86_64_defconfig; unmarked value
-# lines are deltas or kept values, not asserted one way or the other.
+# Audit method: every symbol verified present in the 6.18.10 Kconfig
+# tree; every line run through the real kconfig (defconfig base ->
+# merge -> olddefconfig) and confirmed effective at its requested value.
+# `# pin:` comments are marked against the resolved 6.18.10 base
+# (x86_64_defconfig + defaults); unmarked value lines are deltas.
 #
 # This is a fragment, not a complete .config: the generator merges it over
 # the base config. The NVIDIA *proprietary* driver is not a Kconfig target
@@ -20,42 +24,49 @@
 CONFIG_SMP=y
 # pin: set by x86_64_defconfig
 CONFIG_NUMA=y
-# pin: set by x86_64_defconfig
+# delta: the base (x86_64_defconfig) selects HZ_1000; 300 Hz is the book's
+# choice — it divides both PAL and NTSC frame rates
 CONFIG_HZ_300=y
-# pin: set by x86_64_defconfig
+# pin: base already y (def_bool X86_64); explicit for visibility
 CONFIG_HPET_TIMER=y
-# The base's explicit CONFIG_PREEMPT_VOLUNTARY=y is kept, not overridden:
-# the throughput benefit of PREEMPT_NONE for training is unmeasured
+# pin: set by x86_64_defconfig — kept, not overridden: the throughput
+# benefit of PREEMPT_NONE for training is unmeasured
+CONFIG_PREEMPT_VOLUNTARY=y
 
 # --- Memory management ---
-# pin: set by x86_64_defconfig
+# delta: the base has THP off; required for large training allocations
 CONFIG_TRANSPARENT_HUGEPAGE=y
-# delta: the base defaults to madvise; always-on for large training
-# allocations
+# pin: the base's choice default is already "always" when THP is on
 CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS=y
-# pin: set by x86_64_defconfig
+# pin: base already y (selected transitively); explicit
 CONFIG_COMPACTION=y
-# pin: set by x86_64_defconfig
+# pin: base already y (selected by COMPACTION/CMA); explicit
 CONFIG_MIGRATION=y
-# pin: set by x86_64_defconfig
+# delta: the base has CMA off
 CONFIG_CMA=y
-# delta: the base enables NUMA balancing; the page-migration jitter is not
-# worth it on a NUMA-attached GPU box — pin per-node with numactl instead
+# pin: the base is already off; kept explicit as a defensive pin — the
+# page-migration jitter is not worth it on a NUMA-attached GPU box; pin
+# per-node with numactl instead
 # CONFIG_NUMA_BALANCING is not set
 
 # --- Bus options (PCI) ---
 # pin: set by x86_64_defconfig
 CONFIG_PCI=y
-# pin: set by x86_64_defconfig
+# pin: base already y
 CONFIG_PCI_MSI=y
-# pin: set by x86_64_defconfig
+# delta: the base has AER off; the base has PCIEPORTBUS on, so this is
+# effective
 CONFIG_PCIEAER=y
-# pin: set by x86_64_defconfig
+# pin: base already y (Kconfig default y)
 CONFIG_PCIEASPM=y
 # delta: force performance mode — stability under heavy GPU load
 CONFIG_PCIEASPM_PERFORMANCE=y
+# delta: SR-IOV BAR re-allocation detection needs SR-IOV itself; added so
+# the pin below is effective (the base has PCI_IOV off)
+CONFIG_PCI_IOV=y
+# delta: stable BAR layout when SR-IOV is enabled
 CONFIG_PCI_REALLOC_ENABLE_AUTO=y
-# Passthrough is out of scope: no VFIO, no PCI_IOV, no PCI_PASID, and no
+# Passthrough is out of scope: no VFIO, no PCI_PASID, and no
 # PCI_STUB — there is nothing to stub without a driver that assigns
 # NVIDIA P2P comes from nvidia_p2p in nvidia.ko, not from a PCI option,
 # and PCI_P2PDMA is absent from the base, so no line is written for it
@@ -66,11 +77,11 @@ CONFIG_PCI_REALLOC_ENABLE_AUTO=y
 # read as a reason to delete it on a large box. The IOMMU driver symbols
 # are redundant pins: =y builds a driver, INTEL_IOMMU_DEFAULT_ON decides
 # activation, and the base leaves that unset, so the base already follows
-# the BIOS
+# the BIOS. Delta: the base has IRQ_REMAP off
 CONFIG_IRQ_REMAP=y
 
 # --- Graphics ---
-# delta: keep the DRM core modular
+# delta: the base builds the DRM core built-in; keep it modular
 CONFIG_DRM=m
 # defensive pin against a future base enabling nouveau: this box runs the
 # proprietary driver, which builds out-of-tree
@@ -79,42 +90,40 @@ CONFIG_DRM=m
 # --- Network (single-node) ---
 # pin: set by x86_64_defconfig
 CONFIG_NET=y
-# pin: set by x86_64_defconfig
+# pin: base already y
 CONFIG_INET=y
-# pin: set by x86_64_defconfig
+# pin: base already y
 CONFIG_TCP_CONG_CUBIC=y
 # pin: set by x86_64_defconfig
 CONFIG_NETFILTER=y
 
 # --- CPU frequency ---
-# explicit pin: x86_64_defconfig does not contain CPU_FREQ — it is enabled
-# only transitively by X86_ACPI_CPUFREQ select CPU_FREQ, so "the base has
-# it" is an inference, and the cpufreq service depends on it
+# pin: the base already enables CPU_FREQ (the x86 cpufreq drivers select
+# it in 6.18); explicit because the cpufreq governor service depends on it
 CONFIG_CPU_FREQ=y
 
 # --- File systems ---
 # pin: set by x86_64_defconfig
 CONFIG_EXT4_FS=y
-# delta: the base builds XFS as a module; built-in for the data filesystem
+# delta: the base has XFS off; built-in for the data filesystem
 CONFIG_XFS_FS=y
-# pin: set by x86_64_defconfig
+# pin: base already y
 CONFIG_TMPFS=y
-# delta: the base builds hugetlbfs as a module; built-in for pinned
-# training memory
+# pin: set by x86_64_defconfig — built-in for pinned training memory
 CONFIG_HUGETLBFS=y
 
 # --- Performance monitoring ---
-# pin: set by x86_64_defconfig
+# pin: base already y (default y if PROFILING); explicit
 CONFIG_PERF_EVENTS=y
 # pin: set by x86_64_defconfig
 CONFIG_PROFILING=y
-# pin: set by x86_64_defconfig
+# pin: base already y (default y if DEBUG_KERNEL); explicit
 CONFIG_FTRACE=y
-# pin: set by x86_64_defconfig
+# delta: the base has FUNCTION_TRACER off
 CONFIG_FUNCTION_TRACER=y
 
 # --- Console escape hatch ---
-# pin: already set by x86_64_defconfig — a pin, not the addition it was
+# pin: set by x86_64_defconfig — a pin, not the addition it was
 # believed to be. No CONFIG_MAGIC_SYSRQ_DEFAULT_ENABLE line: 0x1, the
 # default, already means all functions (sysrq_on_mask), so any explicit
 # value only narrows it
