@@ -14,6 +14,7 @@
   build-rootfs.sh guest <cmd>                run a command in the build guest
   build-rootfs.sh derive-base-lock <url>     re-derive base.lock from an edition (stdout)
   build-rootfs.sh derive-test-expectations   re-derive test-expectations.toml in place
+  build-rootfs.sh derive-readme              re-derive scripts/build/README.md from the build files
 
 Every command executed comes from a page of the pinned edition — the book reader is
 the `book` section inlined below, which is why this file and not a package holds it —
@@ -28,6 +29,72 @@ A phase is `passed` only when every block's exit code was evaluated; a nonzero
 code is a failure unless the page's own text expected it.
 """
 
+# >>> docs
+# # The build tree
+#
+# One directory, one layout: the files here mirror the top level of
+# [gbionescu/build-rootfs](https://github.com/gbionescu/build-rootfs) at
+# `c9fa26adeb66e247afbac33510c9479cf4b89f4a` — the build script, the VM manager,
+# the tests, and this file. The alignment is checked, not assumed:
+# `tests/test-all.sh layout` fails on any file that wears a name the reference
+# does not use, and any file this README does not name.
+#
+# The build runs the pinned LFS 13.0-openrc edition, page by page, against a
+# disposable VM, and keeps receipts. The per-page evidence of an actual run is in
+# `docs/BUILD-LOG.md` and `build-evidence/<phase>/`; this file is the map, not
+# the record.
+#
+# ## build-rootfs.sh
+#
+# The driver. Python behind a shell header (`sh` execs it, python reads the exec
+# line as a string), which is why it can be both `sh build-rootfs.sh run temp-tools`
+# and an importable module — the trust checks import it as `build`.
+#
+# ```
+# sh scripts/build/build-rootfs.sh pages <phase>              # what would run, in book order
+# sh scripts/build/build-rootfs.sh run <phase> [--page P]     # run it, then its criteria
+# sh scripts/build/build-rootfs.sh fetch                      # download and verify base.lock's sources
+# sh scripts/build/build-rootfs.sh resume                     # the next phase that has not passed
+# sh scripts/build/build-rootfs.sh status                     # every phase's record
+# sh scripts/build/build-rootfs.sh guest <cmd>                # run a command in the build guest
+# sh scripts/build/build-rootfs.sh derive-base-lock <url>     # re-derive base.lock from an edition (stdout)
+# sh scripts/build/build-rootfs.sh derive-test-expectations   # re-derive test-expectations.toml in place
+# sh scripts/build/build-rootfs.sh derive-readme              # re-derive scripts/build/README.md from the build files
+# ```
+#
+# Every command executed comes from a page of the pinned edition — the book
+# reader is inlined into this file, which is why this file and not a package holds
+# it — except where `build-overrides.toml` says otherwise, and each such exception
+# is written into the log with the reason the override gives. The device
+# placeholders the book leaves as `<xxx>` are filled from one place, `devices` in
+# that file, so the machine this build runs on is a fact in one file and not in
+# eight pages of shell.
+#
+# ### The phases
+#
+# @@PHASES@@
+#
+# A page is a page of the pinned edition, run as its command blocks, in the
+# book's order, with nothing added. `pages <phase>` prints them; the list comes
+# from the edition's own contents page, so a page cannot be left out by editing a
+# list here (`check_no_page_is_dropped_from_the_index` is what keeps that true).
+#
+# `run` takes the build root lock (`build-evidence/.build-lock`): a second
+# invocation is refused, not queued, because two builds would share one `$LFS`,
+# one qcow2 and one snapshot chain. `resume` reads the records, rolls the disk
+# back to the checkpoint the previous phase left, and runs the phase that has not
+# passed — a failed phase keeps its name, so a resume repeats it rather than
+# skipping past it.
+#
+# ### What the build refuses to do
+#
+# It will not run a phase whose pages name a source `base.lock` does not carry, or
+# whose sources are not on the disk — the phase stops before its first command and
+# names the file and the command that puts it there. It will not skip a test suite
+# the book calls utmost important, even through `build-overrides.toml`. It will
+# not pretend a page ran: every block's exit code is in `build-evidence/<phase>/`,
+# and a phase whose record says `passed` has a record for every page it ran.
+# <<< docs
 
 import argparse
 import base64
@@ -353,6 +420,113 @@ def pages_for(ph):
         at = next((i for i, (h, _) in enumerate(out) if h == e.get("after")), len(out))
         out.insert(at + 1, (e["page"], e.get("title", e["page"].split("/")[-1][:-5])))
     return out
+
+
+# --- README derivation ------------------------------------------------------------
+# scripts/build/README.md is derived, not maintained: each build file carries its
+# section in a `# >>> docs` region, and derive-readme assembles the file from those
+# regions, phases.toml and the checks' docstrings. The check that keeps it honest
+# is tests/test-all.sh's check_readme_is_the_scripts.
+
+DOCS_FILES = ("build-rootfs.sh", "run-qemu.sh", "tests/test-all.sh", "tests/test-arch.sh")
+
+
+def _docs_region(rel):
+    """One build file's `# >>> docs` region, with the shell comment prefix stripped."""
+    text = (ROOT / "scripts" / "build" / rel).read_text()
+    m = re.search(r"^# >>> docs\n(.*?)\n# <<< docs\n", text, re.S | re.M)
+    if not m:
+        raise SystemExit(f"{rel}: no documentation region — the README section is the lines "
+                         f"between `# >>> docs` and `# <<< docs`")
+    out = []
+    for line in m.group(1).split("\n"):
+        if line == "":
+            out.append("")
+        elif line == "#":
+            out.append("")
+        elif line.startswith("# "):
+            out.append(line[2:])
+        else:
+            raise SystemExit(f"{rel}: documentation region line is not a `#` comment: {line!r}")
+    return "\n".join(out)
+
+
+def _phases_table():
+    """The README's phase table, from phases.toml and the edition's own index."""
+    rows = ["| phase | chapter | pages | checkpoint | what passing means |",
+            "|---|---|---|---|---|"]
+    for name, ph in phases().items():
+        cp = ph.get("checkpoint", "none")
+        rows.append(f"| `{name}` | {ph['chapter']} | {len(pages_for(ph))} | "
+                    f"{'—' if cp == 'none' else cp} | {'; '.join(ph.get('exit', []))} |")
+    return "\n".join(rows)
+
+
+def _checks_section():
+    """The README's check list, from the checks' own first docstring lines."""
+    import importlib.util
+    from importlib.machinery import SourceFileLoader
+
+    path = ROOT / "scripts" / "build" / "tests" / "test-all.sh"
+    loader = SourceFileLoader("build_docs_test_all", str(path))
+    spec = importlib.util.spec_from_loader("build_docs_test_all", loader)
+    tal = importlib.util.module_from_spec(spec)
+    sys.modules["build_docs_test_all"] = tal
+    spec.loader.exec_module(tal)
+
+    def one(fn):
+        d = (fn.__doc__ or "").strip()
+        if not d:
+            raise SystemExit(f"{fn.__name__}: no docstring — the README's check list is made of them")
+        return d.splitlines()[0].strip()
+
+    out = ["`trust` — the driver's own guarantees, run against the real `base.lock`,",
+           "`phases.toml` and the pinned pages:"]
+    out += [f"- `{f.__name__}` — {one(f)}" for f in tal.TRUST_CHECKS]
+    out += ["", "`layout` — this tree keeps the reference's shape:"]
+    out += [f"- `{f.__name__}` — {one(f)}" for f in (tal.check_build_tree_file_set,
+                                                     tal.check_readme_is_the_scripts)]
+    def acct(fn):
+        return one(fn).rstrip(".")
+
+    out += ["",
+            "`base-lock` — " + acct(tal.main_base_lock) + ". `services` — "
+            + acct(tal.main_services) + ". `no-systemd` — " + acct(tal.main_no_systemd) + "."]
+    return "\n".join(out)
+
+
+README_TAIL = """
+## README.md
+
+This file. It is the build-rootfs slot for the tree's documentation: the five
+`##` sections above are the five files the tree holds, and
+`check_readme_is_the_scripts` keeps the file and the build files equal. The
+whole-build procedure — the hardware, the VM, the GPU stack that follows this
+rootfs — lives in `docs/` (`PREBUILD.md`, `HARDWARE_REQUIREMENTS.md`,
+`HANDOFF-VM.md`, `GPU-STACK.md`), and the evidence of what has actually been
+built so far is in `docs/BUILD-LOG.md`.
+"""
+
+
+def derive_readme():
+    """Assemble scripts/build/README.md from the build files' own documentation.
+
+    The sections are the `# >>> docs` regions of the four build files, in the
+    order the tree lists them; `@@PHASES@@` is filled from `phases.toml` and the
+    edition's index, `@@CHECKS@@` from the checks' docstrings. Nothing in the
+    file is typed by hand — it is a receipt of what the build files say.
+    """
+    head = ("> derived by `scripts/build/build-rootfs.sh derive-readme` from the build files' own\n"
+            "> documentation regions, `phases.toml` and the checks' docstrings — do not edit\n"
+            "> this file: edit the build file it documents, then re-run.\n\n")
+    body = "\n\n".join(_docs_region(p) for p in DOCS_FILES)
+    body = body.replace("@@PHASES@@", _phases_table())
+    body = body.replace("@@CHECKS@@", _checks_section())
+    if "@@" in body:
+        raise SystemExit("an unfilled @@placeholder@@ is left in the README — the build files'\n"
+                         "documentation regions must carry @@PHASES@@ and @@CHECKS@@ where the\n"
+                         "derived parts go")
+    return head + body + "\n" + README_TAIL
 
 
 # --- running things in the guest --------------------------------------------------
@@ -2059,7 +2233,7 @@ def _q(s):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["pages", "run", "fetch", "resume", "status", "guest",
-                                "derive-base-lock", "derive-test-expectations"])
+                                "derive-base-lock", "derive-test-expectations", "derive-readme"])
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--page")
     ap.add_argument("--skip-passed", action="store_true",
@@ -2098,6 +2272,9 @@ def _dispatch(a):
         return 0
     elif a.cmd == "derive-test-expectations":
         derive_test_expectations()
+        return 0
+    elif a.cmd == "derive-readme":
+        (ROOT / "scripts" / "build" / "README.md").write_text(derive_readme())
         return 0
     else:
         return status()

@@ -1,3 +1,7 @@
+> derived by `scripts/build/build-rootfs.sh derive-readme` from the build files' own
+> documentation regions, `phases.toml` and the checks' docstrings — do not edit
+> this file: edit the build file it documents, then re-run.
+
 # The build tree
 
 One directory, one layout: the files here mirror the top level of
@@ -27,6 +31,7 @@ sh scripts/build/build-rootfs.sh status                     # every phase's reco
 sh scripts/build/build-rootfs.sh guest <cmd>                # run a command in the build guest
 sh scripts/build/build-rootfs.sh derive-base-lock <url>     # re-derive base.lock from an edition (stdout)
 sh scripts/build/build-rootfs.sh derive-test-expectations   # re-derive test-expectations.toml in place
+sh scripts/build/build-rootfs.sh derive-readme              # re-derive scripts/build/README.md from the build files
 ```
 
 Every command executed comes from a page of the pinned edition — the book
@@ -41,17 +46,17 @@ eight pages of shell.
 
 | phase | chapter | pages | checkpoint | what passing means |
 |---|---|---|---|---|
-| `host-prep` | 02 | 5 | — | the host has the tools, `lfs` exists, `$LFS` is a real device |
-| `sources` | 03 | 2 | — | every file in `base.lock` is in `$LFS/sources` with its checksum |
-| `chroot-layout` | 04 | 3 | after | `$LFS/{dev,proc,sys,run}` work, `$LFS/tools` belongs to `lfs` |
-| `cross-toolchain` | 05 | 5 | after | `$LFS/tools` holds the cross gcc, as, ld, and libstdc++ links |
-| `temp-tools` | 06 | 17 | after | the temporary tools are installed, including a C++ compiler |
-| `enter-chroot` | 07 | 5 | after | the `lfs` user is inside `$LFS` with the book's six variables |
-| `temp-system` | 07 | 6 | after | the second pass binutils/gcc are in `/tools` |
-| `final-system` | 08 | 85 | after | the system is built in `/usr`, its test suites read against the book |
-| `configuration` | 09 | 7 | after | `/etc` is configured: fstab, timezone, locale, user, network |
-| `bootable` | 10 | 3 | after | a bootloader and kernel are installed on the disk |
-| `first-boot` | 11 | 2 | — | the disk boots on its own and answers over ssh |
+| `host-prep` | 02 | 5 | — | The LFS partition is formatted ext4 and mounted at /mnt/lfs.; Swap is on, and $LFS resolves to the mount point in every later context. |
+| `sources` | 03 | 2 | — | Every URL in base.lock is present in $LFS/sources with the MD5 the book published — the book's checksum, not one computed here.; Nothing was fetched that base.lock does not name. |
+| `chroot-layout` | 04 | 3 | after | The directory layout exists with $LFS/sources writable by lfs and $LFS/tools owned by lfs.; User lfs exists and its environment sets LFS, LFS_TGT and MAKEFLAGS as the book's page writes them. |
+| `cross-toolchain` | 05 | 5 | after | $LFS/tools holds the cross compiler, assembler and linker, and the target's `as --version` answers.; The cross C++ compiler links a program — chapter 6's GCC pass 2 needs it to build libcody.; Every command block of every page exited 0. |
+| `temp-tools` | 06 | 17 | after | The temporary utilities are installed under $LFS/usr: chapter 6's pages configure --prefix=/usr and install with DESTDIR=$LFS, so not under $LFS/tools.; Every command block of every page exited 0. |
+| `enter-chroot` | 07 | 3 | after | Ownership of the $LFS directories is root:root, not lfs.; proc, sysfs and devpts are mounted inside $LFS and /dev is bind-mounted.; The chapter 7 `env -i` invocation runs a command inside $LFS seeing only HOME, TERM, PS1, PATH, MAKEFLAGS, TESTSUITEFLAGS. |
+| `temp-system` | 07 | 8 | after | The chroot's own /etc exists: mtab, hosts, passwd, group, and the directory tree the pages create.; Gettext, Bison, Perl, Python, Texinfo and Util-linux are installed in the temporary system.; Every command block of every page exited 0. |
+| `final-system` | 08 | 85 | after | Every package page's command blocks exited 0, and where a page states a test is known to fail, that is the only failure recorded.; The debugging-symbols, stripping and cleanup pages ran. |
+| `configuration` | 09 | 7 | after | The device symlinks, network configuration, locale, inputrc and shells files exist with the contents the pages give them.; OpenRC's default runlevel is set. |
+| `bootable` | 10 | 3 | after | fstab addresses the root filesystem by UUID, the kernel the book pins is built and installed, and GRUB is installed to the LFS disk.; The kernel on the disk is the version base.lock names. |
+| `first-boot` | 11 | 2 | — | The LFS disk boots to a login prompt with the host's disk detached.; Login succeeds, `uname -r` answers the pinned kernel version, and PID 1 is the init the OpenRC edition installs, named by the command that identifies it. |
 
 A page is a page of the pinned edition, run as its command blocks, in the
 book's order, with nothing added. `pages <phase>` prints them; the list comes
@@ -119,33 +124,25 @@ sh scripts/build/tests/test-all.sh no-systemd --root <image root>
 
 `trust` — the driver's own guarantees, run against the real `base.lock`,
 `phases.toml` and the pinned pages:
-
-- `check_mismatches` — a wrong, absent or undownloaded checksum names the file
-- `check_lock_files` — `base.lock` still carries 89 packages and 5 patches
-- `check_sources_named` — a page's commands are scanned for file names, not prose
-- `check_record_identity_and_atomicity` — a record names its `base.lock` bytes and edition, and a crash leaves the previous one readable
-- `check_chroot_environment_is_the_books` — the chroot gets the book's six variables and nothing else
-- `check_build_root_lock` — one build per build root, and a dead owner is named as stale
-- `check_test_expectations_are_current` — `test-expectations.toml` says what the pinned pages say today
-- `check_core_suite_cannot_be_skipped` — an override cannot skip glibc's, GCC's or Binutils' suite
-- `check_no_page_is_dropped_from_the_index` — every page the contents page lists is a page the build knows
-- `check_sources_needed_for_every_page` — any page can be asked what it needs, including the chapter 7 pages that need nothing
-- `check_resume_starts_at_the_failed_phase` — the phase that failed is the phase a resume runs
-- `check_guard_on_the_real_pages` — an unsourced tarball, in a page or in an override, stops the phase
-- `check_a_predicted_test_failure_does_not_stop_the_page` — a predicted failure forgives the suite and nothing else
+- `check_mismatches` — A wrong, absent or undownloaded checksum names the file.
+- `check_lock_files` — `base.lock` still carries 89 packages and 5 patches.
+- `check_sources_named` — A page's commands are scanned for file names, not prose.
+- `check_record_identity_and_atomicity` — A record says what it was built against, and a crash does not eat it.
+- `check_chroot_environment_is_the_books` — The chroot gets the book's six variables and nothing else.
+- `check_build_root_lock` — One build per build root, and a dead owner is named as stale.
+- `check_test_expectations_are_current` — `test-expectations.toml` says what the pinned pages say today.
+- `check_core_suite_cannot_be_skipped` — Skipping a core suite through an override is refused, not remembered.
+- `check_no_page_is_dropped_from_the_index` — Every page the edition's own contents lists is a page the build knows about.
+- `check_sources_needed_for_every_page` — Every page of every phase can be asked what it needs, including pages that need nothing.
+- `check_resume_starts_at_the_failed_phase` — A resume runs the phase that failed, not the one after it.
+- `check_guard_on_the_real_pages` — The guard runs against the pinned edition, and says what it finds.
+- `check_a_predicted_test_failure_does_not_stop_the_page` — A predicted failure forgives the suite and nothing else.
 
 `layout` — this tree keeps the reference's shape:
+- `check_build_tree_file_set` — Every file in the build tree carries a name the reference has.
+- `check_readme_is_the_scripts` — The README is what the build files' documentation blocks say today, byte for byte.
 
-- `check_build_tree_file_set` — every file here carries a name the reference has
-- `check_readme_documents_every_file` — this README names every file, both directions
-
-`base-lock` — is `base.lock` an account for the base system: every entry carries
-name, version, URL, checksum, provenance class and its book pages, and every
-source-built package the edition lists is present. `services` — every OpenRC
-service the image ships is in `openrc/services.toml` with its runlevel, its
-requirements and its failure semantics. `no-systemd` — nothing in the image
-resolves a systemd library: the ELF walk reads `DT_NEEDED` with `readelf`, and
-a string-table mention is not a runtime resolution.
+`base-lock` — Is `base.lock` an account for the base system: every entry carries name, version, URL, checksum, provenance class and its book pages, and every source-built package the edition lists is present. `services` — Every OpenRC service the image ships is in `openrc/services.toml` with its runlevel, its requirements and its failure semantics. `no-systemd` — Nothing in the image resolves a systemd library: the ELF walk reads `DT_NEEDED` with `readelf`, and a string-table mention is not a runtime resolution.
 
 ## tests/test-arch.sh
 
@@ -163,7 +160,7 @@ sh scripts/build/tests/test-arch.sh --explain             # what the scan does, 
 
 This file. It is the build-rootfs slot for the tree's documentation: the five
 `##` sections above are the five files the tree holds, and
-`check_readme_documents_every_file` keeps the list and the tree equal. The
+`check_readme_is_the_scripts` keeps the file and the build files equal. The
 whole-build procedure — the hardware, the VM, the GPU stack that follows this
 rootfs — lives in `docs/` (`PREBUILD.md`, `HARDWARE_REQUIREMENTS.md`,
 `HANDOFF-VM.md`, `GPU-STACK.md`), and the evidence of what has actually been

@@ -29,6 +29,36 @@
 #   ./run-qemu.sh boot-lfs    boot the LFS disk alone — the first-boot test
 #   ./run-qemu.sh console     tail the boot console
 #
+# >>> docs
+# ## run-qemu.sh
+#
+# The disposable build host: a KVM guest whose entire disk is a qcow2 file,
+# managed entirely inside `$HOME/barecortex-vm` — deleting that directory is the
+# uninstall. `build-rootfs.sh` drives it as `~/barecortex-vm/vm.sh` (the installed
+# name; this file is the source), which is why a page's commands, the snapshots
+# and the rollbacks all route through it:
+#
+# ```
+# sh scripts/build/run-qemu.sh seed         # build the cloud-init seed (new instance-id each run)
+# sh scripts/build/run-qemu.sh start        # start the guest, forwarding 127.0.0.1:2222 -> :22
+# sh scripts/build/run-qemu.sh wait         # wait until ssh answers
+# sh scripts/build/run-qemu.sh sh <cmd>     # run a command in the guest
+# sh scripts/build/run-qemu.sh stop         # kill the guest, waiting for the disk lock to free
+# sh scripts/build/run-qemu.sh grow 64G     # stop, enlarge the qcow2, grow the guest filesystem
+# sh scripts/build/run-qemu.sh disk 60G     # create the LFS disk (/dev/vdb in the guest)
+# sh scripts/build/run-qemu.sh snapshot t   # freeze the LFS disk as checkpoint t
+# sh scripts/build/run-qemu.sh rollback t   # discard the current LFS disk, resume from checkpoint t
+# sh scripts/build/run-qemu.sh prune        # delete checkpoints no image is built on (--do to do it)
+# sh scripts/build/run-qemu.sh boot-lfs     # boot the LFS disk alone — the first-boot test
+# sh scripts/build/run-qemu.sh console      # tail the boot console
+# ```
+#
+# It expects QEMU extracted under `~/.local/qemu` (from Ubuntu's own .debs — the
+# host is not installed on); without one it says so and stops. The guest has no
+# GPU: passthrough needs root, so `(gpu)` work stays on the physical host and
+# `(build)` work happens here.
+# <<< docs
+#
 # From outside the physical host:  ssh -J <host> -p 2222 bct@127.0.0.1
 set -e
 VM=$HOME/barecortex-vm

@@ -33,6 +33,20 @@ The count is of ELF files read, symlinks included not at all, so it agrees with
 `artifacts/handoff-vm/gentoo-probe/`, which is the check's real test.
 """
 
+# >>> docs
+# ## tests/test-arch.sh
+#
+# The 64-bit-only scan: every ELF file under an image root is classified from
+# `EI_CLASS` and `e_machine`, every directory is checked for the name `lib32` or
+# `libx32`, and nothing is excluded. It is named for the reference's
+# `tests/test-arch.sh` and reads like it:
+#
+# ```
+# sh scripts/build/tests/test-arch.sh --root <image root>   # fail on any non-x86-64 ELF
+# sh scripts/build/tests/test-arch.sh --explain             # what the scan does, in words
+# ```
+# <<< docs
+
 import argparse
 import pathlib
 import struct

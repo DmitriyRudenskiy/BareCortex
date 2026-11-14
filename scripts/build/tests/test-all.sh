@@ -22,6 +22,24 @@ into that file), and the base.lock, service, and no-systemd checkers live in
 this file now that the build-rootfs layout gives the tree one test entry each.
 """
 
+# >>> docs
+# ## tests/test-all.sh
+#
+# The offline checks — no guest needed, one result line per check:
+#
+# ```
+# sh scripts/build/tests/test-all.sh                    # everything that runs offline
+# sh scripts/build/tests/test-all.sh trust               # the driver's trust checks
+# sh scripts/build/tests/test-all.sh layout              # the build-rootfs file-layout checks
+# sh scripts/build/tests/test-all.sh base-lock [--lock L --map M [--coverage]]
+# sh scripts/build/tests/test-all.sh services [--inventory I]
+# sh scripts/build/tests/test-all.sh no-systemd --root <image root>
+# ```
+#
+# ### The checks
+#
+# @@CHECKS@@
+# <<< docs
 
 import argparse
 import contextlib
@@ -63,6 +81,7 @@ import build  # noqa: E402
 
 
 def check_mismatches():
+    """A wrong, absent or undownloaded checksum names the file."""
     ok = "@@MD5 a.tar.xz deadbeef deadbeef\n"
     bad = "@@MD5 b.tar.xz cafebeef deadbeef\n"
     gone = "@@MD5 c.tar.xz  deadbeef\n"          # md5sum printed nothing: no file
@@ -77,6 +96,7 @@ def check_mismatches():
 
 
 def check_lock_files():
+    """`base.lock` still carries 89 packages and 5 patches."""
     have = build.lock_files()
     assert len(have) == 94, f"base.lock carries 89 packages and 5 patches, got {len(have)}"
     assert "acl-2.3.2.tar.xz" in have
@@ -84,6 +104,7 @@ def check_lock_files():
 
 
 def check_sources_named():
+    """A page's commands are scanned for file names, not prose."""
     # a page's commands are scanned for file names, not for prose that mentions one
     cmd = "patch -Np1 -i ../glibc-fhs-1.patch && ./configure --prefix=/usr"
     names = {t.rsplit("/", 1)[-1] for t in build.ARCHIVE_RE.findall(cmd)}
@@ -150,7 +171,7 @@ def check_record_identity_and_atomicity():
 
 
 def check_chroot_environment_is_the_books():
-    """Task 3.5: the chroot gets the book's six variables and nothing else."""
+    """The chroot gets the book's six variables and nothing else."""
     book_vars, env_i, prelude = build.wrap_environment_delta()
     assert book_vars == {"HOME", "TERM", "PS1", "PATH", "MAKEFLAGS", "TESTSUITEFLAGS"}, \
         "the pinned page's invocation was read differently than the book prints it"
@@ -161,7 +182,7 @@ def check_chroot_environment_is_the_books():
 
 
 def check_build_root_lock():
-    """Task 4.6: one build per build root, and a dead owner is named as stale."""
+    """One build per build root, and a dead owner is named as stale."""
     real = build.LOCK
     d = pathlib.Path(tempfile.mkdtemp())
     build.LOCK = d / ".build-lock"
@@ -227,7 +248,7 @@ def check_no_page_is_dropped_from_the_index():
 
 
 def check_resume_starts_at_the_failed_phase():
-    """A resume runs the phase that failed, not the one after it (task 4.3)."""
+    """A resume runs the phase that failed, not the one after it."""
     order = ["host-prep", "sources", "chroot-layout", "cross-toolchain", "temp-tools"]
     passed = [{"phase": p, "passed": True} for p in order[:3]]
     assert build.next_phase(passed + [{"phase": "cross-toolchain", "passed": False}], order) == "cross-toolchain"
@@ -320,6 +341,7 @@ def check_core_suite_cannot_be_skipped():
 
 
 def check_a_predicted_test_failure_does_not_stop_the_page():
+    """A predicted failure forgives the suite and nothing else."""
     # The page's shell runs under `set -e` for as long as the book's unpack
     # synopsis owns it, and not one line longer: left on, Glibc's testsuite —
     # which the book says will fail — ends the shell before the block reports,
@@ -436,6 +458,7 @@ def coverage(lock, lock_path, fails):
 
 
 def main_base_lock(argv):
+    """Is `base.lock` an account for the base system: every entry carries name, version, URL, checksum, provenance class and its book pages, and every source-built package the edition lists is present."""
     ap = argparse.ArgumentParser(description="is base.lock an account for the base system?")
     ap.add_argument("--lock", default="base.lock")
     ap.add_argument("--map", dest="map", default="class-map.toml")
@@ -590,6 +613,7 @@ def scan_configs(root):
 
 
 def main_no_systemd(argv):
+    """Nothing in the image resolves a systemd library: the ELF walk reads `DT_NEEDED` with `readelf`, and a string-table mention is not a runtime resolution."""
     ap = argparse.ArgumentParser(description="does anything in the image resolve a systemd library?")
     ap.add_argument("--root", help="the image root to scan, e.g. $LFS")
     ap.add_argument("--explain", action="store_true", help="print the rules and exit")
@@ -655,6 +679,7 @@ def fail_services(msg, fails):
 
 
 def main_services(argv):
+    """Every OpenRC service the image ships is in `openrc/services.toml` with its runlevel, its requirements and its failure semantics."""
     ap = argparse.ArgumentParser(description="is every shipped OpenRC service accounted for?")
     ap.add_argument("--inventory", default="openrc/services.toml")
     ap.add_argument("--explain", action="store_true", help="print the rules and exit")
@@ -785,23 +810,14 @@ def check_build_tree_file_set():
     assert not bad, "files outside the build-rootfs name set: " + "; ".join(bad)
 
 
-def check_readme_documents_every_file():
-    """README.md's `## <relative-path>` headings name the tree, both directions.
-
-    A file with no section is a file nobody documented; a section with no file is
-    documentation that lies. The comparison is a set comparison on the exact
-    relative paths, so moving a file moves its section or the check fails.
-    """
-    md = ROOT / "scripts" / "build" / "README.md"
-    if not md.is_file():
-        raise AssertionError(
-            f"{md} is missing — every build file has to be documented")
-    documented = set(re.findall(r"^## (.+)$", md.read_text(), re.M))
-    files = {str(p) for p in build_tree_files()}
-    missing = sorted(files - documented)
-    extra = sorted(documented - files)
-    assert not missing, "files with no README section: " + ", ".join(missing)
-    assert not extra, "README sections for no file: " + ", ".join(extra)
+def check_readme_is_the_scripts():
+    """The README is what the build files' documentation blocks say today, byte for byte."""
+    have = (ROOT / "scripts" / "build" / "README.md").read_text()
+    want = build.derive_readme()
+    assert have == want, (
+        "scripts/build/README.md is not what the build files' documentation blocks, "
+        "phases.toml and the checks' docstrings say today — edit the build file, "
+        "then run scripts/build/build-rootfs.sh derive-readme")
 
 # --- dispatch -------------------------------------------------------------------
 
@@ -826,7 +842,7 @@ def run_trust():
 
 
 def run_layout():
-    for fn in (check_build_tree_file_set, check_readme_documents_every_file):
+    for fn in (check_build_tree_file_set, check_readme_is_the_scripts):
         print(f"{fn.__name__} ...", flush=True)
         fn()
         print(f"  ok")
