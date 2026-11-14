@@ -27,10 +27,15 @@ Scope note: nothing here runs on the **target**. Markers mean the classes in `ta
       `--compat32-chroot` and `--gbm-backend-dir32`. What it skips is not small:
       the `.run` carries **35 32-bit ELF files, 392 MB** — the only 32-bit code
       anywhere in this project's plan, and the only thing standing between the
-      driver and `check-amd64-only.py`. Census, commands and the installer wording:
-      `nvidia-musl/report/02-elf-audit.md`. Whether the installer would install
-      them by default on a given image is 1.2/2.4's question, not this one; an
-      exception list in the check remains unavailable
+      driver and `check-amd64-only.py`. Better than the flag: NVIDIA also ships
+      the pre-stripped seed, `NVIDIA-Linux-x86_64-580.196.07-no-compat32.run`
+      (325 784 082 B, sha256 `2189c47fa87ae45b7a166b58c3742dd1629035069cb0fb4103ed375229c55867`,
+      72 ELF files and no `32/` directory, measured) — 32-bit code never reaches
+      the image, so there is nothing for the check to catch. Census, commands and
+      the installer wording: `nvidia-musl/report/02-elf-audit.md` and
+      `nvidia-musl/report/03-study-git-bruh.md` §6. Whether the installer would
+      install them by default on a given image is 1.2/2.4's question, not this one;
+      an exception list in the check remains unavailable
 
 ## 2. Component inventory and `base.lock` entries
 

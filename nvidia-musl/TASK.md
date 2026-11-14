@@ -90,6 +90,14 @@ https://github.com/chimera-linux/cports/pull/6531 (перечитать теку
 упаковать libglvnd (APKBUILD с нуля или порт из cports) и пересобрать mesa; решить D3:
 `-Dtls=disabled` (проще, путь git-bruh) vs TLS-enabled + патч 091 (путь Chimera).
 **Важно: для nvidia-smi и CUDA glvnd не нужен — D3 можно отложить до графической ступени.**
+→ ВЫПОЛНЕНО: `report/03-study-git-bruh.md` (head `e5cd409c…`, 2021, KISS, драйвер 470.74).
+Три ответа: (1) `apk search glvnd` пусто — подтверждено APKINDEX 3.22/3.25 и aports (пакета
+`libglvnd` нет вовсе; mesa в Alpine собрана без `-Dglvnd`); (2) патч gcompat на два символа
+для 580 не нужен — `_IO_2_1_stdout_` в дереве нет вовсе, `dladdr1` остался только в двух
+GL-библиотеках (eglcore/glcore); (3) символьный зазор headless-CUDA против musl 1.2.6-r6 +
+gcompat 1.1.0-r4 = **ноль** (`tools/sym-gap.py`), без gcompat — 12 имён, и все 12 gcompat
+даёт. LFS64 (`open64`, `__xstat64`, …) резолвит сам загрузчик musl (`get_lfs64`), так что
+шим не нужен. D3 остаётся отложенным: `libcuda` среди пяти библиотек с `DF_STATIC_TLS` нет.
 
 **1.3. Гист sineemore (Void).**
 https://gist.github.com/sineemore/161e4051b2d03f9e3b0f3e16221463ce — DKMS-пакет: udev-правила,
@@ -202,6 +210,10 @@ musl-nvidia+gcompat+libnvcompat, что требует доработки, чт�
     aarch64 `5b7d23…`
   - nvidia620 = 620.70.06: **x86_64 `29118e3abd08c07559bcca3d9c76238d039490af0362a2e5bcfcbe7204afd4b1`**,
     aarch64 `3fa65a…`
+  - вариант без 32-битного кода (предпочтителен для LFS-образа, `gpu-stack` 1.5):
+    `NVIDIA-Linux-x86_64-580.196.07-no-compat32.run`, 325 784 082 байта (полный —
+    397 209 845), x86_64 **`2189c47fa87ae45b7a166b58c3742dd1629035069cb0fb4103ed375229c55867`**.
+    Внутри 72 ELF вместо 107, каталога `32/` нет (замер 14.11.2026, `report/03` п. 6).
   - Hardening `!pie`.
 - Sanitize каждой `.so`/бинарника:
 ```
