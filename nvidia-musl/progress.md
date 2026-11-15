@@ -337,6 +337,8 @@ open: rung 1 on a real Alpine image, and the GL/Vulkan path (D3, 2.0).
   the other session built its venv there too) stays: it is the live jail of
   both reports. Also freed ~1 GB npm cache. `~/.cache/huggingface` (89 GB)
   and `~/.local/share/strata/Strata-data` (96 GB) await operator decision.
+- Operator approved and both were deleted (no holders, verified first):
+  disk went 9 GB → **194 GB free (56% used)**. Host is no longer tight.
 
 2026-11-15 (musl-nvidia sandbox — PR #6531 loader patches proven on 580.196.07):
 - Built private patched musl in bwrap (Alpine edge minirootfs, no root):
