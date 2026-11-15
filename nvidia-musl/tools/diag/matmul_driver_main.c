@@ -1,17 +1,18 @@
-/* matmul_driver — GEMM over the CUDA DRIVER API, MULTI-GPU, no toolkit.
- * Generates deterministic A,B, computes a CPU reference, then runs matmul on
- * every device and verifies each GPU's C matches the CPU reference (max abs err).
- * This proves the headless musl compute path yields CORRECT numeric results —
- * the actual point of a compute target (vs. the triangle smoke test).
+/* matmul_driver — GEMM over the CUDA DRIVER API, MULTI-GPU, no toolkit, TIMED.
+ * Same cubin + same driver-API launch code; the ONLY variable is the host libc
+ * (build this as musl vs glibc to measure whether the musl host slows compute).
+ * Times `iters` pipelined GEMMs per device -> GFLOPS. Also verifies vs a CPU
+ * reference when N is small (correctness alongside perf).
  *
- * cubin embedded via xxd -i (matmul_cubin[]). cuModuleLoadData(cubin) = no JIT.
- * _exit(0) dodges the NVIDIA static teardown crash under musl (report/13).
- * usage: matmul_driver [path/to/libcuda.so]
+ * cubin embedded via xxd -i (matmul_cubin[]). _exit(0) dodges the NVIDIA static
+ * teardown crash under musl (report/13).
+ * usage: matmul_driver [path/to/libcuda.so] [N] [iters]
  */
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 typedef int CUresult;
@@ -25,11 +26,17 @@ typedef unsigned long long CUdeviceptr;
 extern unsigned char matmul_cubin[];
 extern unsigned int matmul_cubin_len;
 
-#define N 256
-#define TOL 1.0f  /* abs tolerance for float 256-term sums */
+#define TOL 1.0f
+
+static double now_ms(void) {
+    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1e3 + ts.tv_nsec / 1e6;
+}
 
 int main(int argc, char **argv) {
     const char *lib = argc > 1 ? argv[1] : "libcuda.so.1";
+    int N = argc > 2 ? atoi(argv[2]) : 512;
+    int iters = argc > 3 ? atoi(argv[3]) : 50;
     void *h = dlopen(lib, RTLD_NOW | RTLD_GLOBAL);
     if (!h) { fprintf(stderr, "dlopen %s: %s\n", lib, dlerror()); return 2; }
 
@@ -51,79 +58,78 @@ int main(int argc, char **argv) {
                                unsigned, unsigned, unsigned, unsigned,
                                CUstream, void **, void **) = dlsym(h, "cuLaunchKernel");
     CUresult (*cuCtxSynchronize)(void) = dlsym(h, "cuCtxSynchronize");
-    CUresult (*cuGetErrorString)(int, const char **) = dlsym(h, "cuGetErrorString");
     if (!cuInit || !cuModuleLoadData || !cuLaunchKernel || !cuMemAlloc || !cuMemcpyHtoD) {
         fprintf(stderr, "dlsym: missing entry point\n"); return 3;
     }
 
-    /* deterministic A,B + CPU reference */
     size_t n = (size_t)N * N;
-    float *A = malloc(n * 4), *B = malloc(n * 4), *Cref = malloc(n * 4);
+    int verify = (N <= 512);
+    float *A = malloc(n * 4), *B = malloc(n * 4), *C = malloc(n * 4), *Cref = verify ? malloc(n * 4) : NULL;
     for (size_t i = 0; i < n; i++) A[i] = ((i * 31u) % 100u) / 100.0f;
     for (size_t i = 0; i < n; i++) B[i] = ((i * 13u) % 100u) / 100.0f;
-    for (int r = 0; r < N; r++)
-        for (int c = 0; c < N; c++) {
-            float s = 0.0f;
-            for (int k = 0; k < N; k++) s += A[r * N + k] * B[k * N + c];
+    if (verify)
+        for (int r = 0; r < N; r++) for (int c = 0; c < N; c++) {
+            float s = 0.0f; for (int k = 0; k < N; k++) s += A[r * N + k] * B[k * N + c];
             Cref[r * N + c] = s;
         }
 
     if (cuInit(0)) { fprintf(stderr, "cuInit failed\n"); return 1; }
     int ndev = 0; cuDeviceGetCount(&ndev);
-    fprintf(stderr, "[matmul] N=%d, %d device(s) — GEMM on each, verify vs CPU\n", N, ndev);
+    fprintf(stderr, "[matmul] N=%d iters=%d verify=%d, %d device(s)\n", N, iters, verify, ndev);
 
     char *cubin = malloc(matmul_cubin_len + 1);
     memcpy(cubin, matmul_cubin, matmul_cubin_len);
     cubin[matmul_cubin_len] = 0;
 
-    float *C = malloc(n * 4);
-    long ok = 0;
+    double best = 0; long ok = 0;
 
     for (int d = 0; d < ndev; d++) {
         CUdevice dev; cuDeviceGet(&dev, d);
         char name[128] = "?"; cuDeviceGetName(name, sizeof name, dev);
-
         CUcontext ctx;
         if (cuDevicePrimaryCtxRetain(&ctx, dev) || cuCtxSetCurrent(ctx)) {
             fprintf(stderr, "  [%d] %s — CTX FAIL\n", d, name); continue;
         }
         CUmodule mod;
-        CUresult mrc = cuModuleLoadData(&mod, cubin);
-        if (mrc) { const char *es="?"; if(cuGetErrorString) cuGetErrorString(mrc,&es);
-                   fprintf(stderr, "  [%d] %s — ModuleLoadData %d (%s)\n", d, name, mrc, es);
-                   cuDevicePrimaryCtxRelease(dev); continue; }
+        if (cuModuleLoadData(&mod, cubin)) { fprintf(stderr, "  [%d] %s — Load fail\n", d, name);
+                                             cuDevicePrimaryCtxRelease(dev); continue; }
         CUfunction fn;
-        if (cuModuleGetFunction(&fn, mod, "matmul")) {
-            fprintf(stderr, "  [%d] %s — GetFunction fail\n", d, name);
-            cuModuleUnload(mod); cuDevicePrimaryCtxRelease(dev); continue;
-        }
+        if (cuModuleGetFunction(&fn, mod, "matmul")) { fprintf(stderr, "  [%d] %s — GetFn fail\n", d, name);
+            cuModuleUnload(mod); cuDevicePrimaryCtxRelease(dev); continue; }
         CUdeviceptr dA, dB, dC;
         if (cuMemAlloc(&dA, n*4) || cuMemAlloc(&dB, n*4) || cuMemAlloc(&dC, n*4)) {
-            fprintf(stderr, "  [%d] %s — MemAlloc fail\n", d, name);
-            cuModuleUnload(mod); cuDevicePrimaryCtxRelease(dev); continue;
-        }
-        cuMemcpyHtoD(dA, A, n*4);
-        cuMemcpyHtoD(dB, B, n*4);
+            fprintf(stderr, "  [%d] %s — Alloc fail\n", d, name);
+            cuModuleUnload(mod); cuDevicePrimaryCtxRelease(dev); continue; }
+        cuMemcpyHtoD(dA, A, n*4); cuMemcpyHtoD(dB, B, n*4);
 
-        int nval = N;
-        void *args[] = { &dA, &dB, &dC, &nval };
-        unsigned lrc = cuLaunchKernel(fn, (N+15)/16, (N+15)/16, 1, 16, 16, 1, 0, NULL, args, NULL);
+        /* warmup */
+        int nval = N; void *args[] = { &dA, &dB, &dC, &nval };
+        cuLaunchKernel(fn, (N+15)/16, (N+15)/16, 1, 16, 16, 1, 0, NULL, args, NULL);
         cuCtxSynchronize();
-        if (lrc) { fprintf(stderr, "  [%d] %s — LaunchKernel %u\n", d, name, lrc);
-                   cuMemFree(dA); cuMemFree(dB); cuMemFree(dC);
-                   cuModuleUnload(mod); cuDevicePrimaryCtxRelease(dev); continue; }
-        cuMemcpyDtoH(C, dC, n*4);
 
-        float maxerr = 0.0f;
-        for (size_t i = 0; i < n; i++) { float e = C[i] - Cref[i]; if (e < 0) e = -e; if (e > maxerr) maxerr = e; }
-        int good = (maxerr < TOL);
-        if (good) ok++;
-        fprintf(stderr, "  [%d] %-22s max|err|=%.5f %s\n", d, name, maxerr, good ? "OK" : "MISMATCH");
+        double t0 = now_ms();
+        for (int it = 0; it < iters; it++)
+            cuLaunchKernel(fn, (N+15)/16, (N+15)/16, 1, 16, 16, 1, 0, NULL, args, NULL);
+        cuCtxSynchronize();
+        double ms = now_ms() - t0;
+        double secs = ms / 1e3;
+        double gflops = 2.0 * N * N * N * iters / secs / 1e9;
 
+        float maxerr = 0.0f; char vstr[32] = "-";
+        if (verify) {
+            cuMemcpyDtoH(C, dC, n*4);
+            for (size_t i = 0; i < n; i++) { float e = C[i]-Cref[i]; if (e<0) e=-e; if (e>maxerr) maxerr=e; }
+            snprintf(vstr, sizeof vstr, "maxerr=%.5f %s", maxerr, maxerr < TOL ? "OK" : "BAD");
+            if (maxerr < TOL) ok++;
+        }
+        if (gflops > best) best = gflops;
+        fprintf(stderr, "  [%d] %-22s %8.1f GFLOPS  (%.0f ms / %d iters)  %s\n",
+                d, name, gflops, ms, iters, vstr);
         cuMemFree(dA); cuMemFree(dB); cuMemFree(dC);
         cuModuleUnload(mod);
         cuDevicePrimaryCtxRelease(dev);
     }
-    fprintf(stderr, "[matmul] RESULT: %ld/%d devices CORRECT (tol %.1f)\n", ok, ndev, TOL);
-    _exit(0);  /* skip NVIDIA static teardown crash under musl (report/13) */
+    fprintf(stderr, "[matmul] BEST %8.1f GFLOPS ; %ld/%d correct%s\n",
+            best, verify ? ok : 0, verify ? ndev : 0, verify ? "" : " (timing only)");
+    _exit(0);
 }
