@@ -1,104 +1,171 @@
 # Handoff — Проприетарный NVIDIA на musl (Alpine): исследовательский прогон
 
-Дата: 12.11.2026 · Репозиторий: `/Users/user/BareCortex` · ветка `main`; коммиты **запушены** (решение оператора 12.11.2026)
+Дата: 16.11.2026 · Репозиторий: `/Users/user/BareCortex` · ветка `main`
+**Состояние push: локальная `main` опережает `origin/main` на 21 коммит** (вся арка
+`report/15.md` ещё не запушена; push разрешён оператором 12.11.2026, но по умолчанию не
+делается — спрашивать). Предыдущий хэндофф (12.11.2026) — в git-истории, коммит `19740bd`.
 Оператор общается на русском; отвечать по-русски, кратко.
 
 ## Что это
 
-Долгий исследовательский прогон: заставить проприетарный NVIDIA userspace
-(nvidia-smi → CUDA) работать на Alpine x86_64 (musl). Связывающий документ —
-`nvidia-musl/TASK.md` (задание v2, одобрено оператором 12.11.2026, верифицировано по
-живому cports PR #6531; head-коммит PR `c26532983c3b811c2d6b310058761bba39491bbe`
-запинен в Приложении А). **Сначала прочитать его целиком.** Леджер решений и
-прогресса: `nvidia-musl/progress.md`. Инициатива записана в Hindsight:
-страница `kp-d1460c9f8f824d61b78e14b7da38339c`.
+Долгий исследовательский прогон: заставить проприетарный NVIDIA userspace работать на
+Alpine x86_64 (musl). Связывающий документ — `nvidia-musl/TASK.md` (задание v2, одобрено
+оператором 12.11.2026). Леджер решений и прогресса: `nvidia-musl/progress.md`.
+Инициатива в Hindsight: страница `kp-d1460c9f8f824d61b78e14b7da38339c`.
 
-## Что уже сделано (коммит `74e7c9b`)
+**Главный артефакт текущего состояния — `report/15.md`** (14 частей, все проверены на
+железе). Прочитать его первым: он авторитетен, этот хэндофф его не дублирует.
 
-- `nvidia-musl/TASK.md` — зафиксировано с тремя правками оператора (полный head-коммит,
-  patchelf 0.18.0 достаточен, sha256 привязаны к архитектурам).
-- **Фаза 1.1 закрыта**: `nvidia-musl/report/01-study-chimera.md` — разбор PR #6531
-  (патчи 090/091, libnvcompat, patchelf-рецепт, модель musl-nvidia), таблица сверки
-  оператора по живому PR (все строки подтверждены), таблица «компонент Chimera → Alpine».
-- `nvidia-musl/tools/elf-audit.py` — **ре-реализация** (оригинал из хэндоффa на машине не
-  найден; если оператор его даст — diff и замена). Тест: selftest зелёный на Debian 12
-  `libc.so.6` (IRELATIVE>0, max GLIBC_2.35, вердикт NEEDS_PATCHED_MUSL). Запуск:
-  `python3 tools/elf-audit.py <dir> [--all-elf] --json a.json --csv a.csv`,
-  `--selftest [путь к libc]`. Нужен `pip install pyelftools` (на этом Mac уже установлен,
-  python 3.12 user-site).
+Головный результат: **CUDA compute под musl работает на всех 5 GPU только через driver API,
+без CUDA Toolkit.** Обратная сторона — OpenGL/EGL под musl упёрся в блок (см. ниже).
 
-## Открытые вопросы оператору (спросить до Фазы 2)
+Хост GPU: `user@192.168.0.86` (5× RTX 4060 Ti, sm_89, driver 580.159.03). Рабочая dir на
+хосте: `~/lite/glwork`; musl-пространство имён: `~/lite/edge`.
 
-1. GPU-машина: модель (→ D1: Maxwell/Pascal/Volta = 580, иначе 620), как зайти,
-   `.run` уже скачан?
-2. Оригинал `elf-audit.py`, если сохранён где-нибудь.
-3. Пускать ли Alpine-VM через QEMU на этом Mac (2.0/2.2 не требуют GPU), или всё
-   статическое делать сразу на GPU-машине.
+## Состояние: арка compute завершена, 14 частей
 
-## Следующие шаги (без GPU, по порядку)
+| Части | Что | Файлы |
+|---|---|---|
+| 1–4 | запуск ядра, multi-GPU, корректный GEMM, perf parity (musl == glibc) | `report/15.md` §3 |
+| 5–7 | tiled GEMM 1680 GFLOPS, конкурентно 7.6 TFLOPS, async 3.59× | `matmul*.c` |
+| 8 | тренировка MLP (forward+backward+SGD на GPU) | `mlp_kernels.cu`, `mlp_train_main.c` |
+| 9 | persistent-демон, 9.2 TFLOPS sustained, чистый shutdown | `gpd.c` |
+| 10 | data-parallel обучение на 5 GPU + host all-reduce | `mlp_dp_main.c` |
+| 11 | классификатор, softmax/CE, accuracy 99.5% | `cls_kernels.cu`, `cls_train_main.c` |
+| 12 | self-attention, 5 GPU, точно vs CPU | `attn_main.c` |
+| 13 | CNN + backprop свёртки, accuracy 100% | `cnn_kernels.cu`, `cnn_train_main.c` |
+| 14 | multi-layer transformer (attn+FFN+residual+LayerNorm) | `tfm_kernels.cu`, `tfm_main.c` |
 
-1. **Фаза 1.2** — git-bruh/nvidia-musl (архив, ~470-я ветка): клон, разобрать `repo/`
-   (KISS-пакеты): патчи gcompat, стаб `_IO_2_1_stdout_`, patchelf-команды, флаги
-   mesa/glvnd → `report/01-study-git-bruh.md` (таблица «блокер → причина → обход →
-   актуальность для 580/620»). Вывод по контексту: для 580/620 рецепта недостаточно
-   (нет ifunc/TLS) — не переоткрывать.
-2. **Фаза 1.3** — гист Void (gist.github.com/sineemore/161e4051b2d03f9e3b0f3e16221463ce):
-   DKMS-пакет, udev, blacklist, nvidia-modprobe, GSP → карта порта на Alpine + пошаговый
-   план fallback glibc-jail (bwrap + свежий glibc-rootfs, бинды /dev/nvidia*) →
-   `report/01-study-void-jail.md`.
-3. **Фаза 1.4** — MuslMan (github.com/apiwo/MuslMan): построчный разбор, критика
-   вендоринга glibc 2.35 (сверить с max GLIBC из аудита 2.1), вердикт «годен / с
-   изменениями / не годен» + что заимствуем (манифест, sandbox) →
-   `report/01-study-muslman.md`.
-4. **(1.5 опц.)** ZLUDA — только механика drop-in .so, не больше одной сессии.
-5. Скачать `.run` (дефолт 620.70.06; sha256 x86_64 `29118e3abd08…` — Приложение А
-   TASK.md), `--extract-only` в `nvidia-musl/work/` (бинарники **не** в git), прогнать
-   `elf-audit.py` → `report/02-elf-audit.md` (max GLIBC_2.NN → выбор rootfs для jail;
-   потребители libstdc++; кандидаты mutex-инициализаторов).
-6. **Только после Фазы 1** — REA (`npx rea-agents@latest setup`), Фаза 2 по TASK.md.
-   Порядок «Фаза 1 → REA» — жёсткое условие задания.
+Все четыре фундаментальных строительных блока (MLP / классификатор / CNN / attention) плюс
+stacked transformer под musl, **без Toolkit** — только driver API.
 
-## Факты окружения (проверено 12.11.2026)
+Дерево чистое. Коммит `02bdb1e` закрыл разрыв: части 8–10 закоммитили только отчёт, а
+отчёт ссылался на исходники, которые никогда не добавляли.
 
-- Этот Mac: NVIDIA GPU нет, QEMU не seeded (пайплайн `scripts/build/run-qemu.sh` из
-  LFS-проекта существует, но для этого задания не поднят), Docker-демон остановлен.
-  Сеть работает.
-- Специфика pyelftools (уже учтена в скрипте): `elf.header.e_machine` — строка;
-  `st_info` у символа — Container с `.type`; `d_tag` — строка; `.gnu.version_r` парсится
-  вручную (Verneed: vn_cnt@+2, vn_file@+4, vn_aux@+8, vn_next@+12; Verneedaux:
-  vna_name@+8, vna_next@+12).
-- Поправка ground truth (в леджере): glibc-`libc.so.6` (Debian 12) **не** ставит
-  DF_1_STATIC_TLS (DT_FLAGS_1 отсутствует) — флаг живёт в dlopen-библиотеках
-  (libnvidia-tls). Утверждение «libc → STATIC_TLS=True» из старого хэндоффa не
-  воспроизводится.
-- Мусор тестов: `/tmp/elftest` (распакованный libc6 Debian 12) — временный;
-  воспроизвести: `libc6_2.36-9+deb12u14_amd64.deb` из pool main/g/glibc на deb.debian.org,
-  `ar x` + `tar xf data.tar.* ./lib/x86_64-linux-gnu/libc.so.6`.
+**Не трогать (не моё, из прошлых сессий):** `progress.md` и `tools/shim/libnvcompat.c`
+(modified), `reports/` (untracked, внутри — отчёт 14 про EGL).
+
+## Рецепт сборки (нигде больше не собран в одном месте)
+
+Ядра компилируются на **хосте** (там glibc и есть nvcc), встраиваются как C-массив,
+линкуется в musl-бинарь внутри `bwrap`. На хосте, в `~/lite/glwork`:
+
+```sh
+nvcc -arch=sm_89 -cubin -O3 <k>.cu -o <k>.cubin
+xxd -i <k>.cubin > <k>_array.c          # даёт <k>_cubin[] + <k>_cubin_len
+cat <k>_array.c <main>.c > <bin>.c      # одна единица трансляции
+# сборка (неймспейс: ~/lite/edge как /, чтобы резолвился /usr/lib/libcuda)
+bwrap --bind ~/lite/edge / --proc /proc --dev /dev --tmpfs /tmp \
+  --bind ~/lite /l --unshare-user --uid 0 --die-with-parent \
+  env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin cc -O2 -Wall -o /l/glwork/<bin> /l/glwork/<bin>.c -ldl
+# запуск (нужны /dev и /sys)
+bwrap --bind ~/lite/edge / --dev-bind /dev /dev --ro-bind /sys /sys \
+  --proc /proc --tmpfs /tmp --bind ~/lite /l --unshare-user --uid 0 --die-with-parent \
+  env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin /l/glwork/<bin> /usr/lib/libcuda.so.580.159.03
+```
+
+Исходники писать **локально, затем `scp`, затем компилировать** — here-doc внутри
+одинарных кавычек `ssh` ломается на кавычках.
+
+## Ограничения, на которые слито время (соблюдать)
+
+1. **Только driver API.** `dlopen("/usr/lib/libcuda.so.580.159.03")` + `dlsym`. В
+   musl-бинаре не должно быть символов `cuda*`/`libcudart`.
+2. **`_exit(0)` в конце каждого драйвера.** При нормальном выходе NVIDIA-код под musl
+   бросает `std::system_error` в static teardown (`report/13-teardown-crash-triage.md`).
+   Никогда не `return` из `main` после работы с CUDA. Обход НЕ делается LD_PRELOAD-обёрткой
+   над `exit()`: musl вызывает собственный `exit` напрямую, не через PLT — только `_exit()`
+   в коде приложения.
+3. **`/l/glwork/...` и `/usr/lib/libcuda...` существуют только внутри `bwrap`.** С хоста
+   реальные пути: `~/lite/glwork/...` и `~/lite/edge/usr/lib/libcuda.so.580.159.03`.
+4. **Проверка символов: `readelf --dyn-syms`, а не `nm -D`** (второй ложно показывает ноль
+   `cu*` символов в 96-мегабайтном libcuda).
+5. **Async-символы: брать не-`_v2`, где `_v2` нет.** Проверено на настоящем libcuda:
+   есть `cuStreamCreate`, `cuEventCreate`, `cuMemcpyHtoDAsync`, `cuMemAlloc_v2`,
+   `cuMemcpyHtoD_v2`, `cuMemcpyDtoH_v2`; **нет** `cuStreamCreate_v2`, `cuEventCreate_v2`.
+6. **Потоки:** `-pthread`, по потоку на GPU, у каждого свой primary context через
+   thread-local `cuCtxSetCurrent`.
+7. **Ловушка C (сбилась ~6 раз):** аргументы ядра передаются как `void *args[] =
+   {&a,&b,...}`, значит каждый аргумент обязан быть **lvalue**. `#define B 256` + `&B` не
+   компилируется — как и `&2`, `&S*d`. Делать локальную `int Bn = B;` и брать адрес от неё.
+   Та же ловушка, если имя макроса совпадает с именем параметра функции.
+8. Имена ядер в cubin — это `extern "C"`-имена (`gemm2`, `relu_mask`, `softmax_k`,
+   `dY_softmax`); их строками и передавать в `cuModuleGetFunction`.
+
+## Куда дальше
+
+**Рекомендация — закрыть или сменить тему. Арка compute закончена:** части 1–14 покрывают
+работоспособность, корректность, производительность, конкурентность, сервис,
+распределённое обучение и все основные архитектуры. Дальше — вариации, не новая земля.
+
+Если продолжать, по ценности:
+
+1. **Persistent distributed-демон** — обернуть часть 10 (data-parallel + all-reduce) в
+   жизненный цикл демона из части 9. Маленькая задача, склеивает два доказанных куска.
+2. **Модели побольше / настоящие** — реальные датасеты, multi-head attention, степы
+   поглубже. Учти: ядра намеренно наивные (нет shared-memory tiling кроме `matmul_tiled`,
+   свёртка не cuDNN-класса) — работа над производительностью заметно больше, чем над
+   корректностью.
+3. **Триажить teardown-бросок** — сейчас заглушен `_exit(0)`. В `report/13` подтверждено:
+   musl-specific (тот же непатченный бинарь в glibc-джейле выходит с 0), потоки и file-cache
+   исключены перехватчиками. Следующий шаг из самого отчёта, если станет блокирующим:
+   gdb-триаж адреса броска через `__cxa_throw` в статике glcore.
+
+### ⚠️ Прежде чем кто-либо «сменит тему на OpenGL»
+
+Этот пивот предлагался многократно подряд. **Он, похоже, тупик — и проверять надо было
+раньше.** `progress.md` и `reports/14-d3-egl-musl-runtime.md` это уже установили:
+
+- musl грузит host EGL-стек (loader PASS), но первый реальный вызов драйвера
+  (`eglQueryDevicesEXT` → lazy init ICD) падает с `std::system_error` + abort. **Блок на
+  runtime.**
+- NVIDIA GL/EGL дополнительно требует **дисплей**, а хост headless (SSH TTY, нет VT, нет
+  passwordless sudo, у консоли COSMIC greeter).
+- Записанный вывод: «GL needs (glibc) + (a display)». CUDA — тот самый работающий
+  headless-путь, то есть ровно то, что делает `report/15.md`.
+
+То есть для «OpenGL под musl» нужен хост с дисплеем либо glibc. Это прошлые записи — сверь
+версию драйвера, прежде чем полагаться.
 
 ## Правила, которые нельзя нарушать
 
 - Conventional commits; коммитить только `nvidia-musl/**` (в репо есть чужие
   uncommitted-изменения в `scripts/build/*`, `docs/BUILD-LOG.md`, `build-overrides.toml` —
-  не трогать); push разрешён оператором 12.11.2026 — только `nvidia-musl/**`
-  (docs/скрипты/отчёты), бинарники и .run в git не попадают.
+  не трогать). Push разрешён оператором 12.11.2026 — только `nvidia-musl/**`
+  (документы/скрипты/отчёты); бинарники и `.run` в git не попадают.
 - EULA NVIDIA: патченные бинарники и вендоренный glibc не публиковать и не коммитить —
-  только скрипты/патчи; `.run` вне git (при необходимости — .gitignore для
-  `nvidia-musl/work/`).
-- Честность: отрицательный результат — результат, фиксировать как есть.
+  только скрипты/патчи; `.run` вне git.
+- **Проверять на настоящем железе каждый раз.** В этом репо нет ни одного непроверенного
+  утверждения; у каждой части есть сверка с CPU-референсом или сходящаяся метрика. Этот
+  уровень держать.
+- Честность: отрицательный результат — результат, фиксировать как есть. Свои ошибки в
+  отчётах исправлять по первоисточнику, а не пересказывать.
 - Правило останова: две подряд нерешённые ступени лестницы → откат на glibc-jail.
-- PR #6531 — Draft: перед Фазой 2.0 перечитать и запинить новый head (вход для патчей
-  090/091).
+- PR #6531 — Draft: перед Фазой 2.0 перечитать и запинить новый head.
+
+## Стиль работы с оператором
+
+Оператор отвечает **«продолжай»** и больше ничем (подряд 14 раз). Нужны автономные
+существенные продвижения, а не вопросы. Каждый ход — рабочий, проверенный инкремент,
+закоммиченный, плюс одна строка про следующий вариант. Он читает числа, а не прозу.
+Отвечать кратко и по-русски.
 
 ## Suggested skills
 
-- `executing-plans` (superpowers) — прогон это inline-исполнение плана; леджер
-  `nvidia-musl/progress.md` — возобновлять с первого незакрытого пункта, решения
+- `verification-before-completion` — самое релевантное. Не помечать часть готовой без
+  вывода запуска; ценность проекта в том, что каждое число настоящее.
+- `diagnosing-bugs` — для сбоев musl/NVIDIA (teardown-бросок, `std::system_error` + abort,
+  резолв путей в `bwrap`, молча не сработавшее ядро).
+- `research` — если возвращаться к вопросу GL/EGL или к любому факту driver API; фиксировать
+  в Markdown в репо, а не переосмысливать заново.
+- `graphify` — подходить к репо cold и захотеть карту архитектуры до правок в `tools/diag/`.
+- `executing-plans` — возобновлять с первого незакрытого пункта `progress.md`, решения
   записывать строками `Ruling:`.
-- `research` (engineering) — Фазы 1.2–1.4: исследование первичных источников с
-  фиксацией в Markdown в репо.
-- `verification-before-completion` — перед пометкой отчёта/ступени готовой: команда
-  запущена, вывод прочитан.
-- `systematic-debugging` — если вывод elf-audit / dlopen-harness расходится с
-  ожиданием.
-- `test-driven-development` — новые инструменты (`dlopen-harness.sh`, скрипт сборки
-  musl-nvidia) сдавать с одним минимальным self-check.
+- `ponytail` — сейчас активен; ядра и драйверы намеренно минимальны.
+
+## Память
+
+Знания проекта в **OpenViking** (у частей 5–14 по записи `pattern` с измеренным результатом
+и списком файлов) и в **Hindsight** (страницы репозитория, инициатива
+`kp-d1460c9f8f824d61b78e14b7da38339c`). Искать в обеих, прежде чем заново что-то
+расследовать: там и числа по частям, и ловушки, и вывод «GL заблокирован».
