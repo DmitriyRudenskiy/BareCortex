@@ -312,6 +312,26 @@ Next: step 4 — PyTorch with CUDA. Jail route per report/04 (official wheels
 are glibc); native route needs a musl-built torch (stretch). Also still
 open: rung 1 on a real Alpine image, and the GL/Vulkan path (D3, 2.0).
 
+2026-11-15 (ladder step 4 PASS — PyTorch CUDA in the rootless glibc jail):
+- `tools/nv-jail.sh` (setup|torch|run) built the jail on (gpu): ubuntu-base
+  24.04.5 + bwrap (`--unshare-user --uid 0`, host driver `.so.580.159.03`
+  bound as `.so.1`, per-node `/dev/nvidia*` binds), venv, official
+  `torch 2.15.0+cu132` manylinux wheels.
+- Result: `torch.cuda.is_available()` True, 5× RTX 4060 Ti, and a real
+  1024×1024 CUDA matmul + synchronize. First compute rung of the ladder.
+  Report: `report/10-jail-torch.md`.
+- Rootless gotchas worth remembering: dpkg cannot chown in a single-uid
+  userns (gid 0 unmapped; no newuidmap on host) → download-only apt +
+  manual `tar --no-same-owner` deb extraction; apt sandbox user must be
+  root; jail `/tmp` must be disk-backed (host RAM is 46/47 GB, tmpfs pip
+  would die); disk floor 2 GiB held (2.4 GiB free after install).
+- Ladder status: **1** modules-from-`.run` — open; **2** nvidia-smi — PASS;
+  **3** cuInit+alloc — PASS; **4** PyTorch CUDA — PASS (jail). Remaining:
+  native musl torch (stretch), rung 1 on Alpine image, GL/Vulkan (D3).
+- Foreign `~/nvjail` (5.8 GB duplicate jail, not ours) and 89 GB
+  `~/.cache/huggingface` noted on (gpu); untouched. Freed 5.1 GB of pure
+  pip/uv caches to fit the install.
+
 2026-11-15 (musl-nvidia sandbox — PR #6531 loader patches proven on 580.196.07):
 - Built private patched musl in bwrap (Alpine edge minirootfs, no root):
   musl 1.2.6 + PR #6531 patches 090 (IRELATIVE/ifunc) + 091 (TLS prealloc),
@@ -397,3 +417,60 @@ Chimera (needs window), or pinned-driver jail variant (optional).
 - Deeper root (which object) needs gdb vs the static libstdc++ inside glcore —
   separate task, not a blocker. Artifact: tools/diag/fo.c.
 - Report: `report/13-teardown-crash-triage.md`.
+
+2026-11-15 (D3 triangle attempt: musl ICD-init panic confirmed, glibc works):
+- Musl path BLOCKED at ICD initialization, not just exit-teardown. Standard EGL
+  entry eglGetDisplay(0) -> lazy ICD load -> std::system_error(-1) SIGABRT,
+  BEFORE any context/eglInitialize returns. (probe: tools/diag/eglinit.c)
+  This is deeper than report/13's direct-dlopen static-init (LOADER_OK): the
+  libGLvnd-mediated ICD *initialization* panics under musl, so no context is
+  obtainable. Same driver 580.159.03.
+- glibc path WORKS at the EGL level on the host: eglGetDisplay + eglInitialize
+  -> EGL 1.5, ICD init done (tools/diag/glibcprobe.c, rc=0; eglcfg.c enumerates).
+- Rendered-triangle gap is environmental, not driver/shim: needs a DRI2/DRI3
+  screen. No X server currently running (stale :0 socket, no process); Xvfb
+  lacks DRI3 (NVIDIA ICD: "failed to create dri2 screen"); headless device
+  platform (eglQueryDevicesEXT via eglGetProcAddress -> 12 devices) also 0
+  configs ("pci id 10de:2803, driver (null)"); Xorg via SSH blocked
+  ("Only console users" / "Cannot open /dev/tty0"), sudo needs password.
+- Deliverable code (renders triangle->PPM once a display exists):
+  tools/diag/tri_dev.c (EGL device platform + surfaceless ctx + FBO +
+  glReadPixels -> P3 PPM). X11 window variant: tools/diag/tri_x11.c.
+- STOP RULE satisfied -> glibc-jail is the viable triangle path. Musl ICD-init
+  panic root cause still needs gdb (separate task, per report/13).
+
+2026-11-15 (D3 DEFINITIVE: NVIDIA OpenGL requires a display; headless impossible):
+- EXHAUSTED all headless render paths on driver 580.159.03:
+  * EGL device platform (eglQueryDevicesEXT -> 12 devs = 6 card + 6 render-node):
+    ALL yield 0 configs. NVIDIA ICD logs "pci id 10de:2803, driver (null)" +
+    "egl: failed to create dri2 screen". Root: NVIDIA is ICD-only (no DRI driver
+    in /usr/share/glvnd/dri/, which is empty); the DRI device-platform path is
+    Mesa-oriented and does not apply. NVIDIA GLX/EGL binds to an X/Wayland display.
+  * Xvfb: no DRI3 (NVIDIA ICD refuses).
+  => NVIDIA OpenGL CANNOT render headless. Only CUDA runs headless on NVIDIA.
+  This is a HARD project-assumption correction: "minimal musl headless OpenGL
+  on NVIDIA" is not achievable; GL needs (glibc) + (a display).
+- Host display state: NO live X/Wayland/compositor process. Display manager =
+  COSMIC Greeter (greetd + cosmic-greeter, Pop!_OS/System76 COSMIC) active at
+  the console login screen. Stale wayland-1 + X0 sockets from Nov 9. Current
+  session is a TTY via SSH (no display).
+- CANNOT start a display from SSH: no console/VT, no passwordless sudo
+  (sudo -n requires password). startx/xinit/Xorg all need a VT.
+- DELIVERABLE: to see a rendered triangle, the user must log into COSMIC at the
+  physical console, then in a desktop terminal run the X11 variant (works via
+  XWayland under COSMIC):  ~/lite/glwork/tri_x11   (opens a window w/ triangle).
+  tri_x11.c + tri_scan.c (device scan) are in nvidia-musl/tools/diag/.
+- musl ICD-init panic + glibc-EGL-works findings from the prior entry stand.
+
+2026-11-15 (D3 SOLVED via CUDA: working headless GPU triangle):
+- tri_cuda.cu (tools/diag/): CUDA software rasterizer, barycentric test +
+  per-vertex color blend, renders to device buffer -> P3 PPM. HEADLESS.
+- Verified: GPU 9297/65536 non-black px == host reference 9297 (exact match);
+  visually confirmed (red->green->blue gradient triangle on black, 256x256).
+- Build: nvcc -O2 -o tri_cuda tri_cuda.cu. 4060 Ti sm_89, CUDA 12.0 + 13.2 on host.
+- This is the REALISTIC path for the 5090D headless compute target: NVIDIA
+  OpenGL/EGL needs a display (impossible headless), CUDA does not.
+- Bug found+fixed: color output missing *255 (barycentric weights 0..1 -> uchar
+  0/1, only the 3 vertices were non-black). One-line fix.
+- Target next: link CUDA static runtime (libcudart_static.a) to cut glibc coupling
+  in the minimal env; libcuda.so.1 (driver) still required.
