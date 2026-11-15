@@ -331,6 +331,12 @@ open: rung 1 on a real Alpine image, and the GL/Vulkan path (D3, 2.0).
 - Foreign `~/nvjail` (5.8 GB duplicate jail, not ours) and 89 GB
   `~/.cache/huggingface` noted on (gpu); untouched. Freed 5.1 GB of pure
   pip/uv caches to fit the install.
+- 15.11 cleanup (operator-approved): verified `~/nvjail` was a pure build
+  artifact (results committed in `report/11-pytorch-jail.md`, script in git,
+  no holders) and deleted it → 9.0 GB free. Our `~/nv-jail` (5.8 GB now —
+  the other session built its venv there too) stays: it is the live jail of
+  both reports. Also freed ~1 GB npm cache. `~/.cache/huggingface` (89 GB)
+  and `~/.local/share/strata/Strata-data` (96 GB) await operator decision.
 
 2026-11-15 (musl-nvidia sandbox — PR #6531 loader patches proven on 580.196.07):
 - Built private patched musl in bwrap (Alpine edge minirootfs, no root):
