@@ -102,34 +102,42 @@ int main(int argc, char **argv) {
             cuModuleUnload(mod); cuDevicePrimaryCtxRelease(dev); continue; }
         cuMemcpyHtoD(dA, A, n*4); cuMemcpyHtoD(dB, B, n*4);
 
-        /* warmup */
         int nval = N; void *args[] = { &dA, &dB, &dC, &nval };
-        cuLaunchKernel(fn, (N+15)/16, (N+15)/16, 1, 16, 16, 1, 0, NULL, args, NULL);
-        cuCtxSynchronize();
+        unsigned g = (N + 15) / 16;
+        CUfunction fn_t;
+        if (cuModuleGetFunction(&fn_t, mod, "matmul_tiled")) fn_t = fn;  /* fallback */
 
+        /* time naive */
+        cuLaunchKernel(fn, g, g, 1, 16, 16, 1, 0, NULL, args, NULL); cuCtxSynchronize();
         double t0 = now_ms();
-        for (int it = 0; it < iters; it++)
-            cuLaunchKernel(fn, (N+15)/16, (N+15)/16, 1, 16, 16, 1, 0, NULL, args, NULL);
+        for (int it = 0; it < iters; it++) cuLaunchKernel(fn, g, g, 1, 16, 16, 1, 0, NULL, args, NULL);
         cuCtxSynchronize();
-        double ms = now_ms() - t0;
-        double secs = ms / 1e3;
-        double gflops = 2.0 * N * N * N * iters / secs / 1e9;
+        double ms_n = now_ms() - t0;
+        double gf_n = 2.0 * N * N * N * iters / (ms_n / 1e3) / 1e9;
 
-        float maxerr = 0.0f; char vstr[32] = "-";
+        /* time tiled + verify (C holds the last tiled result) */
+        cuLaunchKernel(fn_t, g, g, 1, 16, 16, 1, 0, NULL, args, NULL); cuCtxSynchronize();
+        t0 = now_ms();
+        for (int it = 0; it < iters; it++) cuLaunchKernel(fn_t, g, g, 1, 16, 16, 1, 0, NULL, args, NULL);
+        cuCtxSynchronize();
+        double ms_t = now_ms() - t0;
+        double gf_t = 2.0 * N * N * N * iters / (ms_t / 1e3) / 1e9;
+
+        float maxerr = 0.0f; char vstr[40] = "-";
         if (verify) {
             cuMemcpyDtoH(C, dC, n*4);
             for (size_t i = 0; i < n; i++) { float e = C[i]-Cref[i]; if (e<0) e=-e; if (e>maxerr) maxerr=e; }
-            snprintf(vstr, sizeof vstr, "maxerr=%.5f %s", maxerr, maxerr < TOL ? "OK" : "BAD");
+            snprintf(vstr, sizeof vstr, "tiled maxerr=%.5f %s", maxerr, maxerr < TOL ? "OK" : "BAD");
             if (maxerr < TOL) ok++;
         }
-        if (gflops > best) best = gflops;
-        fprintf(stderr, "  [%d] %-22s %8.1f GFLOPS  (%.0f ms / %d iters)  %s\n",
-                d, name, gflops, ms, iters, vstr);
+        if (gf_t > best) best = gf_t;
+        fprintf(stderr, "  [%d] %-20s naive %8.1f | tiled %8.1f GFLOPS  (%.1fx)  %s\n",
+                d, name, gf_n, gf_t, (ms_t > 0 ? ms_n / ms_t : 0), vstr);
         cuMemFree(dA); cuMemFree(dB); cuMemFree(dC);
         cuModuleUnload(mod);
         cuDevicePrimaryCtxRelease(dev);
     }
-    fprintf(stderr, "[matmul] BEST %8.1f GFLOPS ; %ld/%d correct%s\n",
+    fprintf(stderr, "[matmul] BEST(tiled) %8.1f GFLOPS ; %ld/%d correct%s\n",
             best, verify ? ok : 0, verify ? ndev : 0, verify ? "" : " (timing only)");
     _exit(0);
 }
