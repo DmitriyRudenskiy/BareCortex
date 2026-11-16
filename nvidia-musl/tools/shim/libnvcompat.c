@@ -6,6 +6,10 @@
 #include <pthread.h>
 #include <time.h>
 #include <dlfcn.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <fcntl.h>
 
 /* RECURSIVE MUTEX INITIALIZERS
  *
@@ -84,4 +88,52 @@ int dladdr1(const void *addr, Dl_info *info, void **extra_info, unsigned int fla
     (void)extra_info;
     (void)flags;
     return dladdr(addr, info);
+}
+
+/* glibc 2.39+ ISOC23 variants (host-built userspace references them);
+ * semantics identical to the plain functions. */
+#include <stdio.h>
+long __isoc23_strtol(const char *nptr, char **endptr, int base) {
+    return strtol(nptr, endptr, base);
+}
+unsigned long __isoc23_strtoul(const char *nptr, char **endptr, int base) {
+    return strtoul(nptr, endptr, base);
+}
+long long __isoc23_strtoll(const char *nptr, char **endptr, int base) {
+    return strtoll(nptr, endptr, base);
+}
+unsigned long long __isoc23_strtoull(const char *nptr, char **endptr, int base) {
+    return strtoull(nptr, endptr, base);
+}
+int __isoc23_sscanf(const char *str, const char *format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    int r = vsscanf(str, format, ap);
+    va_end(ap);
+    return r;
+}
+int fcntl64(int fd, int cmd, ...) {
+    va_list ap;
+    va_start(ap, cmd);
+    int r = fcntl(fd, cmd, va_arg(ap, long));
+    va_end(ap);
+    return r;
+}
+
+/* glibc LFS renames (2.28+): glsi references alphasort64/scandir64 */
+#include <dirent.h>
+int alphasort64(const struct dirent **a, const struct dirent **b) {
+    return alphasort(a, b);
+}
+int scandir64(const char *dir, struct dirent ***entlist,
+              int (*filter)(const struct dirent *),
+              int (*compar)(const struct dirent **, const struct dirent **)) {
+    return scandir(dir, entlist, filter, compar);
+}
+
+/* glibc-internal symbol referenced (WEAK) by nvidia gpucomp GOT slot;
+   musl lacks it, loader silently zeroes the slot and gpucomp throws
+   std::system_error. Alias to pthread_key_create. */
+int __pthread_key_create(pthread_key_t *k, void (*destructor)(void *)) {
+    return pthread_key_create(k, destructor);
 }
