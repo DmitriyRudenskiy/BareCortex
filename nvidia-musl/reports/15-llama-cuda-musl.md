@@ -42,9 +42,17 @@ musl-копии (C-ABI, один commit), конфликт не возникае
 
 ## llama-server и мульти-GPU
 
-`llama-server -ngl 99` (OpenAI API): `/health` ok, `/v1/completions` отвечает
-с таймингами. Модель по умолчанию раскидывается на все 5 GPU
-(`nvidia-smi`: 10–12 GiB на каждой, 462 t/s prompt).
+`llama-server -ngl 99` (OpenAI API): `/health` ok, `/v1/completions` и
+`/v1/chat/completions` отвечают с таймингами. Модель по умолчанию раскидывается
+на все 5 GPU (`nvidia-smi`: 10–12 GiB на каждой).
+
+**Шкала (Qwen2.5-3B-Instruct Q4_K_M, 2.1 GiB):** chat API — 1001 t/s prompt /
+104 t/s gen, ответ валидный. Instruct-модели без chat-шаблона галлюцинируют
+роли (user/assistant) — это про промпт, не про стек.
+
+**Побочное наблюдение:** первый запуск server с `-c 4096` однажды завис на
+`loading model` (futex), все последующие (2/2) — 2.5 с. Транзиентный
+первый-GPU-инициал, не воспроизводится.
 
 ## Воспроизведение
 
