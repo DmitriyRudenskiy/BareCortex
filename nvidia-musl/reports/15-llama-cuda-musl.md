@@ -40,6 +40,12 @@ musl-копии (C-ABI, один commit), конфликт не возникае
    `libggml-cuda.so.new` и замена.
 5. `-no-cnv`/`--no-conversation` в v1.0.0 нет — для smoke-теста `llama-completion`.
 
+## llama-server и мульти-GPU
+
+`llama-server -ngl 99` (OpenAI API): `/health` ok, `/v1/completions` отвечает
+с таймингами. Модель по умолчанию раскидывается на все 5 GPU
+(`nvidia-smi`: 10–12 GiB на каждой, 462 t/s prompt).
+
 ## Воспроизведение
 
 ```
@@ -50,8 +56,8 @@ PATH=/usr/local/cuda-13.2/bin:$PATH cmake -B build-cuda -DCMAKE_BUILD_TYPE=Relea
   -DCMAKE_CUDA_COMPILER=/usr/local/cuda-13.2/bin/nvcc -DCMAKE_CUDA_ARCHITECTURES=89 \
   -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_APP=OFF
 cmake --build build-cuda --target ggml-cuda -j16
-# деплой: libggml-cuda.so.1.0.0 + 5 CUDA-рантаймов + libnccl в edge /usr/lib,
-#         patchelf-алиасинг (см. cuda-alias.sh / deploy-cuda.sh)
+# деплой: libggml-cuda.so.1.0.0 + 5 CUDA-рантаймов + libnccl в edge /usr/lib
+sh nvidia-musl/tools/llama-cuda-deploy.sh ~/lite/edge ~/lite/llama/llama.cpp/build-cuda/bin
 # x2: тест
 sh nvidia-musl/tools/test_llama_cuda_musl.sh
 ```
