@@ -28,8 +28,13 @@ done
 [ -n "$musl_cc" ] || { echo "SKIP: needs a musl compiler (set MUSL_CC=/path/to/cc)"; exit 0; }
 CC=$musl_cc
 
-# --- build (same flags as nv-lite-install.sh, minus the runtime-only gcompat) --
-if "$CC" -O2 -shared -fPIC -Wl,-soname,libnvcompat.so.0 \
+# gcompat present (Alpine target) => build exactly like nv-lite-install.sh,
+# which makes the result byte-comparable to a known-good original.
+gcflags=""
+[ -e /lib/libgcompat.so.0 ] && gcflags="-Wl,--no-as-needed -Wl,-l:libgcompat.so.0 /lib/libgcompat.so.0"
+
+# --- build (same flags as nv-lite-install.sh) ---------------------------------
+if "$CC" -O2 -shared -fPIC -Wl,-soname,libnvcompat.so.0 $gcflags \
 	-o "$T/libnvcompat.so.0" "$SHIM_SRC" 2>"$T/build.log"; then
 	pass "shim builds"
 else
@@ -42,6 +47,29 @@ if readelf -dW "$T/libnvcompat.so.0" 2>/dev/null | grep -qi "soname.*libnvcompat
 	pass "soname is libnvcompat.so.0"
 else
 	fail "wrong or missing soname (install would not resolve the NEEDED entry)"
+fi
+
+# --- byte-for-byte against a known-good original (ORIGINAL=/path/to/so) -------
+# every SEC_ALLOC section must match exactly: that is the code and ABI the
+# NVIDIA blobs execute. Non-allocated leftovers (.symtab STT_FILE embeds the
+# source path, .comment the compiler version) are excluded on purpose.
+if [ -n "${ORIGINAL:-}" ]; then
+	secs_diff=0
+	for sec in $(readelf -SW "$ORIGINAL" | awk '$7 ~ /A/ && $2 ~ /^\./ {print $2}'); do
+		if objcopy -O binary --only-section="$sec" "$T/libnvcompat.so.0" "$T/a.bin" 2>/dev/null \
+		   && objcopy -O binary --only-section="$sec" "$ORIGINAL" "$T/b.bin" 2>/dev/null \
+		   && cmp -s "$T/a.bin" "$T/b.bin"; then
+			:
+		else
+			echo "    $sec differs"
+			secs_diff=$((secs_diff + 1))
+		fi
+	done
+	if [ "$secs_diff" -eq 0 ]; then
+		pass "all allocated sections byte-identical to $ORIGINAL"
+	else
+		fail "$secs_diff allocated section(s) differ from $ORIGINAL"
+	fi
 fi
 
 # --- exported symbol set: what the NVIDIA ELFs actually reference -------------
